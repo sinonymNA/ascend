@@ -1,0 +1,11 @@
+{
+  "name": "ascend",
+  "private": true,
+  "version": "0.2.1",
+  "workspaces": ["client"],
+  "scripts": {
+    "dev": "npm run dev -w client",
+    "build": "npm run build -w client",
+    "start": "npm run start -w client"
+  }
+}

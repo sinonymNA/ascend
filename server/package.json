@@ -1,0 +1,9 @@
+{
+  "name": "ascend-server",
+  "version": "0.1.0",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "dependencies": {
+    "express": "^4.22.1"
+  }
+}
