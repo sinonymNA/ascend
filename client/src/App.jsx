@@ -1,34 +1,63 @@
-import React, { useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { GameProvider, useGame } from './context/GameContext.jsx';
 
-const zones = ['Foundations','Empires','Networks','Revolutions','Modernity'];
-const questions = Array.from({length:120}, (_,i)=>({id:i+1,zone:zones[Math.floor(i/24)],q:`AP World Q${i+1}: Key concept?`,choices:['A','B','C','D'],answer:'A'}));
+import LandingPage from './pages/LandingPage.jsx';
+import ExamSelectPage from './pages/ExamSelectPage.jsx';
+import CharacterCreatePage from './pages/CharacterCreatePage.jsx';
+import DiagnosticPage from './pages/DiagnosticPage.jsx';
+import MapRevealPage from './pages/MapRevealPage.jsx';
+import AdventureMapPage from './pages/AdventureMapPage.jsx';
+import LevelPage from './pages/LevelPage.jsx';
+import BossFightPage from './pages/BossFightPage.jsx';
+import StorePage from './pages/StorePage.jsx';
+import ProfilePage from './pages/ProfilePage.jsx';
+import VictoryPage from './pages/VictoryPage.jsx';
 
-const Screen = ({children}) => <div className='screen card'>{children}</div>;
+const pageVariants = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
+  exit: { opacity: 0, y: -16, transition: { duration: 0.2, ease: 'easeIn' } },
+};
 
-export default function App(){
-  const [screen,setScreen]=useState('landing');
-  const [name,setName]=useState('Scholar');
-  const [zoneIdx,setZoneIdx]=useState(0);
-  const [xp,setXp]=useState(0); const [coins,setCoins]=useState(0);
-  const [diag,setDiag]=useState([]); const [lvlIdx,setLvlIdx]=useState(0);
-  const [inventory,setInventory]=useState([]);
-  const zoneQs = useMemo(()=>questions.filter(q=>q.zone===zones[zoneIdx]).slice(0,10),[zoneIdx]);
+function Router() {
+  const { screen } = useGame();
 
-  if(screen==='landing') return <Screen><h1>Ascend</h1><p>Study less. Think better. Score higher.</p><button onClick={()=>setScreen('onboarding')}>Start</button></Screen>;
-  if(screen==='onboarding') return <Screen><h2>Onboarding</h2><input value={name} onChange={e=>setName(e.target.value)} /><button onClick={()=>setScreen('diagnostic')}>Begin Diagnostic</button></Screen>;
-  if(screen==='diagnostic') return <Quiz title='Diagnostic' questions={questions.slice(0,10)} onDone={(c)=>{setDiag([c]); setXp(x=>x+c*5); setScreen('mapReveal')}}/>;
-  if(screen==='mapReveal') return <Screen><h2>Map Revealed</h2><p>Welcome {name}! Path unlocked for {zones[zoneIdx]}.</p><button onClick={()=>setScreen('map')}>Enter Adventure Map</button></Screen>;
-  if(screen==='map') return <Screen><h2>Adventure Map</h2><p>Character Position: Zone {zoneIdx+1}/5</p><progress max={4} value={zoneIdx}></progress><div><button onClick={()=>setScreen('level')}>Play Level</button><button onClick={()=>setScreen('boss')}>Boss Fight</button><button onClick={()=>setScreen('store')}>Store</button><button onClick={()=>setScreen('profile')}>Profile</button></div></Screen>;
-  if(screen==='level') return <Quiz title={`Level ${lvlIdx+1} - ${zones[zoneIdx]}`} questions={zoneQs} onDone={(c)=>{setXp(x=>x+c*10); setCoins(v=>v+c*2); setLvlIdx(v=>v+1); setScreen('map')}}/>;
-  if(screen==='boss') return <Quiz title={`Boss Fight: ${zones[zoneIdx]}`} questions={zoneQs.slice(0,5)} onDone={(c)=>{const win=c>=4; setXp(x=>x+(win?250:50)); if(win){setCoins(v=>v+50); if(zoneIdx<4) setZoneIdx(zoneIdx+1); else setScreen('victory');} else setScreen('map');}}/>;
-  if(screen==='store') return <Screen><h2>Cosmetics Store</h2><button disabled={coins<40} onClick={()=>{if(coins>=40){setCoins(c=>c-40); setInventory(i=>[...i,'Chrononaut Cape']);}}}>Buy Chrononaut Cape (40)</button><button onClick={()=>setScreen('map')}>Back</button></Screen>;
-  if(screen==='profile') return <Screen><h2>{name}</h2><p>XP: {xp} | Coins: {coins}</p><p>Diagnostic Correct: {diag[0]??0}/10</p><p>Inventory: {inventory.join(', ')||'None'}</p><button onClick={()=>setScreen('map')}>Back</button></Screen>;
-  return <Screen><h2>Victory</h2><p>You conquered all AP World zones.</p><p>Total XP: {xp} Coins: {coins}</p><button onClick={()=>{setScreen('landing');setZoneIdx(0);setXp(0);setCoins(0);}}>Play Again</button></Screen>;
+  const pages = {
+    landing: LandingPage,
+    exam_select: ExamSelectPage,
+    character_create: CharacterCreatePage,
+    diagnostic: DiagnosticPage,
+    map_reveal: MapRevealPage,
+    adventure_map: AdventureMapPage,
+    level: LevelPage,
+    boss_fight: BossFightPage,
+    store: StorePage,
+    profile: ProfilePage,
+    victory: VictoryPage,
+  };
+
+  const Page = pages[screen] || LandingPage;
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={screen}
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        style={{ minHeight: '100vh' }}
+      >
+        <Page />
+      </motion.div>
+    </AnimatePresence>
+  );
 }
 
-function Quiz({title,questions,onDone}){
-  const [i,setI]=useState(0); const [correct,setCorrect]=useState(0);
-  const q=questions[i];
-  const pick=(c)=>{const nc=correct+(c===q.answer?1:0); if(i===questions.length-1) onDone(nc); else {setCorrect(nc); setI(i+1);} };
-  return <Screen><h2>{title}</h2><p>{q.q}</p><div className='grid'>{q.choices.map(c=><button key={c} onClick={()=>pick(c)}>{c}</button>)}</div><p>{i+1}/{questions.length}</p></Screen>
+export default function App() {
+  return (
+    <GameProvider>
+      <Router />
+    </GameProvider>
+  );
 }
