@@ -1,0 +1,193 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: #0F1729;
+    --bg-mid: #162038;
+    --card: #1E2D4A;
+    --card-hover: #243556;
+    --border: #2D3F60;
+    --gold: #FFB830;
+    --gold-soft: rgba(255, 184, 48, 0.15);
+    --coral: #E8445A;
+    --coral-soft: rgba(232, 68, 90, 0.15);
+    --green: #2ECC71;
+    --green-soft: rgba(46, 204, 113, 0.15);
+    --purple: #7B4FE9;
+    --blue-light: #5B9CF6;
+    --text: #F0F4FF;
+    --text-mid: #8FA3C8;
+    --text-dim: #4D6080;
+    --glow-gold: 0 0 24px rgba(255, 184, 48, 0.5);
+    --glow-coral: 0 0 24px rgba(232, 68, 90, 0.5);
+    --glow-green: 0 0 24px rgba(46, 204, 113, 0.5);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background: rgba(255, 184, 48, 0.3);
+    color: var(--text);
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg-mid);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+}
+
+@layer components {
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 32px;
+  }
+
+  .btn-coral {
+    background: var(--coral);
+    color: white;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    padding: 14px 32px;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 4px 20px rgba(232, 68, 90, 0.35);
+  }
+  .btn-coral:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(232, 68, 90, 0.5);
+  }
+  .btn-coral:active {
+    transform: translateY(0);
+  }
+
+  .btn-gold {
+    background: var(--gold);
+    color: #0F1729;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    padding: 14px 32px;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 4px 20px rgba(255, 184, 48, 0.35);
+  }
+  .btn-gold:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(255, 184, 48, 0.5);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text-mid);
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 10px 24px;
+    border-radius: 50px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn-outline:hover {
+    border-color: var(--text-mid);
+    color: var(--text);
+  }
+
+  .input-dark {
+    background: var(--bg-mid);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    font-size: 16px;
+    padding: 14px 20px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+  .input-dark::placeholder {
+    color: var(--text-dim);
+  }
+  .input-dark:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(255, 184, 48, 0.15);
+  }
+
+  .gold-text {
+    background: linear-gradient(135deg, #FFB830, #FF9500);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .page-container {
+    min-height: 100vh;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+  }
+
+  .content-max {
+    width: 100%;
+    max-width: 680px;
+  }
+}
+
+@layer utilities {
+  .font-cinzel {
+    font-family: 'Cinzel', serif;
+  }
+  .font-nunito {
+    font-family: 'Nunito', sans-serif;
+  }
+
+  .star-field {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .glow-gold {
+    box-shadow: var(--glow-gold);
+  }
+  .glow-coral {
+    box-shadow: var(--glow-coral);
+  }
+  .glow-green {
+    box-shadow: var(--glow-green);
+  }
+}
