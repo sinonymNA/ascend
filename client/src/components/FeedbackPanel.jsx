@@ -1,16 +1,19 @@
 import { motion } from 'framer-motion';
 import { useGame } from '../context/GameContext.jsx';
+import XPToast from './XPToast.jsx';
 
 export default function FeedbackPanel() {
   const {
     lastAnswerCorrect, lastAnswerExplanation,
     streak, dismissFeedback,
-    sessionIndex, sessionQuestions,
+    sessionIndex, sessionQuestions, xpGainAmount,
   } = useGame();
 
   const isLast = sessionIndex + 1 >= sessionQuestions.length;
 
   return (
+    <div style={{ position: 'relative' }}>
+      {lastAnswerCorrect && <XPToast show amount={xpGainAmount} />}
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
@@ -45,7 +48,7 @@ export default function FeedbackPanel() {
         </div>
         {lastAnswerCorrect && (
           <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-            <div style={{ fontSize: 13, color: 'var(--gold)', fontWeight: 800 }}>+50 XP</div>
+            <div style={{ fontSize: 13, color: 'var(--gold)', fontWeight: 800 }}>+{xpGainAmount} XP</div>
             <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>+10 🪙</div>
           </div>
         )}
@@ -73,5 +76,6 @@ export default function FeedbackPanel() {
         {isLast ? 'See Results →' : 'Continue →'}
       </button>
     </motion.div>
+    </div>
   );
 }

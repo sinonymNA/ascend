@@ -8,8 +8,10 @@ export default function AdventureMapPage() {
   const {
     zones, navigate, startLevel, startBoss,
     isZoneUnlocked, isLevelCompleted, isZoneCompleted,
-    character, currentZone,
+    character, currentZone, wrongQueue, logoutUser, username,
   } = useGame();
+
+  const reviewCount = wrongQueue.filter(w => w.nextReviewAt <= Date.now()).length;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
@@ -25,14 +27,32 @@ export default function AdventureMapPage() {
       }}>
         <div style={{ width: '100%', maxWidth: 680 }}>
           {/* Nav buttons */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+          <div style={{ display: 'flex', gap: 10, marginBottom: reviewCount > 0 ? 10 : 20 }}>
             <button className="btn-outline" style={{ flex: 1 }} onClick={() => navigate('store')}>
               🛒 Store
             </button>
             <button className="btn-outline" style={{ flex: 1 }} onClick={() => navigate('profile')}>
               👤 {character?.name || 'Profile'}
             </button>
+            <button
+              className="btn-outline"
+              style={{ padding: '0 12px', fontSize: 12, color: 'var(--text-dim)' }}
+              onClick={() => { if (window.confirm('Sign out?')) logoutUser(); }}
+              title={`Signed in as ${username || 'Guest'}`}
+            >
+              ↩
+            </button>
           </div>
+
+          {reviewCount > 0 && (
+            <button
+              className="btn-outline"
+              style={{ width: '100%', marginBottom: 20, borderColor: 'var(--gold)', color: 'var(--gold)', fontSize: 14 }}
+              onClick={() => navigate('adventure_map')}
+            >
+              🔁 Review Queue ({reviewCount} due)
+            </button>
+          )}
 
           {/* Zones */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>

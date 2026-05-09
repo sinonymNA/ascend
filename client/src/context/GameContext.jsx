@@ -1,7 +1,9 @@
-import { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
+import { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
 import { zones, questions } from '../data/apWorldHistory.js';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
+
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
 const XP_PER_CORRECT = 50;
 const XP_BONUS_STREAK_3 = 25;
@@ -13,33 +15,50 @@ const BOSS_QUESTIONS = 5;
 const DIAGNOSTIC_QUESTIONS = 10;
 
 const COSMETICS = [
-  { id: 'shield_gold', name: 'Gold Shield', description: 'A gleaming gold shield', price: 100, type: 'avatar', emoji: '🛡️' },
-  { id: 'crown', name: 'Champion Crown', description: 'Worn by champions', price: 150, type: 'avatar', emoji: '👑' },
-  { id: 'sword_fire', name: 'Flame Sword', description: 'Burns with ancient fire', price: 200, type: 'avatar', emoji: '🔥' },
-  { id: 'cape_purple', name: 'Purple Cape', description: 'Flows with mystery', price: 120, type: 'avatar', emoji: '🧣' },
+  // Hats
+  { id: 'crown', name: 'Champion Crown', description: 'Worn by champions', price: 150, type: 'hat', emoji: '👑' },
+  { id: 'wizard_hat', name: 'Wizard Hat', description: 'Arcane knowledge made visible', price: 120, type: 'hat', emoji: '🎩' },
+  { id: 'laurel', name: 'Laurel Wreath', description: 'Ancient symbol of victory', price: 80, type: 'hat', emoji: '🌿' },
+  // Weapons
+  { id: 'sword_fire', name: 'Flame Sword', description: 'Burns with ancient fire', price: 200, type: 'weapon', emoji: '🔥' },
+  { id: 'lightning_staff', name: 'Lightning Staff', description: 'Channels raw power', price: 220, type: 'weapon', emoji: '⚡' },
+  { id: 'shield_gold', name: 'Gold Shield', description: 'Unbreakable defense', price: 100, type: 'weapon', emoji: '🛡️' },
+  // Capes
+  { id: 'cape_purple', name: 'Purple Cape', description: 'Flows with mystery', price: 120, type: 'cape', emoji: '🟣' },
+  { id: 'shadow_cloak', name: 'Shadow Cloak', description: 'Darkness made wearable', price: 180, type: 'cape', emoji: '🌑' },
+  // Badges
   { id: 'star_badge', name: 'Star Badge', description: 'Shows mastery', price: 80, type: 'badge', emoji: '⭐' },
-  { id: 'lightning', name: 'Lightning Strike', description: 'Speed incarnate', price: 180, type: 'badge', emoji: '⚡' },
+  { id: 'diamond', name: 'Diamond', description: 'Precious and rare', price: 300, type: 'badge', emoji: '💎' },
+  // Auras (CSS glow effects)
+  { id: 'aura_gold', name: 'Gold Aura', description: 'Radiant golden glow', price: 250, type: 'aura', emoji: '✨' },
+  { id: 'aura_crimson', name: 'Crimson Aura', description: 'Blazing red energy', price: 250, type: 'aura', emoji: '🔴' },
 ];
 
 // ─── Initial State ────────────────────────────────────────────────────────────
 
 const INITIAL_STATE = {
+  // Auth
+  authToken: null,
+  userId: null,
+  username: null,
+  syncStatus: 'idle',        // 'idle' | 'syncing' | 'ok' | 'error'
+
   // Onboarding
-  screen: 'landing',          // current top-level screen
-  examType: null,             // 'ap_world_history' | null
-  character: null,            // { name, class: 'warrior'|'scholar'|'rogue', avatar: emoji }
+  screen: 'login',           // start at login screen
+  examType: null,
+  character: null,
 
   // Progress
-  unlockedZones: [],          // zone ids
-  completedLevels: {},        // { zoneId: [levelId, ...] }
+  unlockedZones: [],
+  completedLevels: {},
   currentZone: null,
   currentLevel: null,
 
   // Active session
-  sessionMode: null,          // 'diagnostic' | 'level' | 'boss'
-  sessionQuestions: [],       // question objects for current session
-  sessionIndex: 0,            // which question we're on
-  sessionAnswers: [],         // { questionId, chosen, correct } for each answered
+  sessionMode: null,
+  sessionQuestions: [],
+  sessionIndex: 0,
+  sessionAnswers: [],
   sessionComplete: false,
 
   // Stats
@@ -52,12 +71,12 @@ const INITIAL_STATE = {
   totalCorrect: 0,
   totalAnswered: 0,
 
-  // Spaced repetition: track wrong answers for review
-  wrongQueue: [],             // [{ questionId, nextReviewAt }]
+  // Spaced repetition
+  wrongQueue: [],
 
-  // Store / cosmetics
+  // Store / cosmetics — equippedCosmetics is now { hat, weapon, cape, badge, aura }
   ownedCosmetics: [],
-  equippedCosmetics: [],
+  equippedCosmetics: { hat: null, weapon: null, cape: null, badge: null, aura: null },
 
   // Boss health
   bossHp: 100,
@@ -65,12 +84,14 @@ const INITIAL_STATE = {
   bossDefeated: false,
 
   // Diagnostic results
-  diagnosticResults: null,    // { score, weakZones, strongZones }
+  diagnosticResults: null,
 
   // UI flags
   showFeedback: false,
   lastAnswerCorrect: null,
   lastAnswerExplanation: null,
+  showLevelUp: false,
+  xpGainAmount: 0,
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -137,6 +158,24 @@ function buildMapFromDiagnostic(diagnosticResults) {
 
 function reducer(state, action) {
   switch (action.type) {
+
+    case 'LOGIN': {
+      const { authToken, userId, username, gameState } = action;
+      const merged = gameState ? { ...state, ...gameState } : state;
+      return { ...merged, authToken, userId, username, screen: gameState?.screen || 'landing', syncStatus: 'ok' };
+    }
+
+    case 'LOGOUT':
+      return { ...INITIAL_STATE, screen: 'login' };
+
+    case 'SYNC_START':
+      return { ...state, syncStatus: 'syncing' };
+
+    case 'SYNC_OK':
+      return { ...state, syncStatus: 'ok' };
+
+    case 'SYNC_ERROR':
+      return { ...state, syncStatus: 'error' };
 
     case 'SET_SCREEN':
       return { ...state, screen: action.screen };
@@ -282,6 +321,8 @@ function reducer(state, action) {
         }
       }
 
+      const didLevelUp = newPlayerLevel > state.playerLevel;
+
       return {
         ...state,
         sessionAnswers: newAnswers,
@@ -299,8 +340,13 @@ function reducer(state, action) {
         wrongQueue: newWrongQueue,
         bossHp: newBossHp,
         playerHp: newPlayerHp,
+        showLevelUp: didLevelUp,
+        xpGainAmount: xpGain,
       };
     }
+
+    case 'DISMISS_LEVEL_UP':
+      return { ...state, showLevelUp: false };
 
     case 'DISMISS_FEEDBACK': {
       const nextIndex = state.sessionIndex + 1;
@@ -385,18 +431,19 @@ function reducer(state, action) {
       const { cosmeticId } = action;
       if (!state.ownedCosmetics.includes(cosmeticId)) return state;
       const cosmetic = COSMETICS.find(c => c.id === cosmeticId);
-      // Remove other equipped cosmetics of same type
-      const filtered = state.equippedCosmetics.filter(id => {
-        const c = COSMETICS.find(x => x.id === id);
-        return c && c.type !== cosmetic.type;
-      });
-      return { ...state, equippedCosmetics: [...filtered, cosmeticId] };
+      if (!cosmetic) return state;
+      return {
+        ...state,
+        equippedCosmetics: { ...state.equippedCosmetics, [cosmetic.type]: cosmeticId },
+      };
     }
 
     case 'UNEQUIP_COSMETIC': {
+      const cosmetic = COSMETICS.find(c => c.id === action.cosmeticId);
+      if (!cosmetic) return state;
       return {
         ...state,
-        equippedCosmetics: state.equippedCosmetics.filter(id => id !== action.cosmeticId),
+        equippedCosmetics: { ...state.equippedCosmetics, [cosmetic.type]: null },
       };
     }
 
@@ -420,7 +467,7 @@ function reducer(state, action) {
       };
 
     case 'RESET_GAME':
-      return { ...INITIAL_STATE };
+      return { ...INITIAL_STATE, authToken: state.authToken, userId: state.userId, username: state.username, screen: 'landing' };
 
     default:
       return state;
@@ -432,6 +479,14 @@ function reducer(state, action) {
 const GameContext = createContext(null);
 
 const STORAGE_KEY = 'ascend_game_state';
+const TOKEN_KEY = 'ascend_auth_token';
+
+// Fields to exclude from server sync (transient session state)
+const SYNC_EXCLUDE = new Set(['showFeedback','lastAnswerCorrect','lastAnswerExplanation','syncStatus','sessionQuestions','sessionAnswers','sessionIndex','sessionComplete','bossHp','playerHp','bossDefeated','screen']);
+
+function getSyncPayload(state) {
+  return Object.fromEntries(Object.entries(state).filter(([k]) => !SYNC_EXCLUDE.has(k)));
+}
 
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE, (initial) => {
@@ -439,23 +494,55 @@ export function GameProvider({ children }) {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Merge with initial to catch any new fields
         return { ...initial, ...parsed };
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) { /* ignore */ }
     return initial;
   });
 
+  const syncTimerRef = useRef(null);
+
+  // On mount — if we have a saved token, validate it and restore server state
+  useEffect(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) { dispatch({ type: 'LOGOUT' }); return; }
+    fetch(`${SERVER_URL}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => {
+        dispatch({ type: 'LOGIN', authToken: token, userId: data.userId, username: data.username, gameState: data.gameState });
+      })
+      .catch(() => {
+        localStorage.removeItem(TOKEN_KEY);
+        dispatch({ type: 'LOGOUT' });
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Persist to localStorage on every state change
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (e) {
-      // ignore storage errors
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+    if (state.authToken) {
+      try { localStorage.setItem(TOKEN_KEY, state.authToken); } catch (e) { /* ignore */ }
     }
   }, [state]);
+
+  // Debounced server sync — 3s after last state change
+  useEffect(() => {
+    if (!state.authToken) return;
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      dispatch({ type: 'SYNC_START' });
+      fetch(`${SERVER_URL}/progress`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${state.authToken}` },
+        body: JSON.stringify({ gameState: getSyncPayload(state) }),
+      })
+        .then(r => r.ok ? dispatch({ type: 'SYNC_OK' }) : dispatch({ type: 'SYNC_ERROR' }))
+        .catch(() => dispatch({ type: 'SYNC_ERROR' }));
+    }, 3000);
+    return () => { if (syncTimerRef.current) clearTimeout(syncTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.completedLevels, state.unlockedZones, state.coins, state.playerLevel, state.ownedCosmetics, state.equippedCosmetics]);
 
   // ── Action creators ───────────────────────────────────────────────────────
 
@@ -519,9 +606,24 @@ export function GameProvider({ children }) {
     dispatch({ type: 'RESET_SESSION' });
   }, []);
 
+  const dismissLevelUp = useCallback(() => {
+    dispatch({ type: 'DISMISS_LEVEL_UP' });
+  }, []);
+
   const resetGame = useCallback(() => {
     dispatch({ type: 'RESET_GAME' });
     localStorage.removeItem(STORAGE_KEY);
+  }, []);
+
+  const loginUser = useCallback(({ authToken, userId, username, gameState }) => {
+    localStorage.setItem(TOKEN_KEY, authToken);
+    dispatch({ type: 'LOGIN', authToken, userId, username, gameState });
+  }, []);
+
+  const logoutUser = useCallback(() => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(STORAGE_KEY);
+    dispatch({ type: 'LOGOUT' });
   }, []);
 
   // ── Derived values ────────────────────────────────────────────────────────
@@ -591,6 +693,10 @@ export function GameProvider({ children }) {
     unequipCosmetic,
     resetSession,
     resetGame,
+    loginUser,
+    logoutUser,
+    dismissLevelUp,
+    SERVER_URL,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

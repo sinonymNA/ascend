@@ -6,6 +6,7 @@ import QuestionCard from '../components/QuestionCard.jsx';
 import FeedbackPanel from '../components/FeedbackPanel.jsx';
 import BossHealthBar from '../components/BossHealthBar.jsx';
 import StreakIndicator from '../components/StreakIndicator.jsx';
+import CharacterCard from '../components/CharacterCard.jsx';
 import TopBar from '../components/TopBar.jsx';
 
 function BossResultScreen() {
@@ -88,6 +89,7 @@ function BossResultScreen() {
 
 export default function BossFightPage() {
   const {
+    character, equippedCosmetics,
     currentQuestion, sessionIndex, sessionQuestions,
     sessionComplete, showFeedback, streak,
     currentZone, zones, bossHp, playerHp,
@@ -142,18 +144,19 @@ export default function BossFightPage() {
           {!sessionComplete ? (
             <>
               {/* Question counter */}
-              <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                marginBottom: 16, padding: '10px 14px',
-                background: 'rgba(232,68,90,0.1)', border: '1px solid rgba(232,68,90,0.2)',
-                borderRadius: 12,
-              }}>
-                <span style={{ fontSize: 13, color: 'var(--text-mid)' }}>
-                  Question {sessionIndex + 1} of {sessionQuestions.length}
-                </span>
-                <span style={{ fontSize: 13, color: 'var(--coral)', fontWeight: 700 }}>
-                  Defeat the Boss!
-                </span>
+              {/* Character vs Boss portraits */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <CharacterCard character={character} equippedCosmetics={equippedCosmetics} size="sm" animate />
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 2 }}>
+                    Q {sessionIndex + 1}/{sessionQuestions.length}
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--coral)' }}>⚔️</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 48 }}>{zone?.emoji || '👹'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{zone?.bossName}</div>
+                </div>
               </div>
 
               <AnimatePresence mode="wait">

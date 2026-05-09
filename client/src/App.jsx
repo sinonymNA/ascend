@@ -1,6 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { GameProvider, useGame } from './context/GameContext.jsx';
+import LevelUpModal from './components/LevelUpModal.jsx';
 
+import LoginPage from './pages/LoginPage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import ExamSelectPage from './pages/ExamSelectPage.jsx';
 import CharacterCreatePage from './pages/CharacterCreatePage.jsx';
@@ -20,9 +22,10 @@ const pageVariants = {
 };
 
 function Router() {
-  const { screen } = useGame();
+  const { screen, showLevelUp, playerLevel, character, dismissLevelUp } = useGame();
 
   const pages = {
+    login: LoginPage,
     landing: LandingPage,
     exam_select: ExamSelectPage,
     character_create: CharacterCreatePage,
@@ -36,21 +39,29 @@ function Router() {
     victory: VictoryPage,
   };
 
-  const Page = pages[screen] || LandingPage;
+  const Page = pages[screen] || LoginPage;
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={screen}
-        variants={pageVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        style={{ minHeight: '100vh' }}
-      >
-        <Page />
-      </motion.div>
-    </AnimatePresence>
+    <>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={screen}
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          style={{ minHeight: '100vh' }}
+        >
+          <Page />
+        </motion.div>
+      </AnimatePresence>
+      <LevelUpModal
+        show={showLevelUp}
+        level={playerLevel}
+        character={character}
+        onDismiss={dismissLevelUp}
+      />
+    </>
   );
 }
 

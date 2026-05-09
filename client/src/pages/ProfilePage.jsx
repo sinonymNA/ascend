@@ -2,20 +2,20 @@ import { motion } from 'framer-motion';
 import { useGame } from '../context/GameContext.jsx';
 import TopBar from '../components/TopBar.jsx';
 import XPBar from '../components/XPBar.jsx';
+import CharacterCard from '../components/CharacterCard.jsx';
 
 export default function ProfilePage() {
   const {
     character, playerLevel, xp, xpToNextLevel,
     totalCorrect, totalAnswered, accuracy,
     maxStreak, coins, completedLevels, zones,
-    equippedCosmetics, cosmetics,
-    navigate, resetGame,
+    equippedCosmetics, username, syncStatus,
+    navigate, resetGame, logoutUser,
   } = useGame();
 
   const totalLevels = zones.reduce((sum, z) => sum + z.levels.length, 0);
   const completedCount = Object.values(completedLevels).reduce((sum, lvls) => sum + lvls.length, 0);
 
-  const equippedItems = equippedCosmetics.map(id => cosmetics.find(c => c.id === id)).filter(Boolean);
 
   const stats = [
     { label: 'Questions Answered', value: totalAnswered, icon: '📝' },
@@ -39,35 +39,18 @@ export default function ProfilePage() {
               borderRadius: 24, padding: 24, marginBottom: 20,
               textAlign: 'center',
             }}>
-              <div style={{
-                width: 80, height: 80, borderRadius: 24, margin: '0 auto 12px',
-                background: 'linear-gradient(135deg, var(--gold), #FF9500)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 36,
-              }}>
-                {character?.emoji || '⚔️'}
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+                <CharacterCard
+                  character={character}
+                  equippedCosmetics={equippedCosmetics}
+                  size="lg"
+                  animate
+                />
               </div>
-              <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>
-                {character?.name || 'Hero'}
-              </h2>
               <p style={{ color: 'var(--text-mid)', fontSize: 14, marginBottom: 16 }}>
                 Level {playerLevel} · {character?.class || 'Adventurer'}
               </p>
               <XPBar />
-
-              {equippedItems.length > 0 && (
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 14 }}>
-                  {equippedItems.map(item => (
-                    <span
-                      key={item.id}
-                      title={item.name}
-                      style={{ fontSize: 22 }}
-                    >
-                      {item.emoji}
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Stats grid */}
@@ -92,6 +75,32 @@ export default function ProfilePage() {
                 </motion.div>
               ))}
             </div>
+
+            {/* Account */}
+            {username && (
+              <div style={{
+                background: 'var(--card)', border: '1px solid var(--border)',
+                borderRadius: 14, padding: '12px 16px', marginBottom: 12,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <div>
+                  <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>Signed in as</div>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>{username}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {syncStatus === 'ok' && <span style={{ fontSize: 11, color: 'var(--green)' }}>✓ Saved</span>}
+                  {syncStatus === 'syncing' && <span style={{ fontSize: 11, color: 'var(--gold)' }}>Saving...</span>}
+                  {syncStatus === 'error' && <span style={{ fontSize: 11, color: 'var(--coral)' }}>Offline</span>}
+                  <button
+                    className="btn-outline"
+                    style={{ padding: '6px 14px', fontSize: 13 }}
+                    onClick={() => { if (window.confirm('Sign out?')) logoutUser(); }}
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Reset */}
             <button
