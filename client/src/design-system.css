@@ -1,6 +1,0 @@
-:root{--bg:#0b1020;--card:#161e37;--text:#edf2ff;--accent:#6ea8fe}
-*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at top,var(--card),var(--bg));color:var(--text);font-family:Inter,system-ui}
-.screen{max-width:760px;margin:30px auto;padding:24px}.card{background:#161e37cc;border:1px solid #2b3a66;border-radius:16px}
-button{margin:6px;padding:10px 14px;border-radius:10px;border:none;background:var(--accent);color:#04122f;font-weight:700;cursor:pointer}
-button:disabled{opacity:.4} input{padding:10px;border-radius:8px;border:1px solid #3c4f85;background:#0e1730;color:var(--text)}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}

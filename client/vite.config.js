@@ -4,9 +4,14 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    preview: {
-      allowedHosts: ['ascend-production-db3c.up.railway.app'],
+    host: '0.0.0.0',
+    port: 5173,
+    allowedHosts: ['all'],
+    proxy: {
+      '/api': { target: 'http://localhost:3000', changeOrigin: true },
+      '/auth': { target: 'http://localhost:3000', changeOrigin: true },
+      '/socket.io': { target: 'http://localhost:3000', changeOrigin: true, ws: true },
     },
-    allowedHosts: ['ascend-production-db3c.up.railway.app'],
   },
+  build: { outDir: 'dist' },
 });
