@@ -693,7 +693,6 @@ export default function Library() {
         <button
           onClick={() => navigate('teacher_dashboard')}
           style={{
-            background: 'none',
             border: 'none',
             cursor: 'pointer',
             fontFamily: 'Cinzel, serif',
