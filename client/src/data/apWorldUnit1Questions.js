@@ -750,8 +750,9 @@ export const questions = [
     unit: 'unit_1',
     period: '1200-1450',
     difficulty: 2,
-    stimulus: null,
-    stimulus_type: null,
+    stimulus:
+      '"We have seen, in the city of Delhi, Hindus and Muslims living side by side in the same quarters. The Sultan\'s army contains men of both faiths, and the markets are open to all. Yet the sultan also imposes the jizya upon Hindus and has demolished temples in newly conquered territories. The situation is one of great complexity." — adapted from a 14th-century account of the Delhi Sultanate',
+    stimulus_type: 'text',
     question:
       'How did the Delhi Sultanate\'s rule over northern India between 1206 and 1526 affect Hindu-Muslim relations in the subcontinent?',
     correct: 'C',
