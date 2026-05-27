@@ -4,7 +4,9 @@ CREATE TABLE users (
   email           TEXT,
   name            TEXT,
   role            TEXT NOT NULL,
-  subscription    TEXT DEFAULT 'free',
+  subscription          TEXT DEFAULT 'free',
+  stripe_customer_id    TEXT,
+  stripe_subscription_id TEXT,
   xp              INTEGER DEFAULT 0,
   level           INTEGER DEFAULT 1,
   created_at      TIMESTAMPTZ DEFAULT NOW()

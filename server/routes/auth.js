@@ -1,114 +1,72 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const supabase = require('../services/supabase');
+const db = require('../services/db');
 
 const router = express.Router();
 
-/**
- * Verify a Bearer token using Clerk secret key first, falling back to JWT_SECRET.
- * Returns the decoded payload or throws.
- */
 function verifyToken(token) {
   const secrets = [process.env.CLERK_SECRET_KEY, process.env.JWT_SECRET].filter(Boolean);
   for (const secret of secrets) {
-    try {
-      return jwt.verify(token, secret);
-    } catch (_) {
-      // try next
-    }
+    try { return jwt.verify(token, secret); } catch (_) {}
   }
   throw new Error('Invalid or expired token');
 }
 
-/**
- * POST /auth/sync
- * Accepts a Clerk JWT in the Authorization header.
- * Upserts the user in the Supabase `users` table.
- */
+// POST /auth/sync — upsert user from Clerk JWT
 router.post('/sync', async (req, res) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing Authorization header' });
   }
 
-  const token = authHeader.slice(7);
   let payload;
-  try {
-    payload = verifyToken(token);
-  } catch (err) {
-    return res.status(401).json({ error: err.message });
+  try { payload = verifyToken(authHeader.slice(7)); } catch (e) {
+    return res.status(401).json({ error: e.message });
   }
 
   const clerkId = payload.sub || payload.id;
-  if (!clerkId) {
-    return res.status(400).json({ error: 'Token missing subject claim' });
-  }
+  if (!clerkId) return res.status(400).json({ error: 'Token missing subject claim' });
 
-  const email =
-    payload.email ||
-    (payload.email_addresses && payload.email_addresses[0]?.email_address) ||
-    null;
-  const name =
-    payload.name ||
-    [payload.first_name, payload.last_name].filter(Boolean).join(' ') ||
-    null;
+  const email = payload.email || payload.email_addresses?.[0]?.email_address || null;
+  const name = payload.name || [payload.first_name, payload.last_name].filter(Boolean).join(' ') || null;
+  const role = payload.role || 'teacher';
 
-  const { data, error } = await supabase
-    .from('users')
-    .upsert(
-      {
-        clerk_id: clerkId,
-        email,
-        name,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'clerk_id', returning: 'representation' }
-    )
-    .select()
-    .single();
-
-  if (error) {
-    console.error('auth/sync supabase error:', error);
+  try {
+    const { rows } = await db.query(
+      `INSERT INTO users (clerk_id, email, name, role)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (clerk_id) DO UPDATE
+         SET email = EXCLUDED.email, name = COALESCE(EXCLUDED.name, users.name)
+       RETURNING *`,
+      [clerkId, email, name, role]
+    );
+    return res.json({ user: rows[0] });
+  } catch (e) {
+    console.error('auth/sync error:', e.message);
     return res.status(500).json({ error: 'Failed to sync user' });
   }
-
-  return res.json({ user: data });
 });
 
-/**
- * GET /auth/me
- * Returns the Supabase user record for the authenticated caller.
- */
+// GET /auth/me — return current user record
 router.get('/me', async (req, res) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing Authorization header' });
   }
 
-  const token = authHeader.slice(7);
   let payload;
-  try {
-    payload = verifyToken(token);
-  } catch (err) {
-    return res.status(401).json({ error: err.message });
+  try { payload = verifyToken(authHeader.slice(7)); } catch (e) {
+    return res.status(401).json({ error: e.message });
   }
 
   const clerkId = payload.sub || payload.id;
-  if (!clerkId) {
-    return res.status(400).json({ error: 'Token missing subject claim' });
+  try {
+    const { rows } = await db.query('SELECT * FROM users WHERE clerk_id = $1 LIMIT 1', [clerkId]);
+    if (!rows[0]) return res.status(404).json({ error: 'User not found — call /auth/sync first' });
+    return res.json({ user: rows[0] });
+  } catch (e) {
+    return res.status(500).json({ error: 'DB error' });
   }
-
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('clerk_id', clerkId)
-    .single();
-
-  if (error || !data) {
-    return res.status(404).json({ error: 'User not found — call /auth/sync first' });
-  }
-
-  return res.json({ user: data });
 });
 
 module.exports = router;

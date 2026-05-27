@@ -1,325 +1,174 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
-const supabase = require('../services/supabase');
+const db = require('../services/db');
 const claude = require('../services/claude');
 
 const router = express.Router();
 
-/** Middleware that checks if the authenticated user has a Pro subscription. */
 function requirePro(req, res, next) {
-  if (!req.dbUser) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  if (req.dbUser.subscription !== 'pro') {
-    return res.status(403).json({ error: 'Pro subscription required' });
-  }
+  if (!req.dbUser) return res.status(401).json({ error: 'Unauthorized' });
+  if (req.dbUser.subscription !== 'pro') return res.status(403).json({ error: 'Pro subscription required' });
   next();
 }
 
-/**
- * GET /api/questions/sets
- * List public sets plus the authenticated teacher's own sets.
- */
+// GET /api/questions/sets
 router.get('/sets', requireAuth, async (req, res) => {
   const userId = req.dbUser?.id;
-
-  const { data, error } = await supabase
-    .from('question_sets')
-    .select('*, questions(count)')
-    .or(`is_public.eq.true${userId ? `,creator_id.eq.${userId}` : ''}`)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('questions GET /sets error:', error);
-    return res.status(500).json({ error: 'Failed to fetch question sets' });
+  try {
+    const { rows } = await db.query(
+      `SELECT qs.*,
+        (SELECT COUNT(*) FROM questions q WHERE q.set_id = qs.id) AS question_count
+       FROM question_sets qs
+       WHERE qs.is_public = true ${userId ? 'OR qs.creator_id = $1' : ''}
+       ORDER BY qs.created_at DESC`,
+      userId ? [userId] : []
+    );
+    return res.json({ sets: rows });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to fetch sets' });
   }
-
-  return res.json({ sets: data });
 });
 
-/**
- * POST /api/questions/sets
- * Create a new question set.
- * Body: { name, subject, description?, is_public? }
- */
+// POST /api/questions/sets
 router.post('/sets', requireAuth, async (req, res) => {
   const userId = req.dbUser?.id;
-  if (!userId) {
-    return res.status(400).json({ error: 'User not synced' });
-  }
+  if (!userId) return res.status(400).json({ error: 'User not synced' });
 
-  const { name, subject, description, is_public } = req.body;
-  if (!name || !subject) {
-    return res.status(400).json({ error: 'name and subject are required' });
-  }
+  const { title, subject, description, is_public, questions: qs } = req.body;
+  if (!title || !subject) return res.status(400).json({ error: 'title and subject are required' });
 
-  const { data, error } = await supabase
-    .from('question_sets')
-    .insert({
-      creator_id: userId,
-      name,
-      subject,
-      description: description || null,
-      is_public: is_public === true,
-    })
-    .select()
-    .single();
+  try {
+    const { rows } = await db.query(
+      `INSERT INTO question_sets (creator_id, title, subject, description, is_public)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [userId, title, subject, description || null, !!is_public]
+    );
+    const set = rows[0];
 
-  if (error) {
-    console.error('questions POST /sets error:', error);
-    return res.status(500).json({ error: 'Failed to create question set' });
-  }
-
-  return res.status(201).json({ set: data });
-});
-
-/**
- * GET /api/questions/sets/:id
- * Get a question set along with all its questions.
- */
-router.get('/sets/:id', requireAuth, async (req, res) => {
-  const { id } = req.params;
-
-  const { data: set, error: setError } = await supabase
-    .from('question_sets')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (setError || !set) {
-    return res.status(404).json({ error: 'Question set not found' });
-  }
-
-  const { data: questions, error: qError } = await supabase
-    .from('questions')
-    .select('*')
-    .eq('set_id', id)
-    .order('position', { ascending: true });
-
-  if (qError) {
-    console.error('questions GET /sets/:id questions error:', qError);
-    return res.status(500).json({ error: 'Failed to fetch questions' });
-  }
-
-  return res.json({ set: { ...set, questions: questions || [] } });
-});
-
-/**
- * POST /api/questions/sets/:id/questions
- * Add a question to a set.
- * Body: { question, options, correct_index, explanation, hint?, topic?, difficulty?, subject? }
- */
-router.post('/sets/:id/questions', requireAuth, async (req, res) => {
-  const userId = req.dbUser?.id;
-  if (!userId) {
-    return res.status(400).json({ error: 'User not synced' });
-  }
-
-  const { id } = req.params;
-
-  // Verify set ownership
-  const { data: set, error: setError } = await supabase
-    .from('question_sets')
-    .select('id, creator_id')
-    .eq('id', id)
-    .single();
-
-  if (setError || !set) {
-    return res.status(404).json({ error: 'Question set not found' });
-  }
-
-  if (set.creator_id !== userId) {
-    return res.status(403).json({ error: 'Not the owner of this set' });
-  }
-
-  const { question, options, correct_index, explanation, hint, topic, difficulty, subject } =
-    req.body;
-
-  if (!question || !options || correct_index === undefined || !explanation) {
-    return res
-      .status(400)
-      .json({ error: 'question, options, correct_index, and explanation are required' });
-  }
-
-  if (!Array.isArray(options) || options.length < 2) {
-    return res.status(400).json({ error: 'options must be an array with at least 2 items' });
-  }
-
-  // Determine position (append at end)
-  const { count } = await supabase
-    .from('questions')
-    .select('id', { count: 'exact', head: true })
-    .eq('set_id', id);
-
-  const { data, error } = await supabase
-    .from('questions')
-    .insert({
-      set_id: id,
-      question,
-      options,
-      correct_index,
-      explanation,
-      hint: hint || null,
-      topic: topic || null,
-      difficulty: difficulty || 'medium',
-      subject: subject || null,
-      position: (count || 0) + 1,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('questions POST /sets/:id/questions error:', error);
-    return res.status(500).json({ error: 'Failed to add question' });
-  }
-
-  return res.status(201).json({ question: data });
-});
-
-/**
- * PUT /api/questions/:id
- * Update a question.
- */
-router.put('/questions/:id', requireAuth, async (req, res) => {
-  const userId = req.dbUser?.id;
-  if (!userId) {
-    return res.status(400).json({ error: 'User not synced' });
-  }
-
-  const { id } = req.params;
-
-  // Verify ownership through the set
-  const { data: existing, error: fetchError } = await supabase
-    .from('questions')
-    .select('id, set_id, question_sets(creator_id)')
-    .eq('id', id)
-    .single();
-
-  if (fetchError || !existing) {
-    return res.status(404).json({ error: 'Question not found' });
-  }
-
-  if (existing.question_sets?.creator_id !== userId) {
-    return res.status(403).json({ error: 'Not the owner of this question' });
-  }
-
-  const allowed = [
-    'question',
-    'options',
-    'correct_index',
-    'explanation',
-    'hint',
-    'topic',
-    'difficulty',
-    'subject',
-    'position',
-  ];
-  const updates = {};
-  for (const key of allowed) {
-    if (req.body[key] !== undefined) {
-      updates[key] = req.body[key];
+    // Optionally bulk-insert questions
+    if (Array.isArray(qs) && qs.length > 0) {
+      for (let i = 0; i < qs.length; i++) {
+        const q = qs[i];
+        await db.query(
+          `INSERT INTO questions
+             (set_id, stimulus, stimulus_type, question, option_a, option_b, option_c, option_d,
+              correct, explanation, difficulty, historical_thinking, tags, order_index)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+          [set.id, q.stimulus||null, q.stimulus_type||null, q.question,
+           q.options?.A||q.option_a||'', q.options?.B||q.option_b||'',
+           q.options?.C||q.option_c||'', q.options?.D||q.option_d||'',
+           q.correct, q.explanation||null, q.difficulty||1,
+           q.historical_thinking||[], Array.isArray(q.tags)?q.tags:(q.tags||'').split(',').map(t=>t.trim()).filter(Boolean),
+           i+1]
+        );
+      }
+      await db.query('UPDATE question_sets SET question_count = $1 WHERE id = $2', [qs.length, set.id]);
+      set.question_count = qs.length;
     }
+
+    return res.status(201).json({ id: set.id, set });
+  } catch (e) {
+    console.error('POST /sets error:', e.message);
+    return res.status(500).json({ error: 'Failed to create set' });
   }
-
-  if (Object.keys(updates).length === 0) {
-    return res.status(400).json({ error: 'No valid fields to update' });
-  }
-
-  const { data, error } = await supabase
-    .from('questions')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('questions PUT /:id error:', error);
-    return res.status(500).json({ error: 'Failed to update question' });
-  }
-
-  return res.json({ question: data });
 });
 
-/**
- * DELETE /api/questions/:id
- * Delete a question.
- */
+// PUT /api/questions/sets/:id
+router.put('/sets/:id', requireAuth, async (req, res) => {
+  const userId = req.dbUser?.id;
+  const { title, subject, description, questions: qs } = req.body;
+
+  try {
+    const { rows: own } = await db.query(
+      'SELECT id FROM question_sets WHERE id = $1 AND creator_id = $2', [req.params.id, userId]
+    );
+    if (!own[0]) return res.status(403).json({ error: 'Not your set' });
+
+    if (title || subject || description !== undefined) {
+      await db.query(
+        `UPDATE question_sets SET title=COALESCE($1,title), subject=COALESCE($2,subject),
+         description=COALESCE($3,description) WHERE id=$4`,
+        [title||null, subject||null, description!==undefined?description:null, req.params.id]
+      );
+    }
+
+    if (Array.isArray(qs)) {
+      await db.query('DELETE FROM questions WHERE set_id = $1', [req.params.id]);
+      for (let i = 0; i < qs.length; i++) {
+        const q = qs[i];
+        await db.query(
+          `INSERT INTO questions
+             (set_id, stimulus, stimulus_type, question, option_a, option_b, option_c, option_d,
+              correct, explanation, difficulty, historical_thinking, tags, order_index)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+          [req.params.id, q.stimulus||null, q.stimulus_type||null, q.question,
+           q.options?.A||q.option_a||'', q.options?.B||q.option_b||'',
+           q.options?.C||q.option_c||'', q.options?.D||q.option_d||'',
+           q.correct, q.explanation||null, q.difficulty||1,
+           q.historical_thinking||[], Array.isArray(q.tags)?q.tags:(q.tags||'').split(',').map(t=>t.trim()).filter(Boolean),
+           i+1]
+        );
+      }
+      await db.query('UPDATE question_sets SET question_count = $1 WHERE id = $2', [qs.length, req.params.id]);
+    }
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('PUT /sets/:id error:', e.message);
+    return res.status(500).json({ error: 'Failed to update set' });
+  }
+});
+
+// GET /api/questions/sets/:id
+router.get('/sets/:id', requireAuth, async (req, res) => {
+  try {
+    const { rows: sets } = await db.query('SELECT * FROM question_sets WHERE id = $1', [req.params.id]);
+    if (!sets[0]) return res.status(404).json({ error: 'Set not found' });
+    const { rows: questions } = await db.query(
+      'SELECT * FROM questions WHERE set_id = $1 ORDER BY order_index ASC', [req.params.id]
+    );
+    return res.json({ set: { ...sets[0], questions } });
+  } catch (e) {
+    return res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// DELETE /api/questions/:id
 router.delete('/questions/:id', requireAuth, async (req, res) => {
   const userId = req.dbUser?.id;
-  if (!userId) {
-    return res.status(400).json({ error: 'User not synced' });
-  }
-
-  const { id } = req.params;
-
-  const { data: existing, error: fetchError } = await supabase
-    .from('questions')
-    .select('id, set_id, question_sets(creator_id)')
-    .eq('id', id)
-    .single();
-
-  if (fetchError || !existing) {
-    return res.status(404).json({ error: 'Question not found' });
-  }
-
-  if (existing.question_sets?.creator_id !== userId) {
-    return res.status(403).json({ error: 'Not the owner of this question' });
-  }
-
-  const { error } = await supabase.from('questions').delete().eq('id', id);
-
-  if (error) {
-    console.error('questions DELETE /:id error:', error);
+  try {
+    const { rows } = await db.query(
+      `SELECT q.id FROM questions q
+       JOIN question_sets qs ON qs.id = q.set_id
+       WHERE q.id = $1 AND qs.creator_id = $2`,
+      [req.params.id, userId]
+    );
+    if (!rows[0]) return res.status(403).json({ error: 'Not found or not your question' });
+    await db.query('DELETE FROM questions WHERE id = $1', [req.params.id]);
+    return res.json({ deleted: true });
+  } catch (e) {
     return res.status(500).json({ error: 'Failed to delete question' });
   }
-
-  return res.json({ deleted: true });
 });
 
-/**
- * POST /api/questions/ai/generate
- * Generate a single question using Claude AI. Pro only.
- * Body: { topic, difficulty, subject }
- */
+// POST /api/questions/ai/generate  (Pro only)
 router.post('/ai/generate', requireAuth, requirePro, async (req, res) => {
   const { topic, difficulty, subject } = req.body;
+  if (!topic) return res.status(400).json({ error: 'topic is required' });
 
-  if (!topic || !subject) {
-    return res.status(400).json({ error: 'topic and subject are required' });
-  }
-
-  const question = await claude.generateQuestion(
-    topic,
-    difficulty || 'medium',
-    subject
-  );
-
-  if (!question) {
-    return res.status(502).json({ error: 'AI generation failed — try again' });
-  }
-
-  return res.json({ question });
+  const question = await claude.generateQuestion(topic, difficulty || 2, subject || 'history');
+  if (!question) return res.status(502).json({ error: 'AI generation failed — try again' });
+  return res.json(question);
 });
 
-/**
- * POST /api/questions/ai/extract
- * Extract questions from raw text. Pro only.
- * Body: { text, subject }
- */
+// POST /api/questions/ai/extract  (Pro only)
 router.post('/ai/extract', requireAuth, requirePro, async (req, res) => {
   const { text, subject } = req.body;
+  if (!text) return res.status(400).json({ error: 'text is required' });
 
-  if (!text || !subject) {
-    return res.status(400).json({ error: 'text and subject are required' });
-  }
-
-  const questions = await claude.extractQuestionsFromText(text, subject);
-
-  if (questions === null) {
-    return res.status(502).json({ error: 'AI extraction failed — try again' });
-  }
-
-  return res.json({ questions });
+  const questions = await claude.extractQuestionsFromText(text, subject || 'history');
+  if (questions === null) return res.status(502).json({ error: 'AI extraction failed — try again' });
+  return res.json(questions);
 });
 
 module.exports = router;

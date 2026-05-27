@@ -1,22 +1,29 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
+import Modal from '../components/ui/Modal.jsx';
 
 const THINKING_SKILLS = [
-  { value: 'causation', label: 'Causation' },
+  { value: 'causation',            label: 'Causation' },
   { value: 'continuity_and_change', label: 'Continuity & Change' },
-  { value: 'comparison', label: 'Comparison' },
-  { value: 'contextualization', label: 'Contextualization' },
-  { value: 'argumentation', label: 'Argumentation' },
-  { value: 'periodization', label: 'Periodization' },
+  { value: 'comparison',           label: 'Comparison' },
+  { value: 'contextualization',    label: 'Contextualization' },
+  { value: 'argumentation',        label: 'Argumentation' },
+  { value: 'periodization',        label: 'Periodization' },
 ];
 
-const STIMULUS_TYPES = ['text', 'image_description', 'map_description', 'chart'];
+const STIMULUS_TYPES = ['None', 'Text', 'Image Description', 'Map Description', 'Chart'];
+
+const DIFFICULTY_OPTS = [
+  { value: 1, label: 'Base Camp', color: '#52B788' },
+  { value: 2, label: 'Alpine',    color: '#F5A623' },
+  { value: 3, label: 'Summit',    color: '#E85D4A' },
+];
 
 const EMPTY_QUESTION = {
   stimulus: '',
-  stimulus_type: null,
+  stimulus_type: 'None',
   question: '',
   options: { A: '', B: '', C: '', D: '' },
   correct: 'A',
@@ -25,6 +32,26 @@ const EMPTY_QUESTION = {
   tags: '',
   historical_thinking: [],
 };
+
+function generateId() {
+  return `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function isValid(q) {
+  return q.question.trim().length > 0 &&
+    q.options.A.trim().length > 0 && q.options.B.trim().length > 0 &&
+    q.options.C.trim().length > 0 && q.options.D.trim().length > 0;
+}
+
+function Spinner() {
+  return (
+    <motion.div
+      animate={{ rotate: 360 }}
+      transition={{ duration: 0.85, repeat: Infinity, ease: 'linear' }}
+      style={{ width: 18, height: 18, border: '2.5px solid rgba(15,23,32,0.25)', borderTopColor: '#0F1720', borderRadius: '50%', display: 'inline-block' }}
+    />
+  );
+}
 
 function DifficultyButton({ level, label, active, onClick }) {
   const colors = { 1: '#52B788', 2: '#F5A623', 3: '#E85D4A' };
@@ -42,22 +69,24 @@ function DifficultyButton({ level, label, active, onClick }) {
   );
 }
 
-function AIModal({ show, onClose, onAdd, isPro }) {
-  const [tab, setTab] = useState('generate');
-  const [topic, setTopic] = useState('');
+function AIModal({ show, onClose, onAdd, onAddMany, isPro }) {
+  const [tab,       setTab]       = useState('generate');
+  const [topic,     setTopic]     = useState('');
   const [difficulty, setDifficulty] = useState(2);
-  const [text, setText] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+  const [text,      setText]      = useState('');
+  const [loading,   setLoading]   = useState(false);
+  const [result,    setResult]    = useState(null);
   const [extractedList, setExtractedList] = useState([]);
-  const [selected, setSelected] = useState([]);
-  const [error, setError] = useState('');
+  const [selected,  setSelected]  = useState([]);
+  const [error,     setError]     = useState('');
+  const [showPaywall, setShowPaywall] = useState(false);
 
   async function handleGenerate() {
+    if (!isPro) { setShowPaywall(true); return; }
     if (!topic.trim()) return;
     setLoading(true); setError(''); setResult(null);
     try {
-      const q = await api.post('/api/ai/generate', { topic, difficulty, subject: 'ap_world_history_modern' });
+      const q = await api.post('/api/ai/generate', { topic, difficulty });
       setResult(q);
     } catch (e) {
       setError(e.message || 'Generation failed');
@@ -65,11 +94,14 @@ function AIModal({ show, onClose, onAdd, isPro }) {
   }
 
   async function handleExtract() {
+    if (!isPro) { setShowPaywall(true); return; }
     if (!text.trim()) return;
     setLoading(true); setError(''); setExtractedList([]); setSelected([]);
     try {
-      const list = await api.post('/api/ai/extract', { text, subject: 'ap_world_history_modern' });
-      setExtractedList(Array.isArray(list) ? list : []);
+      const list = await api.post('/api/ai/extract', { text });
+      const qs = Array.isArray(list) ? list : (list?.questions || []);
+      setExtractedList(qs);
+      setSelected(qs.map((_, i) => i));
     } catch (e) {
       setError(e.message || 'Extraction failed');
     } finally { setLoading(false); }
@@ -84,102 +116,139 @@ function AIModal({ show, onClose, onAdd, isPro }) {
   });
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ scale: 0.95, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95 }}
-          onClick={e => e.stopPropagation()}
-          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-gold)', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
-        >
-          {/* Header */}
-          <div style={{ padding: '20px 24px 0', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--gold)' }}>✨ AI Assist</span>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20 }}>×</button>
-          </div>
-
-          {!isPro && (
-            <div style={{ margin: '16px 24px 0', padding: '12px 16px', background: 'rgba(245,166,35,0.1)', border: '1px solid var(--border-gold)', borderRadius: 10 }}>
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--gold)' }}>🔒 AI generation requires Summit Pro ($12/month). <button onClick={() => api.post('/api/payments/create-checkout', {}).then(d => window.location.href = d.url)} style={{ background: 'none', border: 'none', color: 'var(--gold)', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline' }}>Upgrade →</button></p>
-            </div>
-          )}
-
-          {/* Tabs */}
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
-            <button style={tabStyle('generate')} onClick={() => setTab('generate')}>Generate from Topic</button>
-            <button style={tabStyle('extract')} onClick={() => setTab('extract')}>Extract from Text</button>
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
-            {tab === 'generate' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div>
-                  <label style={{ fontSize: 13, color: 'var(--text-mid)', fontWeight: 700, display: 'block', marginBottom: 6 }}>Topic</label>
-                  <input value={topic} onChange={e => setTopic(e.target.value)} placeholder="e.g. Mongol conquest of China, Mansa Musa's pilgrimage..."
-                    style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'Nunito, sans-serif', fontSize: 14, boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 13, color: 'var(--text-mid)', fontWeight: 700, display: 'block', marginBottom: 6 }}>Difficulty</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {[1, 2, 3].map(d => <DifficultyButton key={d} level={d} label={['Base Camp', 'Alpine', 'Summit'][d - 1]} active={difficulty === d} onClick={setDifficulty} />)}
-                  </div>
-                </div>
-                <button onClick={handleGenerate} disabled={!isPro || loading || !topic.trim()} className="btn-primary"
-                  style={{ opacity: (!isPro || !topic.trim()) ? 0.5 : 1 }}>
-                  {loading ? '⏳ Generating...' : 'Generate Question →'}
-                </button>
-                {error && <p style={{ color: 'var(--sunset)', fontSize: 13, margin: 0 }}>{error}</p>}
-                {result && (
-                  <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: 10, padding: 16 }}>
-                    <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>{result.question}</p>
-                    {['A', 'B', 'C', 'D'].map(opt => (
-                      <p key={opt} style={{ fontSize: 13, color: opt === result.correct ? 'var(--pine-light)' : 'var(--text-mid)', margin: '4px 0' }}>
-                        {opt === result.correct ? '✓ ' : ''}{opt}. {result.options?.[opt]}
-                      </p>
-                    ))}
-                    <button className="btn-primary" style={{ marginTop: 12, width: '100%' }} onClick={() => { onAdd(result); onClose(); }}>
-                      Add to Set →
-                    </button>
-                  </div>
-                )}
+    <>
+      <AnimatePresence>
+        {show && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+            onClick={onClose}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-gold)', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '82vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+            >
+              {/* Header */}
+              <div style={{ padding: '20px 24px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--gold)' }}>✨ AI Assist</span>
+                <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20 }}>×</button>
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div>
-                  <label style={{ fontSize: 13, color: 'var(--text-mid)', fontWeight: 700, display: 'block', marginBottom: 6 }}>Paste text, notes, or a reading passage</label>
-                  <textarea value={text} onChange={e => setText(e.target.value)} rows={6} placeholder="Paste a primary source, textbook excerpt, or notes..."
-                    style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'Nunito, sans-serif', fontSize: 14, resize: 'vertical', boxSizing: 'border-box' }} />
+
+              {!isPro && (
+                <div style={{ margin: '0 24px 12px', padding: '10px 14px', background: 'rgba(245,166,35,0.1)', border: '1px solid var(--border-gold)', borderRadius: 10 }}>
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--gold)', fontWeight: 600 }}>🔒 Pro Feature — AI generation requires Summit Pro.</p>
                 </div>
-                <button onClick={handleExtract} disabled={!isPro || loading || !text.trim()} className="btn-primary"
-                  style={{ opacity: (!isPro || !text.trim()) ? 0.5 : 1 }}>
-                  {loading ? '⏳ Extracting...' : 'Extract Questions →'}
-                </button>
-                {error && <p style={{ color: 'var(--sunset)', fontSize: 13, margin: 0 }}>{error}</p>}
-                {extractedList.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <p style={{ fontSize: 13, color: 'var(--text-mid)', margin: 0 }}>{extractedList.length} questions extracted. Select which to add:</p>
-                    {extractedList.map((q, i) => (
-                      <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--bg-card)', borderRadius: 8, padding: '10px 14px', cursor: 'pointer', border: `1px solid ${selected.includes(i) ? 'var(--border-gold)' : 'var(--border)'}` }}
-                        onClick={() => setSelected(s => s.includes(i) ? s.filter(x => x !== i) : [...s, i])}>
-                        <input type="checkbox" checked={selected.includes(i)} onChange={() => {}} style={{ marginTop: 2, accentColor: 'var(--gold)' }} />
-                        <span style={{ fontSize: 13, color: 'var(--text)' }}>{q.question}</span>
+              )}
+
+              {/* Tabs */}
+              <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', borderTop: '1px solid var(--border)' }}>
+                <button style={tabStyle('generate')} onClick={() => setTab('generate')}>Generate from Topic</button>
+                <button style={tabStyle('extract')} onClick={() => setTab('extract')}>Extract from Text</button>
+              </div>
+
+              <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+                {tab === 'generate' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div>
+                      <label style={{ fontSize: 13, color: 'var(--text-mid)', fontWeight: 700, display: 'block', marginBottom: 6 }}>Topic</label>
+                      <input value={topic} onChange={e => setTopic(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleGenerate(); }}
+                        placeholder="e.g. Mongol conquest of China, Mansa Musa's pilgrimage..."
+                        style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'Nunito, sans-serif', fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 13, color: 'var(--text-mid)', fontWeight: 700, display: 'block', marginBottom: 6 }}>Difficulty</label>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {DIFFICULTY_OPTS.map(d => (
+                          <DifficultyButton key={d.value} level={d.value} label={d.label} active={difficulty === d.value} onClick={setDifficulty} />
+                        ))}
                       </div>
-                    ))}
-                    <button className="btn-primary" onClick={() => { selected.forEach(i => onAdd(extractedList[i])); onClose(); }}
-                      disabled={selected.length === 0} style={{ opacity: selected.length === 0 ? 0.5 : 1 }}>
-                      Add {selected.length} Question{selected.length !== 1 ? 's' : ''} →
+                    </div>
+                    <button onClick={handleGenerate} disabled={loading || !topic.trim()} className="btn-primary"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      {loading ? <><Spinner /> Generating…</> : 'Generate Question →'}
                     </button>
+                    {error && <p style={{ color: 'var(--sunset)', fontSize: 13, margin: 0 }}>{error}</p>}
+                    {result && (
+                      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: 10, padding: 16 }}>
+                        <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>{result.question}</p>
+                        {['A', 'B', 'C', 'D'].map(opt => (
+                          <p key={opt} style={{ fontSize: 13, color: opt === result.correct ? 'var(--pine-light)' : 'var(--text-mid)', margin: '4px 0' }}>
+                            {opt === result.correct ? '✓ ' : ''}{opt}. {result.options?.[opt]}
+                          </p>
+                        ))}
+                        <button className="btn-primary" style={{ marginTop: 12, width: '100%' }} onClick={() => { onAdd(result); onClose(); }}>
+                          Add to Set →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div>
+                      <label style={{ fontSize: 13, color: 'var(--text-mid)', fontWeight: 700, display: 'block', marginBottom: 6 }}>Paste text, notes, or a reading passage</label>
+                      <textarea value={text} onChange={e => setText(e.target.value)} rows={6}
+                        placeholder="Paste a primary source, textbook excerpt, or notes..."
+                        style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'Nunito, sans-serif', fontSize: 14, resize: 'vertical', boxSizing: 'border-box', outline: 'none' }} />
+                    </div>
+                    <button onClick={handleExtract} disabled={loading || !text.trim()} className="btn-primary"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      {loading ? <><Spinner /> Extracting…</> : 'Extract Questions →'}
+                    </button>
+                    {error && <p style={{ color: 'var(--sunset)', fontSize: 13, margin: 0 }}>{error}</p>}
+                    {extractedList.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <p style={{ fontSize: 13, color: 'var(--text-mid)', margin: 0, fontWeight: 600 }}>{extractedList.length} questions found:</p>
+                          <button onClick={() => setSelected(selected.length === extractedList.length ? [] : extractedList.map((_,i)=>i))}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12, fontWeight: 700 }}>
+                            {selected.length === extractedList.length ? 'Deselect all' : 'Select all'}
+                          </button>
+                        </div>
+                        {extractedList.map((q, i) => (
+                          <div key={i}
+                            style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--bg-card)', borderRadius: 8, padding: '10px 14px', cursor: 'pointer', border: `1px solid ${selected.includes(i) ? 'rgba(82,183,136,0.4)' : 'var(--border)'}`, transition: 'all 0.15s' }}
+                            onClick={() => setSelected(s => s.includes(i) ? s.filter(x => x !== i) : [...s, i])}>
+                            <span style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${selected.includes(i) ? 'var(--pine-light)' : 'var(--border)'}`, background: selected.includes(i) ? 'var(--pine-light)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#0F1720', flexShrink: 0, marginTop: 1 }}>
+                              {selected.includes(i) ? '✓' : ''}
+                            </span>
+                            <span style={{ fontSize: 13, color: 'var(--text)' }}>{q.question?.length > 80 ? q.question.slice(0, 78) + '…' : q.question}</span>
+                          </div>
+                        ))}
+                        <button className="btn-primary"
+                          onClick={() => { onAddMany(selected.map(i => extractedList[i])); onClose(); }}
+                          disabled={selected.length === 0} style={{ opacity: selected.length === 0 ? 0.5 : 1 }}>
+                          Add {selected.length} Question{selected.length !== 1 ? 's' : ''} →
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Paywall modal */}
+      {showPaywall && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', padding: 24 }}
+          onClick={() => setShowPaywall(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-gold)', borderRadius: 20, padding: 32, maxWidth: 380, width: '100%', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ fontSize: 40 }}>🔒</div>
+            <div>
+              <h2 className="cinzel" style={{ fontSize: 18, fontWeight: 700, color: 'var(--gold)', margin: '0 0 8px' }}>Pro Feature</h2>
+              <p style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600, lineHeight: 1.6, margin: 0 }}>
+                AI question generation requires Summit Pro. Upgrade to unlock unlimited AI-powered question creation.
+              </p>
+            </div>
+            <button onClick={() => setShowPaywall(false)} className="btn-primary" style={{ width: '100%' }}>View Pro Plans</button>
+            <button onClick={() => setShowPaywall(false)} className="btn-ghost" style={{ width: '100%', fontSize: 13 }}>Maybe later</button>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -286,139 +355,229 @@ export default function QuestionBuilder() {
   const { navigate, user } = useApp();
   const isPro = user?.subscription === 'pro';
 
-  const [sets, setSets] = useState([]);
   const [activeSetId, setActiveSetId] = useState(null);
-  const [setTitle, setSetTitle] = useState('Untitled Set');
-  const [setSubject, setSetSubject] = useState('ap_world_history_modern');
+  const [setTitle,    setSetTitle]    = useState('Untitled Set');
+  const [setSubject,  setSetSubject]  = useState('');
+  const [setUnit,     setSetUnit]     = useState('');
   const [questionList, setQuestionList] = useState([]);
-  const [activeQIdx, setActiveQIdx] = useState(null);
-  const [editingQ, setEditingQ] = useState(null);
-  const [showAI, setShowAI] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [activeQIdx,  setActiveQIdx]  = useState(null);
+  const [editingQ,    setEditingQ]    = useState(null);
+  const [showAI,      setShowAI]      = useState(false);
+  const [saving,      setSaving]      = useState(false);
+  const [saved,       setSaved]       = useState(false);
+  const [saveError,   setSaveError]   = useState('');
+  const [editTitle,   setEditTitle]   = useState(false);
+  const titleRef = useRef(null);
 
   useEffect(() => {
-    api.get('/api/questions/sets').then(data => setSets(data?.sets || [])).catch(() => {});
-  }, []);
+    if (editTitle) titleRef.current?.focus();
+  }, [editTitle]);
 
   function selectQuestion(i) {
     setActiveQIdx(i);
-    setEditingQ({ ...questionList[i], tags: (questionList[i].tags || []).join(', ') });
+    const q = questionList[i];
+    setEditingQ({ ...q, tags: Array.isArray(q.tags) ? q.tags.join(', ') : (q.tags || '') });
   }
 
-  function addBlankQuestion() {
-    const newQ = { ...EMPTY_QUESTION, options: { A: '', B: '', C: '', D: '' }, historical_thinking: [] };
-    const newList = [...questionList, newQ];
-    setQuestionList(newList);
-    setActiveQIdx(newList.length - 1);
-    setEditingQ({ ...newQ, tags: '' });
+  function addBlankQuestion(prefill) {
+    const newQ = { ...EMPTY_QUESTION, ...prefill, _id: generateId(), options: { A: '', B: '', C: '', D: '', ...(prefill?.options || {}) }, historical_thinking: prefill?.historical_thinking || [] };
+    setQuestionList(prev => {
+      const next = [...prev, newQ];
+      setTimeout(() => { setActiveQIdx(next.length - 1); setEditingQ({ ...newQ, tags: Array.isArray(newQ.tags) ? newQ.tags.join(', ') : (newQ.tags || '') }); }, 0);
+      return next;
+    });
+  }
+
+  function addManyFromAI(qs) {
+    const mapped = qs.map(q => ({ ...EMPTY_QUESTION, ...q, _id: generateId(), options: q.options || { A: '', B: '', C: '', D: '' }, historical_thinking: q.historical_thinking || [] }));
+    setQuestionList(prev => {
+      const next = [...prev, ...mapped];
+      const lastIdx = next.length - 1;
+      setTimeout(() => { setActiveQIdx(lastIdx); setEditingQ({ ...mapped[mapped.length - 1], tags: '' }); }, 0);
+      return next;
+    });
   }
 
   function saveEditingQuestion() {
-    if (activeQIdx === null) return;
-    const saved = { ...editingQ, tags: editingQ.tags.split(',').map(t => t.trim()).filter(Boolean) };
-    const newList = [...questionList];
-    newList[activeQIdx] = saved;
-    setQuestionList(newList);
+    if (activeQIdx === null || !editingQ) return;
+    const saved = { ...editingQ };
+    setQuestionList(prev => { const next = [...prev]; next[activeQIdx] = saved; return next; });
   }
 
   function deleteQuestion(i) {
-    const newList = questionList.filter((_, idx) => idx !== i);
-    setQuestionList(newList);
+    setQuestionList(prev => prev.filter((_, idx) => idx !== i));
     if (activeQIdx === i) { setActiveQIdx(null); setEditingQ(null); }
-    else if (activeQIdx > i) setActiveQIdx(activeQIdx - 1);
-  }
-
-  function addFromAI(q) {
-    const newQ = { stimulus: q.stimulus || '', stimulus_type: q.stimulus_type || null, question: q.question || '', options: q.options || { A: '', B: '', C: '', D: '' }, correct: q.correct || 'A', explanation: q.explanation || '', difficulty: q.difficulty || 2, tags: (q.tags || []).join(', '), historical_thinking: q.historical_thinking || [] };
-    const newList = [...questionList, newQ];
-    setQuestionList(newList);
-    setActiveQIdx(newList.length - 1);
-    setEditingQ(newQ);
+    else if (activeQIdx > i) setActiveQIdx(a => a - 1);
   }
 
   async function saveSet() {
-    setSaving(true);
+    setSaving(true); setSaveError('');
     try {
-      const qs = questionList.map(q => ({ ...q, tags: Array.isArray(q.tags) ? q.tags : q.tags.split(',').map(t => t.trim()).filter(Boolean) }));
+      const qs = questionList.map(q => ({ ...q, tags: Array.isArray(q.tags) ? q.tags : (q.tags || '').split(',').map(t => t.trim()).filter(Boolean) }));
+      const payload = { title: setTitle || 'Untitled', subject: setSubject, unit: setUnit, questions: qs };
       if (activeSetId) {
-        await api.put(`/api/questions/sets/${activeSetId}`, { title: setTitle, subject: setSubject, questions: qs });
+        await api.put(`/api/questions/sets/${activeSetId}`, payload);
       } else {
-        const res = await api.post('/api/questions/sets', { title: setTitle, subject: setSubject, questions: qs });
-        setActiveSetId(res.id);
+        const res = await api.post('/api/questions/sets', payload);
+        if (res?.id) setActiveSetId(res.id);
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
-      alert('Save failed: ' + e.message);
+      setSaveError(e.message || 'Save failed');
     } finally { setSaving(false); }
   }
 
   const DIFF_COLORS = { 1: '#52B788', 2: '#F5A623', 3: '#E85D4A' };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', fontFamily: 'Nunito, sans-serif' }}>
-      {/* Nav */}
-      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 28px', borderBottom: '1px solid var(--border)', background: 'rgba(15,23,32,0.9)', backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 20 }}>
-        <button onClick={() => navigate('teacher_dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontSize: 18, fontWeight: 700, background: 'linear-gradient(135deg, #F5A623, #C8851A)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: 0 }}>SUMMIT</button>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <AnimatePresence>{saved && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ fontSize: 13, color: '#52B788', fontWeight: 700 }}>✓ Saved</motion.span>}</AnimatePresence>
-          <button onClick={saveSet} disabled={saving} className="btn-primary" style={{ padding: '8px 20px', opacity: saving ? 0.6 : 1 }}>{saving ? 'Saving…' : 'Save Set'}</button>
-          <button onClick={() => navigate('teacher_dashboard')} className="btn-ghost" style={{ padding: '8px 14px', fontSize: 13 }}>← Dashboard</button>
+    <div style={{ minHeight: '100vh', height: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', fontFamily: 'Nunito, sans-serif', overflow: 'hidden' }}>
+      {/* ── Top bar ────────────────────────────────────────────────────────────── */}
+      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', height: 56, borderBottom: '1px solid var(--border)', background: 'rgba(15,23,32,0.92)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', flexShrink: 0, gap: 12 }}>
+        <button onClick={() => navigate('teacher_dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, padding: '8px 0', transition: 'color 0.15s', flexShrink: 0, fontFamily: 'Nunito, sans-serif' }}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
+          ← Dashboard
+        </button>
+
+        {/* Editable title */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          {editTitle ? (
+            <input ref={titleRef} value={setTitle} onChange={e => setSetTitle(e.target.value)}
+              onBlur={() => setEditTitle(false)} onKeyDown={e => { if (e.key === 'Enter') setEditTitle(false); }}
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-gold)', borderRadius: 8, color: 'var(--text)', fontFamily: 'Cinzel, serif', fontSize: 15, fontWeight: 700, padding: '5px 14px', outline: 'none', textAlign: 'center', width: '100%', maxWidth: 380 }} />
+          ) : (
+            <button onClick={() => setEditTitle(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, padding: '5px 10px', borderRadius: 8, transition: 'background 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(240,237,230,0.05)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <span className="cinzel" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.04em' }}>{setTitle || 'Untitled'}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>✏️</span>
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+          <AnimatePresence>
+            {saved && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ fontSize: 13, color: '#52B788', fontWeight: 700 }}>✓ Saved</motion.span>}
+          </AnimatePresence>
+          <motion.button onClick={saveSet} disabled={saving} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+            className="btn-primary" style={{ padding: '8px 20px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving ? <><Spinner /> Saving…</> : 'Save Set'}
+          </motion.button>
         </div>
       </nav>
 
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* LEFT: set meta + question list */}
-        <div style={{ width: 340, minWidth: 280, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-          <div style={{ padding: 20, borderBottom: '1px solid var(--border)' }}>
-            <input value={setTitle} onChange={e => setSetTitle(e.target.value)}
-              style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'Cinzel, serif', fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 8, boxSizing: 'border-box' }} />
-            <select value={setSubject} onChange={e => setSetSubject(e.target.value)}
-              style={{ width: '100%', padding: '7px 10px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-mid)', fontFamily: 'Nunito, sans-serif', fontSize: 13, boxSizing: 'border-box' }}>
-              <option value="ap_world_history_modern">AP World History Modern</option>
-              <option value="apush">APUSH</option>
-              <option value="ap_gov">AP Government</option>
-              <option value="ap_human_geo">AP Human Geography</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
+      {/* Error bar */}
+      <AnimatePresence>
+        {saveError && (
+          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
+            style={{ overflow: 'hidden', background: 'rgba(232,93,74,0.1)', borderBottom: '1px solid rgba(232,93,74,0.3)', flexShrink: 0 }}>
+            <div style={{ padding: '8px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--sunset)', fontWeight: 600 }}>{saveError}</span>
+              <button onClick={() => setSaveError('')} style={{ background: 'none', border: 'none', color: 'var(--sunset)', cursor: 'pointer', fontSize: 14 }}>✕</button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 12px 0' }}>
-            {questionList.map((q, i) => (
-              <div key={i} onClick={() => selectQuestion(i)}
-                style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, marginBottom: 4, cursor: 'pointer', background: activeQIdx === i ? 'rgba(245,166,35,0.08)' : 'transparent', border: activeQIdx === i ? '1px solid var(--border-gold)' : '1px solid transparent', transition: 'all 0.15s' }}>
-                <span style={{ width: 16, height: 16, borderRadius: '50%', background: DIFF_COLORS[q.difficulty] || '#6B7E8F', flexShrink: 0, marginTop: 2 }} />
-                <span style={{ fontSize: 13, color: 'var(--text-mid)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.question || '(empty question)'}</span>
-                <button onClick={e => { e.stopPropagation(); deleteQuestion(i); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16, padding: '0 2px', flexShrink: 0 }}>×</button>
+      {/* ── Two-panel body ──────────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '40% 60%', minHeight: 0, overflow: 'hidden' }}>
+
+        {/* LEFT: metadata + list */}
+        <div style={{ borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Metadata */}
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 5 }}>Subject</div>
+                <input value={setSubject} onChange={e => setSetSubject(e.target.value)} placeholder="AP World History"
+                  style={{ width: '100%', background: 'var(--bg-mid)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'Nunito, sans-serif', fontSize: 13, padding: '8px 12px', outline: 'none', boxSizing: 'border-box' }} />
               </div>
-            ))}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 5 }}>Unit</div>
+                <input value={setUnit} onChange={e => setSetUnit(e.target.value)} placeholder="Unit 1"
+                  style={{ width: '100%', background: 'var(--bg-mid)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontFamily: 'Nunito, sans-serif', fontSize: 13, padding: '8px 12px', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            </div>
           </div>
 
-          <div style={{ padding: 12, display: 'flex', gap: 8, borderTop: '1px solid var(--border)' }}>
-            <button onClick={addBlankQuestion} className="btn-secondary" style={{ flex: 1, fontSize: 13 }}>+ Add Question</button>
-            <button onClick={() => setShowAI(true)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-gold)', background: 'rgba(245,166,35,0.08)', color: 'var(--gold)', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✨ AI</button>
+          {/* List header */}
+          <div style={{ padding: '10px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              Questions
+              <span style={{ background: 'var(--bg-elevated)', borderRadius: 20, padding: '1px 8px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>{questionList.length}</span>
+            </span>
+            <button onClick={() => setShowAI(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.25)', borderRadius: 8, padding: '5px 10px', color: 'var(--gold)', fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'Nunito, sans-serif' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,166,35,0.14)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(245,166,35,0.08)'}>
+              ✨ AI Generate
+            </button>
+          </div>
+
+          {/* Scrollable list */}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            <AnimatePresence initial={false}>
+              {questionList.length === 0 ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 14, fontWeight: 600, lineHeight: 1.7 }}>
+                  No questions yet.<br />Add one below or use ✨ AI.
+                </div>
+              ) : questionList.map((q, i) => {
+                const isActive  = activeQIdx === i;
+                const valid     = isValid(q);
+                const shortText = q.question?.trim() ? (q.question.length > 65 ? q.question.slice(0, 63) + '…' : q.question) : '(no question text)';
+                return (
+                  <motion.div key={q._id || i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.18 }}
+                    onClick={() => selectQuestion(i)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px', background: isActive ? 'rgba(245,166,35,0.07)' : 'transparent', borderLeft: `3px solid ${isActive ? 'var(--gold)' : 'transparent'}`, borderBottom: '1px solid var(--border)', cursor: 'pointer', transition: 'background 0.15s', minHeight: 46 }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(240,237,230,0.035)'; }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: DIFF_COLORS[q.difficulty] || '#6B7E8F', flexShrink: 0, opacity: valid ? 1 : 0.35 }} />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, width: 18, flexShrink: 0 }}>{i + 1}</span>
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: valid ? 'var(--text-mid)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{shortText}</span>
+                    {!valid && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--sunset)', background: 'rgba(232,93,74,0.1)', borderRadius: 6, padding: '2px 7px', flexShrink: 0 }}>draft</span>}
+                    <button onClick={e => { e.stopPropagation(); deleteQuestion(i); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14, padding: '2px 4px', borderRadius: 4, flexShrink: 0, opacity: 0.55, transition: 'color 0.12s, opacity 0.12s' }}
+                      onMouseEnter={e => { e.currentTarget.style.color = 'var(--sunset)'; e.currentTarget.style.opacity = '1'; }}
+                      onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.opacity = '0.55'; }}>✕</button>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+
+          {/* Add button */}
+          <div style={{ padding: '14px 18px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+            <button onClick={() => addBlankQuestion()} className="btn-secondary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 14 }}>
+              <span style={{ fontSize: 18, lineHeight: 1, marginTop: -1 }}>+</span> Add Question
+            </button>
           </div>
         </div>
 
-        {/* RIGHT: question editor */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
+        {/* RIGHT: Editor */}
+        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {editingQ && (
+            <div style={{ padding: '10px 24px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)' }}>Editing Question {activeQIdx !== null ? activeQIdx + 1 : ''} of {questionList.length}</span>
+              {!isValid(editingQ) && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--sunset)', background: 'rgba(232,93,74,0.1)', borderRadius: 8, padding: '3px 10px' }}>Missing required fields</span>}
+            </div>
+          )}
+
           {editingQ ? (
-            <motion.div key={activeQIdx} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 24, color: 'var(--text-mid)' }}>Question {activeQIdx + 1} of {questionList.length}</h2>
-              <QuestionEditor q={editingQ} onChange={setEditingQ} onSave={saveEditingQuestion} />
-            </motion.div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+              <motion.div key={activeQIdx} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.2 }}>
+                <QuestionEditor q={editingQ} onChange={setEditingQ} onSave={saveEditingQuestion} />
+              </motion.div>
+            </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16, color: 'var(--text-muted)', textAlign: 'center' }}>
-              <span style={{ fontSize: 48 }}>📝</span>
-              <p style={{ fontWeight: 700, fontSize: 16 }}>Select a question to edit<br />or add a new one to get started.</p>
-              <button onClick={addBlankQuestion} className="btn-primary">+ Add First Question</button>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: 'var(--text-muted)', textAlign: 'center', padding: 40 }}>
+              <span style={{ fontSize: 40, opacity: 0.35 }}>📝</span>
+              <p style={{ fontWeight: 600, fontSize: 15, lineHeight: 1.6, margin: 0 }}>Select a question from the list<br />or click "+ Add Question" to begin.</p>
+              <button onClick={() => addBlankQuestion()} className="btn-primary">+ Add First Question</button>
             </div>
           )}
         </div>
       </div>
 
-      <AIModal show={showAI} onClose={() => setShowAI(false)} onAdd={addFromAI} isPro={isPro} />
+      <AIModal show={showAI} onClose={() => setShowAI(false)} onAdd={q => addBlankQuestion(q)} onAddMany={addManyFromAI} isPro={isPro} />
     </div>
   );
 }
