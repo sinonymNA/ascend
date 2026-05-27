@@ -1,6 +1,8 @@
 CREATE TABLE users (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   clerk_id        TEXT UNIQUE NOT NULL,
+  username        TEXT UNIQUE,
+  password_hash   TEXT,
   email           TEXT,
   name            TEXT,
   role            TEXT NOT NULL,
@@ -11,6 +13,10 @@ CREATE TABLE users (
   level           INTEGER DEFAULT 1,
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migration for existing databases (run once if upgrading from earlier schema):
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
 
 CREATE TABLE classes (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),

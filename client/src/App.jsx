@@ -31,6 +31,9 @@ const Results              = React.lazy(() => import('./pages/Results.jsx'));
 const QuestionBuilder      = React.lazy(() => import('./pages/QuestionBuilder.jsx'));
 const Library              = React.lazy(() => import('./pages/Library.jsx'));
 const Settings             = React.lazy(() => import('./pages/Settings.jsx'));
+const AuthPage             = React.lazy(() => import('./pages/AuthPage.jsx'));
+const StudentDashboard     = React.lazy(() => import('./pages/StudentDashboard.jsx'));
+const SoloGame             = React.lazy(() => import('./pages/SoloGame.jsx'));
 
 const SCREEN_MAP = {
   landing:           LandingPage,
@@ -43,6 +46,9 @@ const SCREEN_MAP = {
   question_builder:  QuestionBuilder,
   library:           Library,
   settings:          Settings,
+  auth:              AuthPage,
+  student_dashboard: StudentDashboard,
+  solo_game:         SoloGame,
 };
 
 // ─── Page transition variants ─────────────────────────────────────────────────
@@ -89,6 +95,38 @@ function AppProvider({ children }) {
     setScreenParams(params);
     setScreen(nextScreen);
   }, []);
+
+  // Auth bootstrap — runs once on mount
+  const bootstrapRun = useRef(false);
+  useEffect(() => {
+    if (bootstrapRun.current) return;
+    bootstrapRun.current = true;
+
+    const storedToken = localStorage.getItem('summit_token');
+    if (!storedToken) return;
+
+    const base = (import.meta.env.VITE_SERVER_URL || '');
+    fetch(`${base}/auth/me`, {
+      headers: { Authorization: `Bearer ${storedToken}` },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('unauthorized');
+        return res.json();
+      })
+      .then((data) => {
+        const u = data.user || data;
+        setUser(u);
+        if (u.role === 'teacher') {
+          navigate('teacher_dashboard');
+        } else {
+          navigate('student_dashboard');
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem('summit_token');
+        setTokenState(null);
+      });
+  }, [navigate]);
 
   const value = {
     // auth

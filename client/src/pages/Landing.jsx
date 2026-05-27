@@ -181,7 +181,7 @@ export default function Landing() {
         </span>
 
         <button
-          onClick={() => navigate('teacher_dashboard')}
+          onClick={() => navigate('auth', { role: 'teacher' })}
           className="btn-ghost"
           style={{ padding: '9px 22px', fontSize: '14px' }}
         >
@@ -261,7 +261,7 @@ export default function Landing() {
           <motion.button
             className="btn-primary"
             style={{ fontSize: '16px', padding: '14px 32px' }}
-            onClick={() => navigate('teacher_dashboard')}
+            onClick={() => navigate('auth', { role: 'teacher' })}
             whileHover={{ scale: 1.04, boxShadow: '0 8px 32px rgba(245,166,35,0.4)' }}
             whileTap={{ scale: 0.97 }}
           >
@@ -269,6 +269,15 @@ export default function Landing() {
           </motion.button>
           <motion.button
             className="btn-secondary"
+            style={{ fontSize: '16px', padding: '14px 32px' }}
+            onClick={() => navigate('auth', { role: 'student' })}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.97 }}
+          >
+            Student Login
+          </motion.button>
+          <motion.button
+            className="btn-ghost"
             style={{ fontSize: '16px', padding: '14px 32px' }}
             onClick={() => navigate('student_join')}
             whileHover={{ scale: 1.04 }}

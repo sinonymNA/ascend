@@ -86,3 +86,31 @@ export function getStreakLabel(streak) {
   if (streak >= 3)  return 'On Fire!';
   return null;
 }
+
+/**
+ * Get the next question for a player using spaced repetition.
+ * Mirrors the server-side logic in server/services/mastery.js.
+ */
+export function getNextQuestion(allQuestions, queue, masteredIds, wrongCounts, answeredCount) {
+  const masteredSet = new Set(masteredIds);
+  const currentIndex = answeredCount;
+
+  // Due queued questions first
+  const dueItems = queue
+    .filter((item) => !masteredSet.has(item.question.id) && item.dueAtIndex <= currentIndex)
+    .sort((a, b) => a.dueAtIndex - b.dueAtIndex);
+  if (dueItems.length > 0) return dueItems[0].question;
+
+  // Unmastered questions not yet queued
+  const queuedIds = new Set(queue.map((item) => item.question.id));
+  const notStarted = allQuestions.filter((q) => !masteredSet.has(q.id) && !queuedIds.has(q.id));
+  if (notStarted.length > 0) return notStarted[0];
+
+  // All mastered or waiting — return soonest due
+  const pending = queue
+    .filter((item) => !masteredSet.has(item.question.id))
+    .sort((a, b) => a.dueAtIndex - b.dueAtIndex);
+  if (pending.length > 0) return pending[0].question;
+
+  return null;
+}
