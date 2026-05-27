@@ -54,13 +54,17 @@ app.use('/api/questions', questionRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/payments', paymentRoutes);
 
-// ── Serve client build in production ──────────────────────────────────────────
-if (process.env.NODE_ENV === 'production') {
-  const clientDist = path.join(__dirname, '..', 'client', 'dist');
+// ── Serve client build ────────────────────────────────────────────────────────
+// Always serve if dist exists (Railway doesn't set NODE_ENV=production by default)
+const clientDist = path.join(__dirname, '..', 'client', 'dist');
+const fs = require('fs');
+if (fs.existsSync(clientDist)) {
   app.use(express.static(clientDist));
   app.get('*', (_req, res) => {
     res.sendFile(path.join(clientDist, 'index.html'));
   });
+} else {
+  app.get('/', (_req, res) => res.json({ ok: true, message: 'Summit API — client not built' }));
 }
 
 // ── Global error handler ───────────────────────────────────────────────────────
