@@ -99,7 +99,7 @@ function processAnswer(gameCode, studentId, questionId, selected) {
   const question = session.questions.find((q) => q.id === questionId);
   if (!question) throw new Error(`Question not found: ${questionId}`);
 
-  const correct = selected === question.correct_index;
+  const correct = selected === question.correct;
   player.answeredCount += 1;
 
   // Track wrong count
@@ -198,6 +198,8 @@ function processAnswer(gameCode, studentId, questionId, selected) {
 function sanitizeQuestion(question, wrongCount) {
   const q = {
     id: question.id,
+    stimulus: question.stimulus || null,
+    stimulus_type: question.stimulus_type || null,
     question: question.question,
     options: question.options,
     topic: question.topic,

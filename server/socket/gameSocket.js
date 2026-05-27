@@ -29,6 +29,17 @@ module.exports = function (io) {
         status: 'active',
       });
 
+      // Send first question to every player already in the lobby
+      for (const [, player] of session.players) {
+        if (!player.socketId) continue;
+        const nextQ = gameEngine.getNextQuestion(session, player);
+        if (nextQ) {
+          io.to(player.socketId).emit('question:next', {
+            question: sanitizeQuestion(nextQ, player.wrongCounts[nextQ.id] || 0),
+          });
+        }
+      }
+
       // Start broadcasting classmates positions every 3 seconds
       if (!positionIntervals.has(gameCode)) {
         const interval = setInterval(() => {
@@ -165,22 +176,22 @@ module.exports = function (io) {
         summited: p.summited,
       }));
 
+      // If already active, embed the first question so the client has it before mounting StudentGame
+      let firstQuestion = null;
+      if (session.status === 'active') {
+        const nextQ = gameEngine.getNextQuestion(session, playerState);
+        if (nextQ) {
+          firstQuestion = sanitizeQuestion(nextQ, playerState.wrongCounts[nextQ.id] || 0);
+        }
+      }
+
       socket.emit('game:lobby', {
         gameCode,
         status: session.status,
         players: allPlayers,
         questionCount: session.questions.length,
+        firstQuestion,
       });
-
-      // If game is already active, send first question
-      if (session.status === 'active') {
-        const nextQ = gameEngine.getNextQuestion(session, playerState);
-        if (nextQ) {
-          socket.emit('question:next', {
-            question: sanitizeQuestion(nextQ, 0),
-          });
-        }
-      }
 
       // Notify teacher
       socket.to(gameCode).emit('student:joined', {
@@ -276,6 +287,8 @@ module.exports = function (io) {
 function sanitizeQuestion(question, wrongCount) {
   const q = {
     id: question.id,
+    stimulus: question.stimulus || null,
+    stimulus_type: question.stimulus_type || null,
     question: question.question,
     options: question.options,
     topic: question.topic,

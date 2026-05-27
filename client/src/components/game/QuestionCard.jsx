@@ -48,7 +48,7 @@ export default function QuestionCard({
 
   const diffColor = DIFFICULTY_COLORS[question.difficulty] || 'var(--text-mid)';
   const diffLabel = DIFFICULTY_LABELS[question.difficulty] || '';
-  const choices   = question.choices || {};
+  const choices   = question.options || question.choices || {};
 
   return (
     <motion.div
@@ -127,7 +127,7 @@ export default function QuestionCard({
           margin: 0,
           fontWeight: 600,
         }}>
-          {question.text}
+          {question.question || question.text}
         </p>
       </div>
 

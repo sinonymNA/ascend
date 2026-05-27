@@ -40,15 +40,28 @@ export default function StudentGame() {
   const advanceTimerRef = useRef(null);
 
   // ── Auto-advance after result ─────────────────────────────────────────────────
-  const scheduleAdvance = useCallback((correct) => {
+  const scheduleAdvance = useCallback((correct, nextQuestion) => {
     if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
     const delay = correct ? 1500 : 3000;
     advanceTimerRef.current = setTimeout(() => {
       setPhase('question');
       setSelectedAnswer(null);
       setAnswerResult(null);
-      setCurrentQuestion(null); // wait for next question from socket
+      if (nextQuestion) {
+        setCurrentQuestion({ ...nextQuestion, _startTime: Date.now() });
+      }
     }, delay);
+  }, []);
+
+  // ── Seed first question if game was already active when we joined ─────────────
+  useEffect(() => {
+    if (gameState?.firstQuestion) {
+      setCurrentQuestion({ ...gameState.firstQuestion, _startTime: Date.now() });
+    }
+    if (gameState?.questionCount) {
+      setTotalCount(gameState.questionCount);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Socket event handlers ─────────────────────────────────────────────────────
@@ -81,9 +94,9 @@ export default function StudentGame() {
         setShowXPFloat(true);
         setTimeout(() => setShowXPFloat(false), 1200);
       }
-      if (result.streak     !== undefined) setStreak(result.streak);
-      if (result.mastered   !== undefined) setMasteredCount(result.mastered);
-      if (result.total      !== undefined) setTotalCount(result.total);
+      if (result.streak        !== undefined) setStreak(result.streak);
+      if (result.masteredCount !== undefined) setMasteredCount(result.masteredCount);
+      if (result.totalCount    !== undefined) setTotalCount(result.totalCount);
 
       if (result.summited) {
         setSummitPosition(result.position || null);
@@ -91,7 +104,7 @@ export default function StudentGame() {
         return;
       }
 
-      scheduleAdvance(result.correct);
+      scheduleAdvance(result.correct, result.nextQuestion);
     }
 
     function onClassmatesPositions(positions) {
@@ -306,7 +319,59 @@ export default function StudentGame() {
         }}
       >
         <AnimatePresence mode="wait">
-          {phase === 'question' && (
+          {phase === 'question' && !currentQuestion && (
+            <motion.div
+              key="waiting-phase"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.24 }}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '16px',
+                padding: '40px 24px',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '20px',
+                textAlign: 'center',
+              }}
+            >
+              <motion.div
+                animate={{ scale: [1, 1.08, 1], opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                style={{ fontSize: '40px', lineHeight: 1 }}
+              >
+                ⛰️
+              </motion.div>
+              <p
+                style={{
+                  fontFamily: 'Cinzel, serif',
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  color: 'var(--text)',
+                  margin: 0,
+                  letterSpacing: '0.04em',
+                }}
+              >
+                Waiting for the climb to begin…
+              </p>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {[0, 0.2, 0.4].map((delay, i) => (
+                  <motion.div
+                    key={i}
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ duration: 1.4, repeat: Infinity, delay }}
+                    style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)' }}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {phase === 'question' && currentQuestion && (
             <motion.div
               key="question-phase"
               initial={{ opacity: 0, y: 16 }}
