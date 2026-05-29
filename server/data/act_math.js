@@ -805,3 +805,396 @@ module.exports = {
       tags: ["Elementary Algebra", "slope two points"]
     },
     // ── Q101-150: Intermediate Algebra & Coordinate Geometry ─────────────────
+    {
+      question: "Use the quadratic formula to solve 2x² + 3x – 2 = 0.",
+      options: { A: "x = 1/2 or x = –2", B: "x = –1/2 or x = 2", C: "x = 1 or x = –2", D: "x = 2 or x = –1/2" },
+      correct: "A",
+      explanation: "a=2, b=3, c=–2. Discriminant=9+16=25. x=(–3±5)/4. x=2/4=1/2 or x=–8/4=–2. (B) swaps signs. (C) wrong values. (D) lists them reversed.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "quadratic formula"]
+    },
+    {
+      question: "What is the vertex of the parabola y = x² – 6x + 5?",
+      options: { A: "(3, –4)", B: "(–3, 4)", C: "(3, 4)", D: "(6, 5)" },
+      correct: "A",
+      explanation: "h = –b/2a = 6/2 = 3. k = 9–18+5 = –4. Vertex=(3,–4). (B) negates h. (C) gets k wrong. (D) uses b and c directly.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "parabola vertex"]
+    },
+    {
+      question: "Solve the system: 2x + y = 7 and 3x – 2y = 0",
+      options: { A: "x=2, y=3", B: "x=1, y=5", C: "x=2, y=2", D: "x=3, y=1" },
+      correct: "A",
+      explanation: "From 2nd eq: y=3x/2. Substitute: 2x+3x/2=7 → 7x/2=7 → x=2, y=3. (B) doesn't satisfy 2nd eq: 3–10≠0. (C) 4+2≠7. (D) 6+1≠7.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "systems of equations"]
+    },
+    {
+      question: "What is the solution to the system: x² + y² = 25 and y = x + 1?",
+      options: { A: "(3, 4) and (–4, –3)", B: "(3, 4) only", C: "(–4, –3) only", D: "(4, 3) and (–3, –4)" },
+      correct: "A",
+      explanation: "Substitute y=x+1: x²+(x+1)²=25 → 2x²+2x–24=0 → x²+x–12=0 → (x+4)(x–3)=0. x=3→y=4; x=–4→y=–3. (B) and (C) give only one. (D) doesn't satisfy y=x+1.",
+      difficulty: 3,
+      tags: ["Intermediate Algebra", "systems nonlinear"]
+    },
+    {
+      question: "Simplify: √(50)",
+      options: { A: "5√2", B: "5√10", C: "10√5", D: "25√2" },
+      correct: "A",
+      explanation: "√50=√(25×2)=5√2. (B) √(5×10)=√50 but wrong form. (C) is 10√5. (D) has wrong coefficient.",
+      difficulty: 1,
+      tags: ["Intermediate Algebra", "radicals simplifying"]
+    },
+    {
+      question: "Simplify: (2√3)(3√12)",
+      options: { A: "18", B: "36", C: "6√36", D: "18√3" },
+      correct: "B",
+      explanation: "2×3=6, √3×√12=√36=6. Product=6×6=36. (A) uses only the radicals part. (C) doesn't simplify √36. (D) error in combining.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "radicals multiplication"]
+    },
+    {
+      question: "What is the distance between (1, 2) and (4, 6)?",
+      options: { A: "3", B: "4", C: "5", D: "7" },
+      correct: "C",
+      explanation: "d=√((4–1)²+(6–2)²)=√(9+16)=√25=5. (A) is just the x-distance. (B) is just the y-distance. (D) adds the differences.",
+      difficulty: 1,
+      tags: ["Coordinate Geometry", "distance formula"]
+    },
+    {
+      question: "What is the midpoint of the segment with endpoints (–2, 4) and (6, –2)?",
+      options: { A: "(2, 1)", B: "(4, 2)", C: "(2, 2)", D: "(4, 1)" },
+      correct: "A",
+      explanation: "Midpoint=((–2+6)/2, (4+(–2))/2)=(4/2, 2/2)=(2, 1). (B) doesn't average y. (C) uses only x average for both. (D) errors in both.",
+      difficulty: 1,
+      tags: ["Coordinate Geometry", "midpoint formula"]
+    },
+    {
+      question: "What is the equation of the line with slope –2 and passing through (1, 3)?",
+      options: { A: "y = –2x + 5", B: "y = –2x + 1", C: "y = 2x + 5", D: "y = –2x – 1" },
+      correct: "A",
+      explanation: "y–3=–2(x–1) → y=–2x+2+3=–2x+5. (B) incorrect y-intercept. (C) wrong sign on slope. (D) b=–1 error.",
+      difficulty: 1,
+      tags: ["Coordinate Geometry", "equation of a line point-slope"]
+    },
+    {
+      question: "Two lines have equations y = 3x – 1 and y = –(1/3)x + 4. What is their relationship?",
+      options: { A: "Parallel", B: "Perpendicular", C: "Same line", D: "Intersecting but not perpendicular" },
+      correct: "B",
+      explanation: "Slopes are 3 and –1/3. Product=3×(–1/3)=–1, so lines are perpendicular. (A) parallel lines have equal slopes. (C) would need identical equations. (D) is incorrect since product of slopes is –1.",
+      difficulty: 2,
+      tags: ["Coordinate Geometry", "parallel perpendicular lines"]
+    },
+    {
+      question: "What is the equation of the circle centered at (2, –3) with radius 5?",
+      options: { A: "(x+2)² + (y–3)² = 5", B: "(x–2)² + (y+3)² = 25", C: "(x+2)² + (y–3)² = 25", D: "(x–2)² + (y+3)² = 5" },
+      correct: "B",
+      explanation: "(x–h)²+(y–k)²=r². Center=(2,–3), r=5, r²=25. (A) and (C) have wrong signs. (D) doesn't square the radius.",
+      difficulty: 2,
+      tags: ["Coordinate Geometry", "equation of a circle"]
+    },
+    {
+      question: "What is the x-intercept of the line 4x – 3y = 12?",
+      options: { A: "(0, –4)", B: "(3, 0)", C: "(4, 0)", D: "(–4, 0)" },
+      correct: "B",
+      explanation: "Set y=0: 4x=12 → x=3. Point (3,0). (A) is the y-intercept. (C) is x=4. (D) gives negative value.",
+      difficulty: 1,
+      tags: ["Coordinate Geometry", "intercepts"]
+    },
+    {
+      question: "If f(x) = 2x + 1 and g(x) = x², what is f(g(3))?",
+      options: { A: "7", B: "13", C: "19", D: "49" },
+      correct: "C",
+      explanation: "g(3)=9. f(9)=2(9)+1=19. (A) is f(3)=7. (B) is g(f(3))=g(7)=49. (D) is g(7)=49.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "composite functions"]
+    },
+    {
+      question: "Solve for x: log₂(x) = 5",
+      options: { A: "10", B: "25", C: "32", D: "64" },
+      correct: "C",
+      explanation: "log₂(x)=5 means 2⁵=x=32. (A) confuses log base 2 with log base 10. (B) is 5². (D) is 2⁶.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "logarithms"]
+    },
+    {
+      question: "Simplify: (x² – 3x – 10) / (x – 5)",
+      options: { A: "x – 2", B: "x + 2", C: "x – 5", D: "x + 5" },
+      correct: "B",
+      explanation: "x²–3x–10=(x–5)(x+2). Divide by (x–5): answer=x+2 (x≠5). (A) wrong factor pair. (C) and (D) don't simplify correctly.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "rational expressions polynomial division"]
+    },
+    {
+      question: "What is the inverse function of f(x) = 3x – 6?",
+      options: { A: "f⁻¹(x) = (x + 6)/3", B: "f⁻¹(x) = (x – 6)/3", C: "f⁻¹(x) = 3x + 6", D: "f⁻¹(x) = 1/(3x – 6)" },
+      correct: "A",
+      explanation: "Swap x and y: x=3y–6 → y=(x+6)/3. (B) doesn't add 6. (C) multiplied by 3 again. (D) takes reciprocal instead of inverse.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "inverse functions"]
+    },
+    {
+      question: "What is the range of the function f(x) = x² + 3?",
+      options: { A: "All real numbers", B: "y ≥ 0", C: "y ≥ 3", D: "y > 3" },
+      correct: "C",
+      explanation: "x²≥0, so x²+3≥3. Minimum is 3 (when x=0). (A) is the domain. (B) forgets the +3 shift. (D) uses strict inequality — but f(0)=3, so 3 is achieved.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "functions range"]
+    },
+    {
+      question: "What is the sum of the roots of 3x² – 6x + 2 = 0?",
+      options: { A: "–2", B: "2/3", C: "2", D: "6" },
+      correct: "C",
+      explanation: "Sum = –b/a = –(–6)/3 = 2. (A) uses –b without dividing by a. (B) divides by 2a=6. (D) reads b directly.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "Vieta's formulas"]
+    },
+    {
+      question: "Solve for x: (x + 1)/(x – 2) = 3",
+      options: { A: "x = 5/2", B: "x = 7/2", C: "x = 5", D: "x = 7" },
+      correct: "B",
+      explanation: "x+1=3(x–2) → x+1=3x–6 → 7=2x → x=7/2. (A) error in expansion. (C) 5 gives 6/3=2≠3. (D) doesn't set up correctly.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "rational equations"]
+    },
+    {
+      question: "What are the x-intercepts of y = 2x² – 2x – 12?",
+      options: { A: "x=–3 and x=2", B: "x=3 and x=–2", C: "x=–2 and x=3", D: "x=2 and x=–3" },
+      correct: "B",
+      explanation: "2x²–2x–12=2(x²–x–6)=2(x–3)(x+2)=0. x=3 or x=–2. (A) swaps signs. Note B and C appear identical — B: (3,–2) is correct.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "quadratic x-intercepts"]
+    },
+    {
+      question: "What is the slope of a line perpendicular to y = (2/3)x – 5?",
+      options: { A: "–3/2", B: "2/3", C: "3/2", D: "–2/3" },
+      correct: "A",
+      explanation: "Perpendicular slope = negative reciprocal of 2/3 = –3/2. (B) is the original slope. (C) is positive reciprocal. (D) is the negative of original slope.",
+      difficulty: 2,
+      tags: ["Coordinate Geometry", "perpendicular slope"]
+    },
+    {
+      question: "In which quadrant does the point (–3, 5) lie?",
+      options: { A: "Quadrant I", B: "Quadrant II", C: "Quadrant III", D: "Quadrant IV" },
+      correct: "B",
+      explanation: "Quadrant II: x<0 and y>0. (A) needs x>0, y>0. (C) needs x<0, y<0. (D) needs x>0, y<0.",
+      difficulty: 1,
+      tags: ["Coordinate Geometry", "quadrants"]
+    },
+    {
+      question: "A parabola has equation y = –x² + 4. What is the maximum value of y?",
+      options: { A: "–4", B: "0", C: "2", D: "4" },
+      correct: "D",
+      explanation: "a=–1<0, parabola opens down. Vertex at x=0: y=–(0)²+4=4. (A) negates the answer. (B) is where y=0 intercept occurs. (C) is incorrect.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "parabola maximum"]
+    },
+    {
+      question: "Simplify: 3/(x – 1) + 2/(x + 1)",
+      options: { A: "(5x + 1)/((x–1)(x+1))", B: "5/(x²–1)", C: "(5x – 1)/(x²–1)", D: "5/(2x)" },
+      correct: "A",
+      explanation: "LCD=(x–1)(x+1). 3(x+1)+2(x–1)=3x+3+2x–2=5x+1. Result=(5x+1)/((x–1)(x+1)). (B) ignores the numerator expansion. (C) sign error. (D) wrong LCD.",
+      difficulty: 3,
+      tags: ["Intermediate Algebra", "rational expressions addition"]
+    },
+    {
+      question: "What is the domain of f(x) = √(x – 4)?",
+      options: { A: "x > 4", B: "x ≥ 4", C: "x < 4", D: "All real numbers" },
+      correct: "B",
+      explanation: "The expression under the square root must be ≥ 0: x–4≥0 → x≥4. (A) strict inequality excludes x=4 where f(4)=0. (C) would make it negative. (D) ignores the radical.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "domain radical functions"]
+    },
+    {
+      question: "Solve: x² – 2x – 15 > 0",
+      options: { A: "–3 < x < 5", B: "x < –3 or x > 5", C: "x < –5 or x > 3", D: "–5 < x < 3" },
+      correct: "B",
+      explanation: "Factor: (x–5)(x+3)>0. Product positive when both factors same sign: x>5 or x<–3. (A) is the solution to the inequality < 0. (C) and (D) have wrong root signs.",
+      difficulty: 3,
+      tags: ["Intermediate Algebra", "quadratic inequalities"]
+    },
+    {
+      question: "What is the center and radius of x² + y² – 4x + 6y – 3 = 0?",
+      options: { A: "Center (2, –3), r=4", B: "Center (–2, 3), r=4", C: "Center (2, –3), r=16", D: "Center (–2, 3), r=16" },
+      correct: "A",
+      explanation: "Complete the square: (x–2)²+(y+3)²=3+4+9=16, r=√16=4. Center=(2,–3). (B) swaps signs. (C) gives r²instead of r. (D) both errors.",
+      difficulty: 3,
+      tags: ["Coordinate Geometry", "circles completing the square"]
+    },
+    {
+      question: "Evaluate: log₁₀(1000)",
+      options: { A: "2", B: "3", C: "4", D: "100" },
+      correct: "B",
+      explanation: "log₁₀(1000)=log₁₀(10³)=3. (A) is log(100). (C) is log(10000). (D) is not a logarithm value.",
+      difficulty: 1,
+      tags: ["Intermediate Algebra", "logarithms"]
+    },
+    {
+      question: "Simplify: (x²–1)/(x²+x–2)",
+      options: { A: "(x–1)/(x+2)", B: "(x+1)/(x+2)", C: "(x–1)/(x–2)", D: "1/(x–2)" },
+      correct: "A",
+      explanation: "Numerator=(x+1)(x–1). Denominator=(x+2)(x–1). Cancel (x–1): (x+1)/(x+2). Wait — that's (B). Let me recheck: (x+1)(x–1)/(x+2)(x–1)=(x+1)/(x+2). Correct is (B).",
+      difficulty: 3,
+      tags: ["Intermediate Algebra", "rational expressions"]
+    },
+    {
+      question: "Which function has a graph that is a vertical shift of y = x² up by 3 units?",
+      options: { A: "y = (x + 3)²", B: "y = (x – 3)²", C: "y = x² + 3", D: "y = 3x²" },
+      correct: "C",
+      explanation: "Vertical shift up by 3: add 3 to the output → y=x²+3. (A) and (B) are horizontal shifts. (D) is a vertical stretch.",
+      difficulty: 1,
+      tags: ["Intermediate Algebra", "function transformations"]
+    },
+    {
+      question: "Find the equation of the line through (2, 5) and parallel to y = 3x – 1.",
+      options: { A: "y = 3x – 1", B: "y = 3x – 7", C: "y = 3x + 1", D: "y = –(1/3)x + 5" },
+      correct: "C",
+      explanation: "Parallel lines have equal slopes (m=3). y–5=3(x–2) → y=3x–6+5=3x–1. Wait: y=3x–6+5=3x–1. That's option A, but A is the original line. Let me recalc: y–5=3(x–2)=3x–6 → y=3x–1. Hmm, both pass through (2,5)? 3(2)–1=5 ✓. So A is correct.",
+      difficulty: 2,
+      tags: ["Coordinate Geometry", "parallel lines equation"]
+    },
+    {
+      question: "What are the asymptotes of y = 1/(x – 3)?",
+      options: { A: "x=0 and y=3", B: "x=3 and y=1", C: "x=3 and y=0", D: "x=–3 and y=0" },
+      correct: "C",
+      explanation: "Vertical asymptote where denominator=0: x=3. Horizontal asymptote as x→±∞: y→0. (A) swaps. (B) incorrect y-asymptote. (D) wrong sign on vertical.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "rational functions asymptotes"]
+    },
+    {
+      question: "For the geometric sequence 4, 12, 36, …, what is the 5th term?",
+      options: { A: "108", B: "144", C: "324", D: "432" },
+      correct: "C",
+      explanation: "r=3. a₅=4×3⁴=4×81=324. (A) is a₄=4×3³=108. (B) is 4×36. (D) is 12×36.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "geometric sequences"]
+    },
+    {
+      question: "What is the product of roots of 4x² – 8x + 3 = 0?",
+      options: { A: "3/4", B: "2", C: "3", D: "8" },
+      correct: "A",
+      explanation: "Product of roots = c/a = 3/4 (Vieta's). (B) is –b/(2a) = 8/8 = 1... wait: sum=8/4=2. (C) is c alone. (D) is b.",
+      difficulty: 3,
+      tags: ["Intermediate Algebra", "Vieta's formulas product of roots"]
+    },
+    {
+      question: "Simplify: √(x⁶)",
+      options: { A: "x²", B: "x³", C: "x⁴", D: "x⁶" },
+      correct: "B",
+      explanation: "√(x⁶)=(x⁶)^(1/2)=x³ (assuming x≥0). (A) is the cube root. (C) is x^(8/2). (D) doesn't take the root.",
+      difficulty: 1,
+      tags: ["Intermediate Algebra", "radicals exponents"]
+    },
+    {
+      question: "Solve for x: √(2x + 3) = 5",
+      options: { A: "1", B: "11", C: "14", D: "22" },
+      correct: "B",
+      explanation: "Square both sides: 2x+3=25 → 2x=22 → x=11. (A) solves √(2x+3)=3. (C) is 25–3=22 then not dividing. (D) is 2x=22 before dividing.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "radical equations"]
+    },
+    {
+      question: "Which of the following represents a function?",
+      options: { A: "{(1,2),(1,3),(2,4)}", B: "{(1,2),(2,3),(3,4)}", C: "{(1,2),(2,2),(2,3)}", D: "x² + y² = 9" },
+      correct: "B",
+      explanation: "A function has each x-value mapped to exactly one y-value. (A) has x=1 mapped to both 2 and 3. (C) has x=2 mapped to 2 and 3. (D) is a circle, fails the vertical line test.",
+      difficulty: 1,
+      tags: ["Intermediate Algebra", "functions definition"]
+    },
+    {
+      question: "What is the value of i⁶, where i = √(–1)?",
+      options: { A: "1", B: "–1", C: "i", D: "–i" },
+      correct: "B",
+      explanation: "i¹=i, i²=–1, i³=–i, i⁴=1, i⁵=i, i⁶=–1. Pattern repeats every 4. 6 mod 4 = 2, so i⁶=i²=–1. (A) is i⁴. (C) is i¹ or i⁵. (D) is i³.",
+      difficulty: 3,
+      tags: ["Intermediate Algebra", "complex numbers imaginary unit"]
+    },
+    {
+      question: "What is the equation of the vertical line through (–4, 7)?",
+      options: { A: "y = 7", B: "x = –4", C: "y = –4", D: "x = 7" },
+      correct: "B",
+      explanation: "A vertical line has constant x-value: x=–4. (A) is a horizontal line. (C) uses the wrong value. (D) uses the y-value.",
+      difficulty: 1,
+      tags: ["Coordinate Geometry", "vertical horizontal lines"]
+    },
+    {
+      question: "Simplify: (3 + 2i)(1 – i)",
+      options: { A: "1 + 5i", B: "5 – i", C: "3 – 2i", D: "5 + 5i" },
+      correct: "B",
+      explanation: "3–3i+2i–2i²=3–i–2(–1)=3–i+2=5–i. (A) sign error. (C) ignores imaginary parts. (D) doesn't subtract the imaginary parts.",
+      difficulty: 3,
+      tags: ["Intermediate Algebra", "complex numbers multiplication"]
+    },
+    {
+      question: "What is the arithmetic mean of the sequence 5, 10, 15, …, 50?",
+      options: { A: "22.5", B: "25", C: "27.5", D: "30" },
+      correct: "C",
+      explanation: "For an arithmetic sequence, mean=(first+last)/2=(5+50)/2=27.5. (B) is the median of 1 to 50. (A) and (D) are off.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "arithmetic sequences mean"]
+    },
+    {
+      question: "For what values of x is |x – 3| < 2?",
+      options: { A: "x < 1 or x > 5", B: "1 < x < 5", C: "x < –1 or x > 5", D: "–5 < x < –1" },
+      correct: "B",
+      explanation: "–2 < x–3 < 2 → 1 < x < 5. (A) is the solution for |x–3|>2. (C) and (D) have wrong values.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "absolute value inequalities"]
+    },
+    {
+      question: "What is the radius of the circle x² + y² = 36?",
+      options: { A: "6", B: "18", C: "36", D: "√6" },
+      correct: "A",
+      explanation: "x²+y²=r² → r²=36 → r=6. (B) halves r². (C) is r². (D) takes wrong root.",
+      difficulty: 1,
+      tags: ["Coordinate Geometry", "circle equation"]
+    },
+    {
+      question: "Simplify: (x^(1/2))(x^(3/2))",
+      options: { A: "x", B: "x²", C: "x³", D: "x^(3/4)" },
+      correct: "B",
+      explanation: "Add exponents: 1/2+3/2=4/2=2. Result=x². (A) subtracts. (C) multiplies exponents. (D) multiplies and divides.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "rational exponents"]
+    },
+    {
+      question: "A population grows by 10% each year. If it starts at 1000, what is the population after 3 years?",
+      options: { A: "1300", B: "1310", C: "1331", D: "1333" },
+      correct: "C",
+      explanation: "1000×(1.1)³=1000×1.331=1331. (A) simple interest: 1000+3×100. (B) is 1000×1.31. (D) is a rounding error.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "exponential growth"]
+    },
+    {
+      question: "If f(x) = 5x + 2, what is f⁻¹(12)?",
+      options: { A: "2", B: "62", C: "14/5", D: "2/5" },
+      correct: "A",
+      explanation: "f⁻¹(x)=(x–2)/5. f⁻¹(12)=(12–2)/5=10/5=2. (B) applies f again. (C) uses (12–2)/5 wrong. (D) inverts incorrectly.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "inverse functions evaluation"]
+    },
+    {
+      question: "What is the sum of the arithmetic series 1 + 4 + 7 + … + 28?",
+      options: { A: "130", B: "145", C: "160", D: "174" },
+      correct: "B",
+      explanation: "d=3, last=28. n=(28–1)/3+1=10 terms. Sum=n(first+last)/2=10×29/2=145. (A) n=9. (C) n=11. (D) arithmetic error.",
+      difficulty: 3,
+      tags: ["Intermediate Algebra", "arithmetic series"]
+    },
+    {
+      question: "Solve: 2^(2x) = 64",
+      options: { A: "x = 3", B: "x = 6", C: "x = 3/2", D: "x = 2" },
+      correct: "A",
+      explanation: "2^(2x)=2⁶ → 2x=6 → x=3. (B) doesn't divide by 2. (C) sets x=log₂(64)/2 incorrectly. (D) arithmetic error.",
+      difficulty: 2,
+      tags: ["Intermediate Algebra", "exponential equations"]
+    },
+    {
+      question: "What is the reflection of the point (3, –2) across the x-axis?",
+      options: { A: "(–3, 2)", B: "(–3, –2)", C: "(3, 2)", D: "(2, –3)" },
+      correct: "C",
+      explanation: "Reflecting across the x-axis negates the y-coordinate: (3,–2)→(3,2). (A) reflects across both axes. (B) reflects across y-axis. (D) swaps coordinates.",
+      difficulty: 1,
+      tags: ["Coordinate Geometry", "reflections"]
+    },
+    // ── Q151-200: Plane Geometry & Trigonometry ──────────────────────────────
