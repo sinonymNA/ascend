@@ -5,6 +5,27 @@ const db = require('../services/db');
 
 const router = express.Router();
 
+const PLANS = {
+  student_monthly: {
+    amount: 999,
+    interval: 'month',
+    name: 'Summit Student Monthly',
+    description: 'Full question library, unlimited practice, progress tracking',
+  },
+  student_summer: {
+    amount: 3499,
+    interval: 'month',
+    name: 'Summit Summer Access',
+    description: 'Full access May–August · Less than one Princeton Review session',
+  },
+  teacher_pro: {
+    amount: 1200,
+    interval: 'month',
+    name: 'Summit Teacher Pro',
+    description: 'Live classroom games, student analytics, custom question sets',
+  },
+};
+
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY not configured');
   return new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
@@ -14,6 +35,10 @@ function getStripe() {
 router.post('/create-checkout', requireAuth, async (req, res) => {
   const user = req.dbUser;
   if (!user) return res.status(400).json({ error: 'User not synced' });
+
+  const planKey = req.body.plan || 'student_monthly';
+  const plan = PLANS[planKey];
+  if (!plan) return res.status(400).json({ error: 'Invalid plan' });
 
   let stripe;
   try { stripe = getStripe(); } catch (e) { return res.status(500).json({ error: e.message }); }
@@ -26,16 +51,16 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
       line_items: [{
         price_data: {
           currency: 'usd',
-          recurring: { interval: 'month' },
-          unit_amount: 1200,
-          product_data: { name: 'Summit Pro', description: 'Full library, AI generation, advanced analytics' },
+          recurring: { interval: plan.interval },
+          unit_amount: plan.amount,
+          product_data: { name: plan.name, description: plan.description },
         },
         quantity: 1,
       }],
       customer_email: user.email || undefined,
-      metadata: { user_id: user.id },
-      success_url: `${base}/dashboard?checkout=success`,
-      cancel_url: `${base}/library`,
+      metadata: { user_id: user.id, plan: planKey },
+      success_url: `${base}?checkout=success`,
+      cancel_url: `${base}`,
     });
     return res.json({ url: session.url });
   } catch (e) {

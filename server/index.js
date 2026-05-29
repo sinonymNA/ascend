@@ -11,6 +11,8 @@ const classRoutes = require('./routes/classes');
 const questionRoutes = require('./routes/questions');
 const sessionRoutes = require('./routes/sessions');
 const paymentRoutes = require('./routes/payments');
+const waitlistRoutes = require('./routes/waitlist');
+const progressRoutes = require('./routes/progress');
 const initGameSocket = require('./socket/gameSocket');
 
 const app = express();
@@ -53,6 +55,8 @@ app.use('/api/classes', classRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/waitlist', waitlistRoutes);
+app.use('/api/progress', progressRoutes);
 
 // ── Serve client build ────────────────────────────────────────────────────────
 // Always serve if dist exists (Railway doesn't set NODE_ENV=production by default)

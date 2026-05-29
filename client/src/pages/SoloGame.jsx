@@ -62,6 +62,9 @@ export default function SoloGame() {
   const [xpFloatKey,      setXpFloatKey]        = useState(0);
 
   const advanceTimerRef = useRef(null);
+  const streakBestRef = useRef(0);
+  const xpRef = useRef(0);
+  const [sessionResultsParams, setSessionResultsParams] = useState(null);
 
   // ── Load questions ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -72,9 +75,14 @@ export default function SoloGame() {
         if (cancelled) return;
         const raw = data.set?.questions || [];
         if (!raw.length) { navigate('student_dashboard'); return; }
-        const normalized = shuffle(normalizeQuestions(raw));
-        setQuestions(normalized);
-        setCurrentQuestion({ ...normalized[0], _startTime: Date.now() });
+        let pool = normalizeQuestions(raw);
+        if (user?.subscription !== 'pro' && pool.length > 20) {
+          pool = [...pool].sort((a, b) => a.difficulty - b.difficulty).slice(0, 20);
+        } else {
+          pool = shuffle(pool);
+        }
+        setQuestions(pool);
+        setCurrentQuestion({ ...pool[0], _startTime: Date.now() });
         setPhase('question');
       })
       .catch(() => { if (!cancelled) navigate('student_dashboard'); });
@@ -96,6 +104,7 @@ export default function SoloGame() {
 
     if (correct) {
       newStreak = streak + 1;
+      if (newStreak > streakBestRef.current) streakBestRef.current = newStreak;
       const wrongCount = wrongCountsRef.current[question.id] || 0;
       mastered = !masteredIdsRef.current.includes(question.id);
       if (mastered) masteredIdsRef.current = [...masteredIdsRef.current, question.id];
@@ -103,15 +112,10 @@ export default function SoloGame() {
 
       queueRef.current = queueRef.current.filter((item) => item.question.id !== question.id);
 
+      const isSummit = mastered && masteredIdsRef.current.length >= questions.length;
+      xpRef.current += xpGained + (isSummit ? 200 : 0);
       setStreak(newStreak);
-      setXp((prev) => {
-        const next = prev + xpGained;
-        if (mastered && masteredIdsRef.current.length >= questions.length) {
-          // summit bonus
-          return next + 200;
-        }
-        return next;
-      });
+      setXp(xpRef.current);
       setMasteredCount(masteredIdsRef.current.length);
 
       if (xpGained > 0) {
@@ -152,7 +156,26 @@ export default function SoloGame() {
 
     // Check summit
     if (correct && masteredIdsRef.current.length >= questions.length) {
-      setTimeout(() => setPhase('summited'), correct ? 1600 : 3100);
+      const resultParams = {
+        setTitle: setTitle || 'Practice Session',
+        masteredCount: masteredIdsRef.current.length,
+        questionsTotal: questions.length,
+        xpEarned: xpRef.current,
+        streakBest: streakBestRef.current,
+        subject: screenParams.subject,
+        setId,
+      };
+      setTimeout(() => {
+        api.post('/api/progress/solo', {
+          setId,
+          masteredCount: resultParams.masteredCount,
+          questionsTotal: resultParams.questionsTotal,
+          xpEarned: resultParams.xpEarned,
+          streakBest: resultParams.streakBest,
+        }).catch(() => {});
+        setSessionResultsParams(resultParams);
+        setPhase('summited');
+      }, 1600);
       return;
     }
 
@@ -215,7 +238,18 @@ export default function SoloGame() {
         }}
       >
         <button
-          onClick={() => navigate('student_dashboard')}
+          onClick={() => {
+            if (setId && masteredIdsRef.current.length > 0) {
+              api.post('/api/progress/solo', {
+                setId,
+                masteredCount: masteredIdsRef.current.length,
+                questionsTotal: questions.length,
+                xpEarned: xpRef.current,
+                streakBest: streakBestRef.current,
+              }).catch(() => {});
+            }
+            navigate('student_dashboard');
+          }}
           style={{
             background: 'none',
             border: 'none',
@@ -362,7 +396,7 @@ export default function SoloGame() {
         show={phase === 'summited'}
         xpEarned={xp}
         playerName={playerName}
-        onDismiss={() => navigate('student_dashboard')}
+        onDismiss={() => navigate('session_results', sessionResultsParams || {})}
       />
     </div>
   );

@@ -127,10 +127,48 @@ CREATE TABLE assignments (
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE waitlist (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email      TEXT UNIQUE NOT NULL,
+  source     TEXT DEFAULT 'landing',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE user_subject_progress (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           UUID REFERENCES users(id) ON DELETE CASCADE,
+  set_id            UUID REFERENCES question_sets(id),
+  mastered_count    INTEGER DEFAULT 0,
+  questions_total   INTEGER DEFAULT 0,
+  xp_earned         INTEGER DEFAULT 0,
+  streak_best       INTEGER DEFAULT 0,
+  sessions_count    INTEGER DEFAULT 0,
+  last_practiced_at TIMESTAMPTZ,
+  updated_at        TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, set_id)
+);
+
+-- Migration for existing databases:
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+-- CREATE TABLE IF NOT EXISTS waitlist (...);
+-- CREATE TABLE IF NOT EXISTS user_subject_progress (...);
+
 -- Seed the AP World Unit 1 question set
 INSERT INTO question_sets
   (id, title, subject, unit, is_summit_library, is_public, question_count)
 VALUES
   ('00000000-0000-0000-0000-000000000001',
    'AP World History Modern — Unit 1: The Global Tapestry',
-   'ap_world_history_modern', 'unit_1', true, true, 50);
+   'ap_world_history_modern', 'unit_1', true, true, 50)
+ON CONFLICT (id) DO NOTHING;
+
+-- Seed SAT/ACT question sets
+INSERT INTO question_sets (id, title, subject, is_summit_library, is_public, question_count) VALUES
+  ('00000000-0000-0000-0000-000000000010', 'SAT Math',               'sat_math',     true, true, 200),
+  ('00000000-0000-0000-0000-000000000011', 'SAT Reading & Writing',  'sat_rw',        true, true, 200),
+  ('00000000-0000-0000-0000-000000000020', 'ACT Math',               'act_math',      true, true, 200),
+  ('00000000-0000-0000-0000-000000000021', 'ACT English',            'act_english',   true, true, 150),
+  ('00000000-0000-0000-0000-000000000022', 'ACT Reading',            'act_reading',   true, true, 150),
+  ('00000000-0000-0000-0000-000000000023', 'ACT Science',            'act_science',   true, true, 150)
+ON CONFLICT (id) DO NOTHING;

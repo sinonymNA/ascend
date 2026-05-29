@@ -6,9 +6,9 @@ import api from '../lib/api.js';
 export default function AuthPage() {
   const { screenParams, navigate, setToken, setUser } = useApp();
 
-  const [mode, setMode] = useState('login');
+  const [mode, setMode] = useState(screenParams.email ? 'register' : 'login');
   const [role, setRole] = useState(screenParams.role || 'student');
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(screenParams.email ? screenParams.email.split('@')[0].replace(/[^a-z0-9_]/gi, '').toLowerCase() : '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');

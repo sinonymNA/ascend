@@ -34,6 +34,7 @@ const Settings             = React.lazy(() => import('./pages/Settings.jsx'));
 const AuthPage             = React.lazy(() => import('./pages/AuthPage.jsx'));
 const StudentDashboard     = React.lazy(() => import('./pages/StudentDashboard.jsx'));
 const SoloGame             = React.lazy(() => import('./pages/SoloGame.jsx'));
+const SessionResults       = React.lazy(() => import('./pages/SessionResults.jsx'));
 
 const SCREEN_MAP = {
   landing:           LandingPage,
@@ -49,6 +50,7 @@ const SCREEN_MAP = {
   auth:              AuthPage,
   student_dashboard: StudentDashboard,
   solo_game:         SoloGame,
+  session_results:   SessionResults,
 };
 
 // ─── Page transition variants ─────────────────────────────────────────────────
