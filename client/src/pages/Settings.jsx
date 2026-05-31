@@ -256,7 +256,7 @@ function SaveStatus({ status }) {
 // ─── Settings page ────────────────────────────────────────────────────────────
 
 export default function Settings() {
-  const { navigate, user, setUser, token, setToken } = useApp();
+  const { navigate, user, setUser, token, setToken, wallet, setWallet } = useApp();
 
   // If not authenticated, redirect
   useEffect(() => {
@@ -288,6 +288,11 @@ export default function Settings() {
   // 5. Danger zone
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // 6. Dev panel (secret: click Settings title 3 times)
+  const [devClicks, setDevClicks] = useState(0);
+  const [showDevPanel, setShowDevPanel] = useState(false);
+  const [devLoading, setDevLoading] = useState(false);
 
   // Sync from context user when it updates
   useEffect(() => {
@@ -382,6 +387,34 @@ export default function Settings() {
     }
   };
 
+  // ── Dev panel (secret: 3 clicks on Settings title) ─────────────────────────
+
+  const handleTitleClick = () => {
+    const newClicks = devClicks + 1;
+    setDevClicks(newClicks);
+    if (newClicks >= 3) {
+      setShowDevPanel(true);
+      setDevClicks(0);
+      SoundService.play('click');
+    }
+  };
+
+  const handleGrantCoins = async () => {
+    setDevLoading(true);
+    try {
+      await api.post('/api/dev/grant-coins');
+      // Refresh wallet
+      const resp = await api.get('/api/economy/wallet');
+      if (resp.coins) setWallet(resp);
+      alert('🎉 1,000,000 coins granted!');
+      setShowDevPanel(false);
+    } catch (err) {
+      alert('Error: ' + (err.message || 'Failed to grant coins'));
+    } finally {
+      setDevLoading(false);
+    }
+  };
+
   // ── Avatar ─────────────────────────────────────────────────────────────────
 
   const displayName = profileName || user?.email?.split('@')[0] || 'T';
@@ -471,6 +504,7 @@ export default function Settings() {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
+          onClick={handleTitleClick}
           style={{
             fontFamily: 'Cinzel, serif',
             fontSize: 'clamp(22px, 4vw, 28px)',
@@ -478,7 +512,9 @@ export default function Settings() {
             color: 'var(--gold)',
             letterSpacing: '0.08em',
             margin: 0,
+            cursor: 'pointer',
           }}
+          title={devClicks > 0 ? `${3 - devClicks} more clicks to dev panel` : ''}
         >
           Settings
         </motion.h1>
@@ -808,6 +844,85 @@ export default function Settings() {
           </div>
         </motion.div>
       </main>
+
+      {/* ── Dev Panel Modal ── */}
+      <AnimatePresence>
+        {showDevPanel && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowDevPanel(false); }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(10,16,26,0.8)',
+              backdropFilter: 'blur(6px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 100,
+              padding: '24px',
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16 }}
+              transition={{ duration: 0.22 }}
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid rgba(245,166,35,0.3)',
+                borderRadius: '20px',
+                padding: '32px',
+                width: '100%',
+                maxWidth: '420px',
+                boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+              }}
+            >
+              <h2
+                style={{
+                  fontFamily: 'Nunito, sans-serif',
+                  fontSize: '20px',
+                  fontWeight: 800,
+                  color: 'var(--gold)',
+                  margin: '0 0 12px',
+                }}
+              >
+                🔧 Developer Panel
+              </h2>
+              <p
+                style={{
+                  fontFamily: 'Nunito, sans-serif',
+                  fontSize: '14px',
+                  color: 'var(--text-mid)',
+                  margin: '0 0 20px',
+                  lineHeight: 1.6,
+                }}
+              >
+                Test coins, packs, and economy features in development mode only.
+              </p>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setShowDevPanel(false)}
+                  style={{ flex: 1 }}
+                >
+                  Close
+                </button>
+                <button
+                  className="btn-primary"
+                  onClick={handleGrantCoins}
+                  disabled={devLoading}
+                  style={{ flex: 1 }}
+                >
+                  {devLoading ? 'Granting…' : '💰 Grant 1M Coins'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Delete Confirmation Modal ── */}
       <AnimatePresence>
