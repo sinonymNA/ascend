@@ -1,99 +1,236 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
 
-function HeroMountain() {
+// ─── Animated mountain hero ───────────────────────────────────────────────────
+
+function HeroMountain({ progress = 0.4 }) {
+  // time-of-day sky: evening for landing page drama
+  const skyTop = '#1A0A2E';
+  const skyBot = '#0F1720';
+  const starPositions = [];
+  let seed = 99;
+  function lcg() { seed = (seed * 1664525 + 1013904223) & 0xFFFFFFFF; return (seed >>> 0) / 0xFFFFFFFF; }
+  for (let i = 0; i < 50; i++) starPositions.push({ x: lcg() * 100, y: lcg() * 40, r: lcg() * 0.8 + 0.3, d: lcg() * 3 + 1.5 });
+
   return (
-    <svg width="300" height="200" viewBox="0 0 300 200" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid slice" style={{ width: '100%', height: '100%' }}>
       <defs>
-        <radialGradient id="skyGlow" cx="50%" cy="60%" r="55%">
-          <stop offset="0%" stopColor="#2D6A4F" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#0F1720" stopOpacity="0" />
+        <linearGradient id="lSky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={skyTop} />
+          <stop offset="100%" stopColor={skyBot} />
+        </linearGradient>
+        <linearGradient id="lGold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#F5A623" stopOpacity="0.7" />
+          <stop offset="100%" stopColor="#C8851A" stopOpacity="0" />
+        </linearGradient>
+        <radialGradient id="lGlow" cx="50%" cy="30%" r="30%">
+          <stop offset="0%" stopColor="#F5A623" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="#F5A623" stopOpacity="0" />
         </radialGradient>
+        <filter id="lBlur">
+          <feGaussianBlur stdDeviation="0.4" />
+        </filter>
       </defs>
-      <ellipse cx="150" cy="140" rx="150" ry="70" fill="url(#skyGlow)" />
-      <polygon points="0,160 80,90 130,120 180,70 240,110 300,80 300,200 0,200" fill="#1A2E20" />
-      <polygon points="150,18 270,175 30,175" fill="#2D6A4F" />
-      <polygon points="150,18 200,100 100,100" fill="#3D5A40" />
-      <polygon points="150,18 165,60 150,65" fill="#4A6850" />
-      <polygon points="150,18 138,58 152,62" fill="#567A5A" />
-      <polygon points="150,18 178,72 122,72" fill="#E8F4F8" />
-      <polygon points="150,18 162,52 140,55" fill="#ffffff" />
-      <polygon points="122,72 130,68 138,80" fill="#D4EBF0" />
-      <polygon points="178,72 168,68 160,80" fill="#D4EBF0" />
-      <polygon points="0,175 60,130 120,155 150,140 180,155 240,128 300,175 300,200 0,200" fill="#1E2D18" />
-      {[30, 55, 250, 275].map((x, i) => (
-        <polygon key={i} points={`${x},175 ${x + 6},160 ${x + 12},175`} fill="#162214" />
+
+      {/* Sky */}
+      <rect width="100" height="60" fill="url(#lSky)" />
+
+      {/* Stars */}
+      {starPositions.map((s, i) => (
+        <circle key={i} cx={s.x} cy={s.y} r={s.r}
+          fill="white" opacity="0.7"
+          style={{ animation: `twinkle ${s.d}s ease-in-out infinite`, animationDelay: `${i * 0.15}s` }}
+        />
       ))}
+
+      {/* Summit glow */}
+      <ellipse cx="50" cy="22" rx="18" ry="10" fill="url(#lGlow)" filter="url(#lBlur)" />
+
+      {/* Distant peaks */}
+      <polygon points="10,45 25,28 40,45" fill="#1A2840" opacity="0.5" />
+      <polygon points="60,45 80,24 100,45" fill="#1A2840" opacity="0.5" />
+
+      {/* Main mountain */}
+      <polygon points="50,8 78,52 22,52" fill="#1E3A28" />
+      <polygon points="50,8 63,30 37,30" fill="#2D5A3F" />
+
+      {/* Snow cap */}
+      <polygon points="50,8 58,22 42,22" fill="#E8F4F8" opacity="0.92" />
+      <polygon points="50,8 54,16 47,17" fill="#ffffff" />
+
+      {/* Gold trail up the mountain */}
+      <motion.path
+        d={`M 50 ${52 - (progress * 44)} Q 53 ${52 - (progress * 44) + 8} 56 52`}
+        fill="none"
+        stroke="#F5A623"
+        strokeWidth="0.8"
+        strokeLinecap="round"
+        strokeDasharray="1.5 1.5"
+        opacity="0.6"
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 2, ease: 'easeOut', delay: 0.8 }}
+      />
+
+      {/* Gold summit halo */}
+      <motion.circle cx="50" cy="8" r="3" fill="#F5A623" opacity="0.15"
+        animate={{ r: [3, 5, 3], opacity: [0.15, 0.3, 0.15] }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+      />
+
+      {/* Prayer flags at summit */}
+      {[0,1,2,3,4].map((i) => (
+        <rect key={i} x={47.5 + i * 1.2} y={7.5} width={0.9} height={0.6}
+          fill={['#F5A623','#52B788','#E85D4A','#4A90D9','#A78BFA'][i]}
+          opacity="0.85"
+        />
+      ))}
+
+      {/* Climber silhouette */}
+      <motion.g
+        animate={{ y: [0, -0.4, 0] }}
+        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+      >
+        <ellipse cx="50" cy="28" rx="1" ry="1.4" fill="#F5A623" />
+        <circle cx="50" cy="26.2" r="0.7" fill="#F5A623" />
+      </motion.g>
+
+      {/* Foreground hills */}
+      <polygon points="0,52 20,44 45,52 55,48 80,52 100,46 100,60 0,60" fill="#0D1A12" />
+
+      {/* Purple/pink horizon glow */}
+      <rect x="0" y="46" width="100" height="2" fill="url(#lGold)" />
     </svg>
   );
 }
 
-const fadeUp = { hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } };
-const stagger = { visible: { transition: { staggerChildren: 0.12 } } };
+// ─── Feature card ─────────────────────────────────────────────────────────────
+
+function FeatureCard({ icon, title, desc, delay = 0 }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay, duration: 0.4 }}
+      whileHover={{ y: -4, borderColor: 'rgba(245,166,35,0.4)' }}
+      style={{
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border)',
+        borderRadius: '20px',
+        padding: '28px 24px',
+        transition: 'border-color 0.2s',
+      }}
+    >
+      <div style={{ fontSize: '32px', marginBottom: '14px' }}>{icon}</div>
+      <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '16px', fontWeight: 700, color: 'var(--text)', margin: '0 0 8px', letterSpacing: '0.04em' }}>
+        {title}
+      </h3>
+      <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '14px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.6, fontWeight: 600 }}>
+        {desc}
+      </p>
+    </motion.div>
+  );
+}
+
+// ─── Stat chip ────────────────────────────────────────────────────────────────
+
+function StatChip({ value, label }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontFamily: 'Cinzel, serif', fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 700, color: '#F5A623' }}>
+        {value}
+      </div>
+      <div style={{ fontFamily: 'Nunito, sans-serif', fontSize: '13px', color: 'var(--text-muted)', fontWeight: 700 }}>
+        {label}
+      </div>
+    </div>
+  );
+}
+
+// ─── Landing ──────────────────────────────────────────────────────────────────
 
 export default function Landing() {
   const { navigate } = useApp();
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState('idle'); // idle | loading | success | duplicate | error
   const [count, setCount] = useState(null);
+  const [email, setEmail] = useState('');
+  const [joinStatus, setJoinStatus] = useState('idle');
 
   useEffect(() => {
-    api.get('/api/waitlist/count')
-      .then(d => setCount(d.count))
-      .catch(() => {});
+    api.get('/api/waitlist/count').then((d) => setCount(d.count)).catch(() => {});
   }, []);
 
-  async function handleSubmit(e) {
+  async function handleWaitlist(e) {
     e.preventDefault();
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
-    setStatus('loading');
+    setJoinStatus('loading');
     try {
-      const data = await api.post('/api/waitlist', { email: trimmed, source: 'landing' });
-      setCount(data.count);
-      setStatus('success');
-      setTimeout(() => navigate('auth', { email: trimmed, role: 'student' }), 1800);
-    } catch (err) {
-      if (err.message === 'already_on_list' || err.status === 409) {
-        setStatus('duplicate');
-        setTimeout(() => navigate('auth', { email: trimmed, role: 'student' }), 1800);
-      } else {
-        setStatus('error');
-      }
-    }
+      await api.post('/api/waitlist', { email: trimmed, source: 'landing' });
+    } catch (_) {}
+    navigate('auth', { email: trimmed, role: 'student', mode: 'register' });
   }
 
-  const showForm = status === 'idle' || status === 'loading' || status === 'error';
+  const FEATURES = [
+    {
+      icon: '🧠',
+      title: 'Spaced Repetition',
+      desc: 'Our SM-2 algorithm resurfaces questions right before you\'d forget them — maximizing retention across every study session.',
+    },
+    {
+      icon: '📈',
+      title: 'Score Prediction',
+      desc: 'See your projected SAT & ACT score update in real time as you master more questions. Watch the gauge climb.',
+    },
+    {
+      icon: '🏔️',
+      title: 'Gamified Climbing',
+      desc: 'Earn XP, level up, unlock climber customizations, and race friends on the weekly leaderboard. Studying feels like a game.',
+    },
+    {
+      icon: '🔥',
+      title: 'Streak System',
+      desc: 'Daily login streaks, streak shields, and achievement badges keep you motivated and coming back every day.',
+    },
+    {
+      icon: '🎯',
+      title: '1,050 Questions',
+      desc: 'Expert-curated SAT Math, SAT R&W, and all four ACT sections. Difficulty-calibrated and tagged by topic.',
+    },
+    {
+      icon: '⚡',
+      title: 'Instant Feedback',
+      desc: 'Know exactly why you got each answer right or wrong. Explanations for every question, every time.',
+    },
+  ];
 
   return (
     <div style={{
       minHeight: '100vh',
       background: 'var(--bg)',
-      display: 'flex',
-      flexDirection: 'column',
       fontFamily: 'Nunito, sans-serif',
       overflowX: 'hidden',
     }}>
 
-      {/* Nav */}
+      {/* ── Nav ── */}
       <motion.nav
         initial={{ opacity: 0, y: -14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.35 }}
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '18px 32px',
+          padding: '16px 32px',
           borderBottom: '1px solid var(--border)',
           position: 'sticky',
           top: 0,
           zIndex: 50,
-          background: 'rgba(15,23,32,0.88)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
+          background: 'rgba(15,23,32,0.92)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
         }}
       >
         <span style={{
@@ -108,196 +245,365 @@ export default function Landing() {
         }}>
           SUMMIT
         </span>
-        <button
-          onClick={() => navigate('auth', { role: 'student' })}
-          className="btn-ghost"
-          style={{ padding: '9px 22px', fontSize: '14px' }}
-        >
-          Sign In
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={() => navigate('auth', { mode: 'login' })}
+            className="btn-ghost"
+            style={{ padding: '8px 18px', fontSize: '14px' }}
+          >
+            Sign In
+          </button>
+          <motion.button
+            onClick={() => navigate('auth', { mode: 'register' })}
+            className="btn-primary"
+            style={{ padding: '8px 18px', fontSize: '14px' }}
+            whileHover={{ scale: 1.04, boxShadow: '0 6px 20px rgba(245,166,35,0.35)' }}
+            whileTap={{ scale: 0.97 }}
+          >
+            Get Started Free
+          </motion.button>
+        </div>
       </motion.nav>
 
-      {/* Hero */}
-      <motion.section
-        variants={stagger}
-        initial="hidden"
-        animate="visible"
+      {/* ── Hero ── */}
+      <section style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+        gap: '0',
+        minHeight: '90vh',
+        alignItems: 'center',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '60px 32px',
+      }}>
+        {/* Text */}
+        <motion.div
+          initial={{ opacity: 0, x: -24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          style={{ maxWidth: '540px' }}
+        >
+          {count !== null && count > 10 && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(245,166,35,0.1)',
+                border: '1px solid rgba(245,166,35,0.3)',
+                borderRadius: '999px',
+                padding: '5px 14px',
+                marginBottom: '24px',
+                fontSize: '13px',
+                fontWeight: 700,
+                color: '#F5A623',
+              }}
+            >
+              🏔️ {count.toLocaleString()}+ students climbing
+            </motion.div>
+          )}
+
+          <h1 style={{
+            fontFamily: 'Cinzel, serif',
+            fontSize: 'clamp(32px, 5vw, 56px)',
+            fontWeight: 700,
+            color: 'var(--text)',
+            letterSpacing: '0.02em',
+            margin: '0 0 20px',
+            lineHeight: 1.12,
+          }}>
+            Master the SAT & ACT.<br />
+            <span style={{
+              background: 'linear-gradient(135deg, #F5A623 0%, #C8851A 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}>
+              Reach the Summit.
+            </span>
+          </h1>
+
+          <p style={{
+            fontSize: '18px',
+            color: 'var(--text-muted)',
+            lineHeight: 1.65,
+            margin: '0 0 36px',
+            fontWeight: 600,
+            maxWidth: '440px',
+          }}>
+            1,050 expert questions. Spaced repetition that actually works.
+            A live score prediction that climbs with your mastery.
+          </p>
+
+          {/* Primary CTA */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '400px' }}>
+            <motion.button
+              onClick={() => navigate('auth', { mode: 'register' })}
+              className="btn-primary"
+              style={{ width: '100%', padding: '16px', fontSize: '17px', borderRadius: '14px' }}
+              whileHover={{ scale: 1.03, boxShadow: '0 10px 36px rgba(245,166,35,0.4)' }}
+              whileTap={{ scale: 0.97 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              Create Free Account →
+            </motion.button>
+
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600, textAlign: 'center', margin: 0 }}>
+              Free to start · No credit card needed ·{' '}
+              <button
+                onClick={() => navigate('auth', { mode: 'login' })}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#F5A623', fontWeight: 700, fontFamily: 'Nunito, sans-serif', fontSize: '13px', padding: 0, textDecoration: 'underline' }}
+              >
+                Already have an account?
+              </button>
+            </p>
+
+            {/* Secondary: waitlist form for email capture */}
+            <form onSubmit={handleWaitlist} style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="email"
+                placeholder="Or enter email to get early access"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  padding: '11px 14px',
+                  color: 'var(--text)',
+                  fontFamily: 'Nunito, sans-serif',
+                  fontSize: '14px',
+                  outline: 'none',
+                }}
+              />
+              <button
+                type="submit"
+                disabled={joinStatus === 'loading'}
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-gold)',
+                  borderRadius: '10px',
+                  padding: '11px 16px',
+                  cursor: 'pointer',
+                  fontFamily: 'Nunito, sans-serif',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: '#F5A623',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {joinStatus === 'loading' ? '…' : 'Join →'}
+              </button>
+            </form>
+          </div>
+        </motion.div>
+
+        {/* Mountain visual */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, delay: 0.15 }}
+          style={{
+            height: 'clamp(280px, 40vw, 460px)',
+            borderRadius: '24px',
+            overflow: 'hidden',
+            border: '1px solid var(--border)',
+            position: 'relative',
+            background: '#0D1318',
+          }}
+        >
+          <HeroMountain progress={0.55} />
+
+          {/* Floating stat chips over mountain */}
+          <motion.div
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.7 }}
+            style={{
+              position: 'absolute', top: '16px', right: '16px',
+              background: 'rgba(15,23,32,0.85)', backdropFilter: 'blur(8px)',
+              border: '1px solid var(--border-gold)', borderRadius: '12px',
+              padding: '10px 16px', textAlign: 'center',
+            }}
+          >
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: '20px', fontWeight: 700, color: '#F5A623' }}>1,240</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>Est. SAT Score</div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.85 }}
+            style={{
+              position: 'absolute', bottom: '16px', left: '16px',
+              background: 'rgba(15,23,32,0.85)', backdropFilter: 'blur(8px)',
+              border: '1px solid var(--border)', borderRadius: '12px',
+              padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px',
+            }}
+          >
+            <span style={{ fontSize: '20px' }}>🔥</span>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>14-Day Streak</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>Keep climbing!</div>
+            </div>
+          </motion.div>
+        </motion.div>
+      </section>
+
+      {/* ── Stats bar ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
         style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '72px 24px 64px',
-          textAlign: 'center',
-          position: 'relative',
+          background: 'var(--bg-elevated)',
+          borderTop: '1px solid var(--border)',
+          borderBottom: '1px solid var(--border)',
+          padding: '32px 32px',
         }}
       >
         <div style={{
-          position: 'absolute',
-          top: '8%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '600px',
-          height: '400px',
-          background: 'radial-gradient(ellipse at center, rgba(45,106,79,0.15) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }} />
+          maxWidth: '800px', margin: '0 auto',
+          display: 'flex', justifyContent: 'space-around',
+          gap: '24px', flexWrap: 'wrap',
+        }}>
+          <StatChip value="1,050+" label="Practice Questions" />
+          <StatChip value="6" label="Subjects Covered" />
+          <StatChip value="SAT & ACT" label="Tests Supported" />
+          <StatChip value="Free" label="To Get Started" />
+        </div>
+      </motion.div>
 
-        <motion.div variants={fadeUp}>
-          <HeroMountain />
-        </motion.div>
-
-        <motion.h1
-          variants={fadeUp}
-          style={{
+      {/* ── Features ── */}
+      <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '80px 32px' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          style={{ textAlign: 'center', marginBottom: '52px' }}
+        >
+          <h2 style={{
             fontFamily: 'Cinzel, serif',
-            fontSize: 'clamp(32px, 7vw, 56px)',
+            fontSize: 'clamp(24px, 4vw, 36px)',
             fontWeight: 700,
             color: 'var(--text)',
+            margin: '0 0 14px',
             letterSpacing: '0.04em',
-            margin: '28px 0 16px',
-            lineHeight: 1.15,
-            maxWidth: '680px',
-          }}
-        >
-          The test prep app that<br />
-          <span style={{
-            background: 'linear-gradient(135deg, #F5A623 30%, #C8851A 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
           }}>
-            actually works.
-          </span>
-        </motion.h1>
-
-        <motion.p
-          variants={fadeUp}
-          style={{
-            fontFamily: 'Nunito, sans-serif',
-            fontSize: '18px',
+            Why Summit Works
+          </h2>
+          <p style={{
+            fontSize: '17px',
             color: 'var(--text-muted)',
-            maxWidth: '480px',
-            lineHeight: 1.6,
-            margin: '0 0 36px',
             fontWeight: 600,
-          }}
-        >
-          Summit is coming. Be the first to climb.
-        </motion.p>
+            maxWidth: '500px',
+            margin: '0 auto',
+            lineHeight: 1.6,
+          }}>
+            Built on the science of learning — not just a question bank.
+          </p>
+        </motion.div>
 
-        {/* Count badge */}
-        {count !== null && count > 0 && (
-          <motion.p
-            variants={fadeUp}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          gap: '20px',
+        }}>
+          {FEATURES.map((f, i) => (
+            <FeatureCard key={f.title} {...f} delay={i * 0.07} />
+          ))}
+        </div>
+      </section>
+
+      {/* ── Final CTA ── */}
+      <motion.section
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        style={{
+          textAlign: 'center',
+          padding: '80px 32px',
+          background: 'var(--bg-elevated)',
+          borderTop: '1px solid var(--border)',
+        }}
+      >
+        <div style={{
+          maxWidth: '520px',
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '20px',
+        }}>
+          <div style={{ fontSize: '52px' }}>🏔️</div>
+          <h2 style={{
+            fontFamily: 'Cinzel, serif',
+            fontSize: 'clamp(24px, 4vw, 36px)',
+            fontWeight: 700,
+            color: 'var(--text)',
+            margin: 0,
+            letterSpacing: '0.04em',
+            lineHeight: 1.2,
+          }}>
+            Ready to start climbing?
+          </h2>
+          <p style={{
+            fontSize: '16px',
+            color: 'var(--text-muted)',
+            fontWeight: 600,
+            margin: 0,
+            lineHeight: 1.6,
+          }}>
+            Create your free account in 30 seconds. No credit card, no commitment.
+          </p>
+          <motion.button
+            onClick={() => navigate('auth', { mode: 'register' })}
+            className="btn-primary"
+            style={{ padding: '16px 40px', fontSize: '17px', borderRadius: '14px' }}
+            whileHover={{ scale: 1.04, boxShadow: '0 12px 40px rgba(245,166,35,0.4)' }}
+            whileTap={{ scale: 0.97 }}
+          >
+            Create Free Account →
+          </motion.button>
+          <button
+            onClick={() => navigate('auth', { mode: 'login' })}
             style={{
-              fontFamily: 'Nunito, sans-serif',
-              fontSize: '14px',
-              color: 'var(--text-muted)',
-              marginBottom: '20px',
-              fontWeight: 600,
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: 'Nunito, sans-serif', fontSize: '14px',
+              color: 'var(--text-muted)', fontWeight: 700,
             }}
           >
-            Join <span style={{ color: '#F5A623', fontWeight: 800 }}>{count.toLocaleString()}</span> students already on the waitlist
-          </motion.p>
-        )}
-
-        {/* Email form */}
-        <motion.div variants={fadeUp} style={{ width: '100%', maxWidth: '440px' }}>
-          {showForm ? (
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <input
-                  type="email"
-                  required
-                  placeholder="Your email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={{
-                    flex: 1,
-                    minWidth: '200px',
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '10px',
-                    padding: '13px 16px',
-                    color: 'var(--text)',
-                    fontFamily: 'Nunito, sans-serif',
-                    fontSize: '15px',
-                    outline: 'none',
-                  }}
-                />
-                <motion.button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={status === 'loading'}
-                  style={{
-                    padding: '13px 24px',
-                    fontSize: '15px',
-                    whiteSpace: 'nowrap',
-                    opacity: status === 'loading' ? 0.7 : 1,
-                    cursor: status === 'loading' ? 'not-allowed' : 'pointer',
-                  }}
-                  whileHover={status !== 'loading' ? { scale: 1.03, boxShadow: '0 8px 28px rgba(245,166,35,0.35)' } : {}}
-                  whileTap={status !== 'loading' ? { scale: 0.97 } : {}}
-                >
-                  {status === 'loading' ? 'Joining…' : 'Join the Waitlist'}
-                </motion.button>
-              </div>
-
-              {status === 'error' && (
-                <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '13px', color: '#E05252', margin: 0, fontWeight: 600 }}>
-                  Something went wrong — please try again.
-                </p>
-              )}
-
-              <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
-                Free to start. No credit card needed.
-              </p>
-            </form>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              style={{
-                background: 'var(--bg-elevated)',
-                border: '1px solid rgba(245,166,35,0.3)',
-                borderRadius: '14px',
-                padding: '24px',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontSize: '32px', marginBottom: '10px' }}>🏔️</div>
-              <p style={{
-                fontFamily: 'Nunito, sans-serif',
-                fontSize: '16px',
-                fontWeight: 800,
-                color: 'var(--text)',
-                margin: '0 0 6px',
-              }}>
-                {status === 'duplicate' ? 'Already on the list!' : "You're on the waitlist!"}
-              </p>
-              <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>
-                Taking you to your account…
-              </p>
-            </motion.div>
-          )}
-        </motion.div>
+            Already have an account? Sign In
+          </button>
+        </div>
       </motion.section>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <footer style={{
         borderTop: '1px solid var(--border)',
         padding: '20px 32px',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: '20px',
+        gap: '24px',
+        flexWrap: 'wrap',
       }}>
+        <span style={{
+          fontFamily: 'Cinzel, serif', fontSize: '14px', fontWeight: 700,
+          background: 'linear-gradient(135deg, #F5A623, #C8851A)',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+        }}>
+          SUMMIT
+        </span>
         <a
           href="https://www.tiktok.com/@summitprep"
-          target="_blank"
-          rel="noopener noreferrer"
+          target="_blank" rel="noopener noreferrer"
           style={{ fontFamily: 'Nunito, sans-serif', fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none' }}
         >
           @summitprep

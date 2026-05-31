@@ -158,7 +158,6 @@ router.get('/me', async (req, res) => {
       if (lastDate === yesterdayStr) {
         newStreak = (user.login_streak || 0) + 1;
       } else if (lastDate) {
-        // Missed — check for streak shield
         if ((user.streak_shield_count || 0) > 0) {
           newStreak = (user.login_streak || 0) + 1;
           shieldUsed = true;
@@ -169,23 +168,26 @@ router.get('/me', async (req, res) => {
         newStreak = 1;
       }
 
-      // Award shield at 7-day streaks (multiples)
       const earnedShield = newStreak > 0 && newStreak % 7 === 0;
 
-      await db.query(
-        `UPDATE users SET
-           last_login_date   = $2,
-           login_streak      = $3,
-           streak_shield_count = GREATEST(0, streak_shield_count - $4) + $5
-         WHERE id = $1`,
-        [user.id, today, newStreak, shieldUsed ? 1 : 0, earnedShield ? 1 : 0]
-      );
-
-      streakUpdate = { newStreak, shieldUsed, earnedShield, isNewDay: true };
-      user.login_streak = newStreak;
-      user.last_login_date = today;
-      if (shieldUsed) user.streak_shield_count = Math.max(0, (user.streak_shield_count || 0) - 1);
-      if (earnedShield) user.streak_shield_count = (user.streak_shield_count || 0) + 1;
+      // Wrapped in try/catch so missing columns don't break /auth/me entirely
+      try {
+        await db.query(
+          `UPDATE users SET
+             last_login_date   = $2,
+             login_streak      = $3,
+             streak_shield_count = GREATEST(0, streak_shield_count - $4) + $5
+           WHERE id = $1`,
+          [user.id, today, newStreak, shieldUsed ? 1 : 0, earnedShield ? 1 : 0]
+        );
+        streakUpdate = { newStreak, shieldUsed, earnedShield, isNewDay: true };
+        user.login_streak = newStreak;
+        user.last_login_date = today;
+        if (shieldUsed) user.streak_shield_count = Math.max(0, (user.streak_shield_count || 0) - 1);
+        if (earnedShield) user.streak_shield_count = (user.streak_shield_count || 0) + 1;
+      } catch (streakErr) {
+        console.warn('auth/me streak update skipped (column may not exist yet):', streakErr.message);
+      }
     }
 
     const { password_hash: _ph, ...safeUser } = user;
@@ -214,8 +216,8 @@ router.post('/diagnostic-done', async (req, res) => {
   }
 });
 
-// GET /api/users/me/customization
-router.get('/users/me/customization', async (req, res) => {
+// GET /me/customization  (mounted at /api/users → /api/users/me/customization)
+router.get('/me/customization', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
   let payload;
@@ -227,7 +229,7 @@ router.get('/users/me/customization', async (req, res) => {
     const userRes = await db.query('SELECT id FROM users WHERE clerk_id = $1 LIMIT 1', [clerkId]);
     if (!userRes.rows[0]) return res.status(404).json({ error: 'Not found' });
     const userId = userRes.rows[0].id;
-    const { rows } = await db.query(
+    await db.query(
       `INSERT INTO climber_customizations (student_id) VALUES ($1)
        ON CONFLICT (student_id) DO NOTHING`,
       [userId]
@@ -243,8 +245,8 @@ router.get('/users/me/customization', async (req, res) => {
   }
 });
 
-// PATCH /api/users/me/customization
-router.patch('/users/me/customization', async (req, res) => {
+// PATCH /me/customization  (mounted at /api/users → /api/users/me/customization)
+router.patch('/me/customization', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
   let payload;

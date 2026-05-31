@@ -189,11 +189,11 @@ CREATE TABLE friendships (
   UNIQUE(user_id, friend_id)
 );
 
--- Migration for existing databases:
+-- ─── Migration script (run this against existing databases to apply new columns/tables) ───
+-- Copy lines below into your Railway/Supabase SQL console to upgrade an existing DB:
+--
 -- ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
 -- ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
--- CREATE TABLE IF NOT EXISTS waitlist (...);
--- CREATE TABLE IF NOT EXISTS user_subject_progress (...);
 -- ALTER TABLE users ADD COLUMN IF NOT EXISTS diagnostic_done BOOLEAN DEFAULT FALSE;
 -- ALTER TABLE users ADD COLUMN IF NOT EXISTS predicted_sat INTEGER;
 -- ALTER TABLE users ADD COLUMN IF NOT EXISTS predicted_act INTEGER;
@@ -202,9 +202,37 @@ CREATE TABLE friendships (
 -- ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_shield_count INTEGER DEFAULT 0;
 -- ALTER TABLE users ADD COLUMN IF NOT EXISTS weekly_xp INTEGER DEFAULT 0;
 -- ALTER TABLE users ADD COLUMN IF NOT EXISTS weekly_xp_reset_at DATE DEFAULT CURRENT_DATE;
--- CREATE TABLE IF NOT EXISTS user_question_mastery (...);
--- CREATE TABLE IF NOT EXISTS user_achievements (...);
--- CREATE TABLE IF NOT EXISTS friendships (...);
+--
+-- CREATE TABLE IF NOT EXISTS user_question_mastery (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+--   question_id UUID REFERENCES questions(id) ON DELETE CASCADE,
+--   set_id UUID REFERENCES question_sets(id),
+--   mastered BOOLEAN DEFAULT FALSE,
+--   wrong_count INTEGER DEFAULT 0,
+--   correct_count INTEGER DEFAULT 0,
+--   next_review_at TIMESTAMPTZ DEFAULT NOW(),
+--   last_seen_at TIMESTAMPTZ,
+--   UNIQUE(user_id, question_id)
+-- );
+-- CREATE INDEX IF NOT EXISTS uqm_user_set ON user_question_mastery(user_id, set_id);
+-- CREATE INDEX IF NOT EXISTS uqm_due ON user_question_mastery(user_id, next_review_at);
+--
+-- CREATE TABLE IF NOT EXISTS user_achievements (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+--   achievement TEXT NOT NULL,
+--   earned_at TIMESTAMPTZ DEFAULT NOW(),
+--   UNIQUE(user_id, achievement)
+-- );
+--
+-- CREATE TABLE IF NOT EXISTS friendships (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+--   friend_id UUID REFERENCES users(id) ON DELETE CASCADE,
+--   created_at TIMESTAMPTZ DEFAULT NOW(),
+--   UNIQUE(user_id, friend_id)
+-- );
 
 -- Seed the AP World Unit 1 question set
 INSERT INTO question_sets

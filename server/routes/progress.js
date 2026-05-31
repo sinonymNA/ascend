@@ -72,7 +72,6 @@ router.post('/solo', requireAuth, async (req, res) => {
 
     // Accumulate XP, weekly_xp, and level
     if (xp > 0) {
-      const today = new Date().toISOString().slice(0, 10);
       const monday = (() => {
         const d = new Date();
         const day = d.getUTCDay() || 7;
@@ -80,19 +79,30 @@ router.post('/solo', requireAuth, async (req, res) => {
         return d.toISOString().slice(0, 10);
       })();
 
-      await db.query(
-        `UPDATE users SET
-           xp       = xp + $1,
-           level    = GREATEST(1, FLOOR((xp + $1) / 500) + 1),
-           weekly_xp = CASE
-             WHEN weekly_xp_reset_at IS NULL OR weekly_xp_reset_at < $3::date
-             THEN $1
-             ELSE weekly_xp + $1
-           END,
-           weekly_xp_reset_at = $3::date
-         WHERE id = $2`,
-        [xp, userId, monday]
-      );
+      // Try full update with weekly_xp columns; fall back to basic xp+level if those columns don't exist
+      try {
+        await db.query(
+          `UPDATE users SET
+             xp       = xp + $1,
+             level    = GREATEST(1, FLOOR((xp + $1) / 500) + 1),
+             weekly_xp = CASE
+               WHEN weekly_xp_reset_at IS NULL OR weekly_xp_reset_at < $3::date
+               THEN $1
+               ELSE weekly_xp + $1
+             END,
+             weekly_xp_reset_at = $3::date
+           WHERE id = $2`,
+          [xp, userId, monday]
+        );
+      } catch (_) {
+        await db.query(
+          `UPDATE users SET
+             xp    = xp + $1,
+             level = GREATEST(1, FLOOR((xp + $1) / 500) + 1)
+           WHERE id = $2`,
+          [xp, userId]
+        );
+      }
     }
 
     // Fetch updated user + aggregate stats for achievement checks
