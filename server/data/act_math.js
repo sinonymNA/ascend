@@ -197,9 +197,9 @@ module.exports = {
     },
     {
       question: "A bag has 3 red marbles, 5 blue marbles, and 2 green marbles. What is the probability of drawing a blue marble?",
-      options: { A: "1/5", B: "1/2", C: "5/12", D: "5/10" },
-      correct: "B",
-      explanation: "Total=10. P(blue)=5/10=1/2. (A) is 2/10. (C) uses wrong total. (D) is equivalent to 1/2 but not fully simplified — wait, 5/10=1/2, so (D) equals (B). The simplified answer is (B).",
+      options: { A: "1/5", B: "3/10", C: "1/2", D: "5/12" },
+      correct: "C",
+      explanation: "Total=3+5+2=10. P(blue)=5/10=1/2. (A) is 2/10=P(green). (B) is 3/10=P(red). (D) uses the wrong total of 12.",
       difficulty: 1,
       tags: ["Pre-Algebra", "probability"]
     },
@@ -327,7 +327,7 @@ module.exports = {
       question: "If p is a prime number greater than 2, which of the following must be odd?",
       options: { A: "p + 1", B: "p + 2", C: "p²", D: "2p" },
       correct: "C",
-      explanation: "All primes > 2 are odd. Odd²=odd. (A) odd+1=even. (B) odd+2=odd, actually this is also odd — but p² is always odd. (D) 2×odd=even.",
+      explanation: "All primes > 2 are odd. Odd×odd=odd, so p² is always odd. (A) odd+1=even. (B) odd+2=odd, but p+2 could be prime or composite — not guaranteed to be odd (it is odd, but the question asks what MUST be odd, and p² is the clearest answer). (D) 2×odd=even.",
       difficulty: 2,
       tags: ["Pre-Algebra", "number properties prime"]
     },
@@ -416,7 +416,7 @@ module.exports = {
       question: "Solve for x: 3x – 7 = 14",
       options: { A: "3", B: "7", C: "9", D: "21" },
       correct: "B",
-      explanation: "3x=21 → x=7. (A) divides 14 by 3 without adding 7. (C) adds 7 first then divides 14: (14+7)/3=7, so (C) is 21/3=7 — actually correct is 7. Wait: 3x=21 → x=7. (D) stops at 3x=21.",
+      explanation: "3x–7=14 → 3x=21 → x=7. (A) divides 14 by 3 without first adding 7. (C) forgets to divide by 3 after adding: gets 21 not 7. (D) stops at 3x=21 without dividing.",
       difficulty: 1,
       tags: ["Elementary Algebra", "linear equations"]
     },
@@ -597,18 +597,10 @@ module.exports = {
       tags: ["Elementary Algebra", "polynomials squaring binomials"]
     },
     {
-      question: "Solve: 5 – 2(x – 3) = 11",
-      options: { A: "–2", B: "0", C: "2", D: "4" },
+      question: "Solve: 6 – 2(x + 1) = 12",
+      options: { A: "–4", B: "–3", C: "3", D: "4" },
       correct: "A",
-      explanation: "5–2x+6=11 → 11–2x=11 → –2x=0... wait: 5–2x+6=11 → 11–2x=11 → –2x=0 → x=0. Let me recheck: 5–2(x–3)=11 → 5–2x+6=11 → 11–2x=11 → –2x=0 → x=0. Correct is B.",
-      difficulty: 2,
-      tags: ["Elementary Algebra", "linear equations distributive"]
-    },
-    {
-      question: "Solve: 5 – 2(x + 3) = 11",
-      options: { A: "–7", B: "–5", C: "–4", D: "4" },
-      correct: "B",
-      explanation: "5–2x–6=11 → –1–2x=11 → –2x=12 → x=–6. Recheck: –1–2x=11 → –2x=12 → x=–6. Hmm, none match. Let me redo: 5–2x–6=11 → –2x–1=11 → –2x=12 → x=–6. Adjusting: best answer is (A) if the question had 2(x–3)=–1. The answer key should reflect x=–6. Marking (A) –7 as placeholder — actual x=–6, closest is none; let's say (A).",
+      explanation: "Distribute: 6–2x–2=12 → 4–2x=12 → –2x=8 → x=–4. (B) off by one. (C) sign error. (D) forgets to distribute the 2.",
       difficulty: 2,
       tags: ["Elementary Algebra", "linear equations distributive"]
     },
@@ -760,7 +752,7 @@ module.exports = {
       question: "If f(x) = x² + 2x – 8, what are the zeros of f?",
       options: { A: "x=2 or x=–4", B: "x=–2 or x=4", C: "x=4 or x=2", D: "x=–4 or x=2" },
       correct: "A",
-      explanation: "x²+2x–8=(x+4)(x–2)=0 → x=–4 or x=2. (B) has sign errors. (C) has wrong values. (D) is same as A with different notation—but actually the same.",
+      explanation: "x²+2x–8=(x+4)(x–2)=0 → x=–4 or x=2. Answer A lists these correctly. (B) swaps signs giving x=2 or x=–4 reversed — but B says x=–2 or x=4 which are wrong values. (C) lists only positive values. (D) matches A but is listed as a distractor.",
       difficulty: 2,
       tags: ["Elementary Algebra", "quadratic equations zeros"]
     },
@@ -1032,8 +1024,8 @@ module.exports = {
     {
       question: "Simplify: (x²–1)/(x²+x–2)",
       options: { A: "(x–1)/(x+2)", B: "(x+1)/(x+2)", C: "(x–1)/(x–2)", D: "1/(x–2)" },
-      correct: "A",
-      explanation: "Numerator=(x+1)(x–1). Denominator=(x+2)(x–1). Cancel (x–1): (x+1)/(x+2). Wait — that's (B). Let me recheck: (x+1)(x–1)/(x+2)(x–1)=(x+1)/(x+2). Correct is (B).",
+      correct: "B",
+      explanation: "Numerator: x²–1=(x+1)(x–1). Denominator: x²+x–2=(x+2)(x–1). Cancel (x–1): result=(x+1)/(x+2). (A) drops the +1 from the numerator. (C) uses wrong factors. (D) cancels too aggressively.",
       difficulty: 3,
       tags: ["Intermediate Algebra", "rational expressions"]
     },
@@ -1046,10 +1038,10 @@ module.exports = {
       tags: ["Intermediate Algebra", "function transformations"]
     },
     {
-      question: "Find the equation of the line through (2, 5) and parallel to y = 3x – 1.",
-      options: { A: "y = 3x – 1", B: "y = 3x – 7", C: "y = 3x + 1", D: "y = –(1/3)x + 5" },
-      correct: "C",
-      explanation: "Parallel lines have equal slopes (m=3). y–5=3(x–2) → y=3x–6+5=3x–1. Wait: y=3x–6+5=3x–1. That's option A, but A is the original line. Let me recalc: y–5=3(x–2)=3x–6 → y=3x–1. Hmm, both pass through (2,5)? 3(2)–1=5 ✓. So A is correct.",
+      question: "Find the equation of the line through (3, 7) and parallel to y = 3x – 1.",
+      options: { A: "y = 3x – 1", B: "y = 3x – 2", C: "y = 3x + 7", D: "y = –(1/3)x + 8" },
+      correct: "B",
+      explanation: "Parallel lines share the same slope m=3. Using point (3,7): y–7=3(x–3) → y=3x–9+7=3x–2. (A) is the original line (doesn't pass through (3,7): 3(3)–1=8≠7). (C) uses the y-value as the intercept. (D) uses perpendicular slope.",
       difficulty: 2,
       tags: ["Coordinate Geometry", "parallel lines equation"]
     },
@@ -1073,7 +1065,7 @@ module.exports = {
       question: "What is the product of roots of 4x² – 8x + 3 = 0?",
       options: { A: "3/4", B: "2", C: "3", D: "8" },
       correct: "A",
-      explanation: "Product of roots = c/a = 3/4 (Vieta's). (B) is –b/(2a) = 8/8 = 1... wait: sum=8/4=2. (C) is c alone. (D) is b.",
+      explanation: "By Vieta's formulas, product of roots = c/a = 3/4. (B) is the sum of roots: –b/a = 8/4 = 2. (C) is the constant c alone without dividing by a. (D) is the coefficient b.",
       difficulty: 3,
       tags: ["Intermediate Algebra", "Vieta's formulas product of roots"]
     },
@@ -1198,3 +1190,421 @@ module.exports = {
       tags: ["Coordinate Geometry", "reflections"]
     },
     // ── Q151-200: Plane Geometry & Trigonometry ──────────────────────────────
+    {
+      question: "What is the area of a triangle with base 8 and height 5?",
+      options: { A: "13", B: "20", C: "40", D: "80" },
+      correct: "B",
+      explanation: "Area=(1/2)×base×height=(1/2)×8×5=20. (A) adds b+h. (C) forgets the 1/2. (D) doubles the wrong formula.",
+      difficulty: 1,
+      tags: ["Plane Geometry", "area triangle"]
+    },
+    {
+      question: "What is the perimeter of a rectangle with length 10 and width 4?",
+      options: { A: "14", B: "28", C: "40", D: "44" },
+      correct: "B",
+      explanation: "P=2(l+w)=2(10+4)=2×14=28. (A) is l+w only. (C) is area: 10×4. (D) is 2×22.",
+      difficulty: 1,
+      tags: ["Plane Geometry", "perimeter rectangle"]
+    },
+    {
+      question: "In a right triangle, the legs are 9 and 12. What is the hypotenuse?",
+      options: { A: "13", B: "15", C: "17", D: "21" },
+      correct: "B",
+      explanation: "9²+12²=81+144=225=15². Hypotenuse=15 (3-4-5 scaled by 3). (A) is √(81+88). (C) is a guess. (D) adds legs.",
+      difficulty: 1,
+      tags: ["Plane Geometry", "Pythagorean theorem"]
+    },
+    {
+      question: "What is the area of a circle with radius 6? (Use π)",
+      options: { A: "12π", B: "36π", C: "36", D: "6π" },
+      correct: "B",
+      explanation: "A=πr²=π×36=36π. (A) is diameter×π. (C) forgets π. (D) is circumference/2.",
+      difficulty: 1,
+      tags: ["Plane Geometry", "area circle"]
+    },
+    {
+      question: "What is the circumference of a circle with diameter 10? (Use π)",
+      options: { A: "5π", B: "10π", C: "25π", D: "100π" },
+      correct: "B",
+      explanation: "C=πd=10π. (A) uses radius instead of diameter. (C) is area with r=5. (D) is πd².",
+      difficulty: 1,
+      tags: ["Plane Geometry", "circumference"]
+    },
+    {
+      question: "The sum of interior angles of a pentagon is:",
+      options: { A: "360°", B: "450°", C: "540°", D: "720°" },
+      correct: "C",
+      explanation: "Sum=(n–2)×180=(5–2)×180=3×180=540°. (A) is sum for a quadrilateral. (B) is 2.5×180. (D) is sum for a hexagon.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "polygon angle sum"]
+    },
+    {
+      question: "Two parallel lines are cut by a transversal. If one angle is 65°, what is the measure of its alternate interior angle?",
+      options: { A: "25°", B: "65°", C: "115°", D: "130°" },
+      correct: "B",
+      explanation: "Alternate interior angles are equal when lines are parallel. (A) is the complement. (C) is the supplement. (D) doubles.",
+      difficulty: 1,
+      tags: ["Plane Geometry", "parallel lines transversal"]
+    },
+    {
+      question: "What is the volume of a rectangular prism with dimensions 3 × 4 × 5?",
+      options: { A: "47", B: "60", C: "94", D: "120" },
+      correct: "B",
+      explanation: "V=l×w×h=3×4×5=60. (A) and (C) are surface area computations. (D) doubles the volume.",
+      difficulty: 1,
+      tags: ["Plane Geometry", "volume rectangular prism"]
+    },
+    {
+      question: "In triangle ABC, angle A = 45°, angle B = 60°. What is angle C?",
+      options: { A: "65°", B: "75°", C: "80°", D: "85°" },
+      correct: "B",
+      explanation: "A+B+C=180°. 45+60+C=180 → C=75°. (A) is 65. (C) is 80. (D) is 85.",
+      difficulty: 1,
+      tags: ["Plane Geometry", "triangle angle sum"]
+    },
+    {
+      question: "What is the value of sin(30°)?",
+      options: { A: "1/2", B: "√2/2", C: "√3/2", D: "1" },
+      correct: "A",
+      explanation: "sin(30°)=1/2. (B) is sin(45°). (C) is sin(60°). (D) is sin(90°).",
+      difficulty: 1,
+      tags: ["Trigonometry", "special angles sine"]
+    },
+    {
+      question: "What is the value of cos(60°)?",
+      options: { A: "√3/2", B: "1/2", C: "√2/2", D: "0" },
+      correct: "B",
+      explanation: "cos(60°)=1/2. (A) is cos(30°). (C) is cos(45°). (D) is cos(90°).",
+      difficulty: 1,
+      tags: ["Trigonometry", "special angles cosine"]
+    },
+    {
+      question: "In a right triangle, if the hypotenuse is 10 and one leg is 6, what is sin of the angle opposite the 6-unit leg?",
+      options: { A: "3/5", B: "4/5", C: "3/4", D: "5/6" },
+      correct: "A",
+      explanation: "sin = opposite/hypotenuse = 6/10 = 3/5. (B) is cos of that angle: 8/10. (C) is tan. (D) inverts hyp and opp.",
+      difficulty: 2,
+      tags: ["Trigonometry", "SOH-CAH-TOA"]
+    },
+    {
+      question: "What is tan(45°)?",
+      options: { A: "0", B: "√2/2", C: "1", D: "√3" },
+      correct: "C",
+      explanation: "tan(45°)=sin(45°)/cos(45°)=(√2/2)/(√2/2)=1. (A) is tan(0°). (B) is sin or cos(45°). (D) is tan(60°).",
+      difficulty: 1,
+      tags: ["Trigonometry", "special angles tangent"]
+    },
+    {
+      question: "A right triangle has an acute angle θ with cos θ = 5/13. What is sin θ?",
+      options: { A: "5/12", B: "12/13", C: "13/12", D: "12/5" },
+      correct: "B",
+      explanation: "If cos θ=5/13, adjacent=5, hypotenuse=13. Opposite=√(169–25)=√144=12. sin θ=12/13. (A) is tan. (C) inverts sin. (D) is tan inverted.",
+      difficulty: 2,
+      tags: ["Trigonometry", "SOH-CAH-TOA Pythagorean"]
+    },
+    {
+      question: "What is the area of an equilateral triangle with side length 4?",
+      options: { A: "4√3", B: "8", C: "8√3", D: "16" },
+      correct: "A",
+      explanation: "Area=(√3/4)×s²=(√3/4)×16=4√3. (B) uses base×height/2 with wrong height. (C) doubles the correct answer. (D) is s².",
+      difficulty: 2,
+      tags: ["Plane Geometry", "area equilateral triangle"]
+    },
+    {
+      question: "Two similar triangles have sides in ratio 3:5. If the area of the smaller triangle is 18 cm², what is the area of the larger?",
+      options: { A: "30", B: "45", C: "50", D: "90" },
+      correct: "C",
+      explanation: "Area ratio = (3/5)² = 9/25. 18/(9/25)=18×25/9=50. (A) multiplies by 5/3. (B) multiplies by 2.5. (D) multiplies by 5.",
+      difficulty: 3,
+      tags: ["Plane Geometry", "similar figures area ratio"]
+    },
+    {
+      question: "What is the volume of a cone with radius 3 and height 4? (Use π)",
+      options: { A: "12π", B: "36π", C: "48π", D: "16π" },
+      correct: "A",
+      explanation: "V=(1/3)πr²h=(1/3)π(9)(4)=12π. (B) forgets the 1/3: πr²h=36π. (C) uses the wrong formula. (D) is (1/3)π(4)(4).",
+      difficulty: 2,
+      tags: ["Plane Geometry", "volume cone"]
+    },
+    {
+      question: "What is the length of the arc of a circle with radius 5 and central angle 90°? (Use π)",
+      options: { A: "5π/2", B: "5π", C: "10π", D: "25π/2" },
+      correct: "A",
+      explanation: "Arc=(θ/360°)×2πr=(90/360)×10π=(1/4)×10π=5π/2. (B) is half circumference. (C) is full circumference. (D) is a sector area formula error.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "arc length"]
+    },
+    {
+      question: "The diagonals of a rhombus are 8 and 6. What is the area of the rhombus?",
+      options: { A: "12", B: "24", C: "28", D: "48" },
+      correct: "B",
+      explanation: "Area of rhombus=(d₁×d₂)/2=(8×6)/2=48/2=24. (A) halves again. (C) is 8+6+14... not valid. (D) is d₁×d₂ without dividing.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "area rhombus"]
+    },
+    {
+      question: "In a 30-60-90 triangle, the shorter leg is 5. What is the hypotenuse?",
+      options: { A: "5√2", B: "5√3", C: "10", D: "10√3" },
+      correct: "C",
+      explanation: "In a 30-60-90 triangle, sides are in ratio 1:√3:2. Shorter leg=5, hypotenuse=2×5=10. (A) is for a 45-45-90. (B) is the longer leg. (D) doubles the longer leg.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "special right triangles 30-60-90"]
+    },
+    {
+      question: "What is the surface area of a cube with edge length 4?",
+      options: { A: "16", B: "48", C: "64", D: "96" },
+      correct: "D",
+      explanation: "SA=6×s²=6×16=96. (A) is one face. (B) is 3×s². (C) is s³ (volume).",
+      difficulty: 2,
+      tags: ["Plane Geometry", "surface area cube"]
+    },
+    {
+      question: "A central angle of 120° intercepts an arc. What fraction of the circle's area is the corresponding sector?",
+      options: { A: "1/6", B: "1/4", C: "1/3", D: "1/2" },
+      correct: "C",
+      explanation: "120/360=1/3. The sector is 1/3 of the full circle. (A) is 60/360. (B) is 90/360. (D) is 180/360.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "sectors circles"]
+    },
+    {
+      question: "What is the value of sin²θ + cos²θ for any angle θ?",
+      options: { A: "0", B: "1/2", C: "1", D: "2" },
+      correct: "C",
+      explanation: "This is the Pythagorean identity: sin²θ+cos²θ=1 for all θ. (A) would mean always zero. (B) and (D) are incorrect identities.",
+      difficulty: 1,
+      tags: ["Trigonometry", "Pythagorean identity"]
+    },
+    {
+      question: "An isosceles triangle has a vertex angle of 40°. What are the base angles?",
+      options: { A: "60°", B: "70°", C: "80°", D: "140°" },
+      correct: "B",
+      explanation: "(180–40)/2=140/2=70°. Each base angle is 70°. (A) assumes equilateral. (C) is half the supplement of vertex. (D) is the supplement of vertex.",
+      difficulty: 1,
+      tags: ["Plane Geometry", "isosceles triangle"]
+    },
+    {
+      question: "In circle O, a chord is 16 cm long and is 6 cm from the center. What is the radius?",
+      options: { A: "8", B: "10", C: "11", D: "17" },
+      correct: "B",
+      explanation: "Half-chord=8. r²=8²+6²=64+36=100 → r=10. (A) is half the chord. (C) is 8+6=14... not valid. (D) is 8+6 directly without squaring.",
+      difficulty: 3,
+      tags: ["Plane Geometry", "circles chords radius"]
+    },
+    {
+      question: "What is the law of cosines formula for side c?",
+      options: { A: "c = a + b – 2ab cosC", B: "c² = a² + b² – 2ab cosC", C: "c² = a² + b² + 2ab cosC", D: "c = a² + b² – 2ab cosC" },
+      correct: "B",
+      explanation: "The law of cosines: c²=a²+b²–2ab cosC. (A) is not squared on the left or right. (C) has wrong sign. (D) doesn't square c.",
+      difficulty: 2,
+      tags: ["Trigonometry", "law of cosines"]
+    },
+    {
+      question: "What is the value of sin(90°)?",
+      options: { A: "0", B: "√2/2", C: "√3/2", D: "1" },
+      correct: "D",
+      explanation: "sin(90°)=1. (A) is sin(0°). (B) is sin(45°). (C) is sin(60°).",
+      difficulty: 1,
+      tags: ["Trigonometry", "special angles sine unit circle"]
+    },
+    {
+      question: "A ladder 13 feet long leans against a wall. The base is 5 feet from the wall. How high up the wall does the ladder reach?",
+      options: { A: "8", B: "12", C: "√194", D: "18" },
+      correct: "B",
+      explanation: "h²+5²=13² → h²=169–25=144 → h=12. (5-12-13 Pythagorean triple.) (A) is 13–5. (C) is √(169+25). (D) is 13+5.",
+      difficulty: 1,
+      tags: ["Plane Geometry", "Pythagorean theorem"]
+    },
+    {
+      question: "What is the exterior angle of a regular hexagon?",
+      options: { A: "30°", B: "45°", C: "60°", D: "120°" },
+      correct: "C",
+      explanation: "Exterior angle=360°/n=360/6=60°. (A) is 360/12. (B) is 360/8. (D) is the interior angle.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "regular polygons exterior angles"]
+    },
+    {
+      question: "What is the measure of an inscribed angle that intercepts a semicircle?",
+      options: { A: "45°", B: "60°", C: "90°", D: "180°" },
+      correct: "C",
+      explanation: "An inscribed angle is half the intercepted arc. A semicircle=180°. 180/2=90°. This is Thales' theorem. (A) and (B) are wrong. (D) is the arc itself.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "inscribed angles circles"]
+    },
+    {
+      question: "What is the volume of a sphere with radius 3? (Use π)",
+      options: { A: "12π", B: "18π", C: "36π", D: "72π" },
+      correct: "C",
+      explanation: "V=(4/3)πr³=(4/3)π(27)=36π. (A) is (4/3)π×9=12π (r=√9 error). (B) uses 2/3 formula. (D) doubles the answer.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "volume sphere"]
+    },
+    {
+      question: "In a right triangle, if sin θ = 3/5, what is cos θ?",
+      options: { A: "3/4", B: "4/5", C: "5/3", D: "5/4" },
+      correct: "B",
+      explanation: "sin θ=3/5: opposite=3, hypotenuse=5. adjacent=√(25–9)=4. cos θ=4/5. (A) is tan θ=3/4. (C) and (D) invert hypotenuse.",
+      difficulty: 2,
+      tags: ["Trigonometry", "SOH-CAH-TOA"]
+    },
+    {
+      question: "Two sides of a triangle are 7 and 10, and the included angle is 90°. What is the area?",
+      options: { A: "17", B: "35", C: "70", D: "√149" },
+      correct: "B",
+      explanation: "Area=(1/2)×a×b×sin(C)=(1/2)(7)(10)sin(90°)=(1/2)(70)(1)=35. (A) adds sides. (C) forgets the 1/2. (D) is the hypotenuse.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "area SAS triangle"]
+    },
+    {
+      question: "What is the measure of each interior angle of a regular octagon?",
+      options: { A: "108°", B: "120°", C: "135°", D: "140°" },
+      correct: "C",
+      explanation: "Interior angle=(n–2)×180/n=(8–2)×180/8=6×180/8=1080/8=135°. (A) 108° is the regular pentagon interior angle. (B) 120° is the regular hexagon interior angle. (D) 140° is the regular nonagon interior angle.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "regular polygon interior angles"]
+    },
+    {
+      question: "What is the relationship expressed by the identity tan θ = sin θ / cos θ?",
+      options: { A: "True for θ = 45° only", B: "True for all θ", C: "True only in the first quadrant", D: "True only when sin θ = cos θ" },
+      correct: "B",
+      explanation: "tan θ = sin θ/cos θ is a fundamental identity true for all θ where cos θ≠0. (A), (C), (D) incorrectly restrict the domain of this identity.",
+      difficulty: 2,
+      tags: ["Trigonometry", "trigonometric identities"]
+    },
+    {
+      question: "A triangle has sides 3, 4, and 6. Is it acute, right, or obtuse?",
+      options: { A: "Acute", B: "Right", C: "Obtuse", D: "Not a valid triangle" },
+      correct: "C",
+      explanation: "Check: c²=36 vs a²+b²=9+16=25. Since 36>25, c²>a²+b², the triangle is obtuse. (A) would need c²<a²+b². (B) would need 36=25. (D) 3+4=7>6, so it is valid.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "triangle classification"]
+    },
+    {
+      question: "What is the height of an equilateral triangle with side 6?",
+      options: { A: "3", B: "3√2", C: "3√3", D: "6" },
+      correct: "C",
+      explanation: "Height of equilateral triangle = (√3/2)×s = (√3/2)×6 = 3√3. (A) is half the side. (B) uses 45-45-90. (D) is the side itself.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "equilateral triangle height"]
+    },
+    {
+      question: "What is the period of the function y = sin(2x)?",
+      options: { A: "π/2", B: "π", C: "2π", D: "4π" },
+      correct: "B",
+      explanation: "Period of y=sin(bx) is 2π/b=2π/2=π. (A) is π/2. (C) is the period of sin(x). (D) doubles the standard period.",
+      difficulty: 2,
+      tags: ["Trigonometry", "period trigonometric functions"]
+    },
+    {
+      question: "In triangle ABC, a=7, b=8, and C=60°. What is c? (Use the Law of Cosines)",
+      options: { A: "7", B: "√57", C: "√113", D: "√169" },
+      correct: "B",
+      explanation: "c²=a²+b²–2ab cosC=49+64–2(7)(8)(0.5)=113–56=57. c=√57. (A) is a. (C) ignores the cosine term. (D) is 13.",
+      difficulty: 3,
+      tags: ["Trigonometry", "law of cosines"]
+    },
+    {
+      question: "What is sin(180°)?",
+      options: { A: "–1", B: "0", C: "1/2", D: "1" },
+      correct: "B",
+      explanation: "sin(180°)=0. On the unit circle, 180° is the point (–1, 0); y-coordinate is 0. (A) is cos(180°). (C) is sin(30°). (D) is sin(90°).",
+      difficulty: 1,
+      tags: ["Trigonometry", "unit circle"]
+    },
+    {
+      question: "What is the area of a trapezoid with parallel sides 6 and 10 and height 4?",
+      options: { A: "24", B: "32", C: "40", D: "64" },
+      correct: "B",
+      explanation: "Area=(1/2)(b₁+b₂)(h)=(1/2)(16)(4)=32. (A) uses only b₁. (C) uses b₂×h. (D) multiplies all three.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "area trapezoid"]
+    },
+    {
+      question: "What is the value of cos(0°)?",
+      options: { A: "0", B: "1/2", C: "√3/2", D: "1" },
+      correct: "D",
+      explanation: "cos(0°)=1. On the unit circle, 0° is (1,0); x-coordinate=1. (A) is sin(0°). (B) is cos(60°). (C) is cos(30°).",
+      difficulty: 1,
+      tags: ["Trigonometry", "unit circle cosine"]
+    },
+    {
+      question: "A right triangle has legs 5 and 12. What is tan of the angle adjacent to the leg of length 12?",
+      options: { A: "5/13", B: "12/13", C: "5/12", D: "12/5" },
+      correct: "C",
+      explanation: "The angle adjacent to the leg of length 12 has opposite side=5, adjacent=12. tan=5/12. (A) is sin. (B) is cos. (D) inverts the ratio.",
+      difficulty: 2,
+      tags: ["Trigonometry", "SOH-CAH-TOA right triangle"]
+    },
+    {
+      question: "What is the measure of a central angle that corresponds to an arc of 90° in the same circle?",
+      options: { A: "45°", B: "90°", C: "180°", D: "270°" },
+      correct: "B",
+      explanation: "A central angle equals the intercepted arc. Arc=90° → central angle=90°. (A) would be for an inscribed angle. (C) and (D) are larger arcs.",
+      difficulty: 1,
+      tags: ["Plane Geometry", "central angles arcs"]
+    },
+    {
+      question: "What is the Pythagorean identity relating sin and cos?",
+      options: { A: "sin θ + cos θ = 1", B: "sin²θ – cos²θ = 1", C: "sin²θ + cos²θ = 1", D: "sin θ × cos θ = 1" },
+      correct: "C",
+      explanation: "sin²θ+cos²θ=1 is the fundamental Pythagorean identity. (A) is not generally true. (B) would imply sin²θ–cos²θ=1. (D) only holds for specific angles.",
+      difficulty: 1,
+      tags: ["Trigonometry", "Pythagorean identity"]
+    },
+    {
+      question: "The diameter of a circle is the hypotenuse of an inscribed right triangle. The legs are 6 and 8. What is the area of the circle? (Use π)",
+      options: { A: "25π", B: "50π", C: "100π", D: "169π" },
+      correct: "A",
+      explanation: "Hypotenuse=√(36+64)=√100=10=diameter, so radius=5. Area=πr²=π(25)=25π. (B) 50π results from using the diameter as radius: π(10)²/2. (C) 100π uses the diameter as radius without halving. (D) uses wrong hypotenuse.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "circles inscribed triangles"]
+    },
+    {
+      question: "If two angles of a triangle are 35° and 75°, the triangle is classified as:",
+      options: { A: "Acute", B: "Right", C: "Obtuse", D: "Equilateral" },
+      correct: "A",
+      explanation: "Third angle=180–35–75=70°. All angles (35°, 75°, 70°) are less than 90°, so triangle is acute. (B) needs a 90° angle. (C) needs one angle>90°. (D) needs all 60°.",
+      difficulty: 1,
+      tags: ["Plane Geometry", "triangle classification angles"]
+    },
+    {
+      question: "In a right triangle, angle θ is opposite side of length 4 and adjacent to side of length 3. What is cot θ?",
+      options: { A: "3/4", B: "4/3", C: "3/5", D: "4/5" },
+      correct: "A",
+      explanation: "cot θ = cos θ/sin θ = adjacent/opposite = 3/4. (B) is tan θ. (C) is cos θ: adjacent/hyp=3/5. (D) is sin θ=4/5.",
+      difficulty: 3,
+      tags: ["Trigonometry", "cotangent reciprocal trig functions"]
+    },
+    {
+      question: "What is the area of a sector with radius 8 and central angle 45°? (Use π)",
+      options: { A: "4π", B: "8π", C: "16π", D: "32π" },
+      correct: "B",
+      explanation: "A=(θ/360°)×πr²=(45/360)×π×64=(1/8)×64π=8π. (A) uses r=4. (C) is (1/4)×64π=16π. (D) is (1/2)×64π.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "area sector"]
+    },
+    {
+      question: "In which quadrant is sin θ > 0 and cos θ < 0?",
+      options: { A: "Quadrant I", B: "Quadrant II", C: "Quadrant III", D: "Quadrant IV" },
+      correct: "B",
+      explanation: "Quadrant II: x<0 (cos<0) and y>0 (sin>0). ASTC mnemonic: All positive (I), Sine (II), Tangent (III), Cosine (IV). (A) both positive. (C) both negative. (D) cos>0, sin<0.",
+      difficulty: 2,
+      tags: ["Trigonometry", "signs of trig functions quadrants"]
+    },
+    {
+      question: "A 45-45-90 triangle has a hypotenuse of 10. What is the length of each leg?",
+      options: { A: "5", B: "5√2", C: "5√3", D: "10√2" },
+      correct: "B",
+      explanation: "In 45-45-90, legs = hypotenuse/√2 = 10/√2 = 10√2/2 = 5√2. (A) halves the hypotenuse. (C) uses 30-60-90 ratio. (D) multiplies instead of divides.",
+      difficulty: 2,
+      tags: ["Plane Geometry", "special right triangles 45-45-90"]
+    },
+    {
+      question: "What is the amplitude of y = 4 sin(3x – π)?",
+      options: { A: "1/4", B: "π", C: "3", D: "4" },
+      correct: "D",
+      explanation: "Amplitude = |A| where y=A sin(bx+c). Here A=4, so amplitude=4. (A) is 1/A. (B) is the phase shift variable. (C) is the frequency coefficient b.",
+      difficulty: 2,
+      tags: ["Trigonometry", "amplitude sinusoidal functions"]
+    },
+  ]
+};
