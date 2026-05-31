@@ -1,5 +1,6 @@
 'use strict';
 const db = require('./db');
+const { ITEMS, QUESTS, SEASON } = require('./catalog');
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
@@ -173,9 +174,141 @@ CREATE TABLE IF NOT EXISTS friendships (
   UNIQUE(user_id, friend_id)
 );
 
+-- ── Economy: wallet + ledger ──
+CREATE TABLE IF NOT EXISTS user_wallets (
+  user_id      UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  coins        BIGINT DEFAULT 0,
+  gems         INTEGER DEFAULT 0,
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS currency_ledger (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID REFERENCES users(id) ON DELETE CASCADE,
+  coins_delta BIGINT DEFAULT 0,
+  gems_delta  INTEGER DEFAULT 0,
+  reason      TEXT NOT NULL,
+  ref_id      TEXT,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ── Items + inventory ──
+CREATE TABLE IF NOT EXISTS item_definitions (
+  id           TEXT PRIMARY KEY,
+  kind         TEXT NOT NULL,
+  category     TEXT NOT NULL,
+  name         TEXT NOT NULL,
+  rarity       TEXT NOT NULL,
+  payload      JSONB DEFAULT '{}',
+  coin_value   INTEGER DEFAULT 0,
+  in_packs     BOOLEAN DEFAULT TRUE,
+  created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS user_inventory (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID REFERENCES users(id) ON DELETE CASCADE,
+  item_id      TEXT REFERENCES item_definitions(id),
+  quantity     INTEGER DEFAULT 1,
+  equipped     BOOLEAN DEFAULT FALSE,
+  acquired_at  TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, item_id)
+);
+
+-- ── Daily quests ──
+CREATE TABLE IF NOT EXISTS daily_quest_defs (
+  id           TEXT PRIMARY KEY,
+  description  TEXT NOT NULL,
+  metric       TEXT NOT NULL,
+  target       INTEGER NOT NULL,
+  filter_value TEXT,
+  reward_coins INTEGER DEFAULT 0,
+  reward_gems  INTEGER DEFAULT 0,
+  weight       INTEGER DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS user_daily_quests (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID REFERENCES users(id) ON DELETE CASCADE,
+  quest_id     TEXT REFERENCES daily_quest_defs(id),
+  quest_date   DATE NOT NULL,
+  progress     INTEGER DEFAULT 0,
+  target       INTEGER NOT NULL,
+  claimed      BOOLEAN DEFAULT FALSE,
+  UNIQUE(user_id, quest_id, quest_date)
+);
+
+-- ── Leagues ──
+CREATE TABLE IF NOT EXISTS leagues (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tier         TEXT NOT NULL,
+  week_start   DATE NOT NULL,
+  cohort_index INTEGER DEFAULT 0,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(tier, week_start, cohort_index)
+);
+
+CREATE TABLE IF NOT EXISTS league_members (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  league_id    UUID REFERENCES leagues(id) ON DELETE CASCADE,
+  user_id      UUID REFERENCES users(id) ON DELETE CASCADE,
+  weekly_xp    INTEGER DEFAULT 0,
+  final_rank   INTEGER,
+  result       TEXT,
+  UNIQUE(league_id, user_id)
+);
+
+-- ── Season pass ──
+CREATE TABLE IF NOT EXISTS season_defs (
+  id           TEXT PRIMARY KEY,
+  name         TEXT NOT NULL,
+  starts_at    DATE NOT NULL,
+  ends_at      DATE NOT NULL,
+  active       BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS season_tiers (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  season_id    TEXT REFERENCES season_defs(id) ON DELETE CASCADE,
+  tier_index   INTEGER NOT NULL,
+  xp_required  INTEGER NOT NULL,
+  reward_coins INTEGER DEFAULT 0,
+  reward_gems  INTEGER DEFAULT 0,
+  reward_item  TEXT,
+  UNIQUE(season_id, tier_index)
+);
+
+CREATE TABLE IF NOT EXISTS user_season_progress (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID REFERENCES users(id) ON DELETE CASCADE,
+  season_id     TEXT REFERENCES season_defs(id) ON DELETE CASCADE,
+  season_xp     INTEGER DEFAULT 0,
+  claimed_tiers INTEGER[] DEFAULT '{}',
+  UNIQUE(user_id, season_id)
+);
+
+-- ── Boost activations ──
+CREATE TABLE IF NOT EXISTS boost_activations (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID REFERENCES users(id) ON DELETE CASCADE,
+  item_id      TEXT REFERENCES item_definitions(id),
+  category     TEXT NOT NULL,
+  activated_at TIMESTAMPTZ DEFAULT NOW(),
+  expires_at   TIMESTAMPTZ,
+  consumed     BOOLEAN DEFAULT FALSE
+);
+
+-- Idempotent coin grants
+ALTER TABLE user_subject_progress ADD COLUMN IF NOT EXISTS coins_awarded INTEGER DEFAULT 0;
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS uqm_user_set ON user_question_mastery(user_id, set_id);
 CREATE INDEX IF NOT EXISTS uqm_due      ON user_question_mastery(user_id, next_review_at);
+CREATE INDEX IF NOT EXISTS ledger_user  ON currency_ledger(user_id, created_at);
+CREATE INDEX IF NOT EXISTS inv_user     ON user_inventory(user_id);
+CREATE INDEX IF NOT EXISTS udq_user_date ON user_daily_quests(user_id, quest_date);
+CREATE INDEX IF NOT EXISTS lm_user      ON league_members(user_id);
+CREATE INDEX IF NOT EXISTS boost_user_active ON boost_activations(user_id, consumed);
 `;
 
 const QUESTION_SETS = `
@@ -189,10 +322,52 @@ INSERT INTO question_sets (id, title, subject, is_summit_library, is_public, que
 ON CONFLICT (id) DO NOTHING;
 `;
 
+async function seedCatalogs() {
+  // Item definitions
+  for (const it of ITEMS) {
+    await db.query(
+      `INSERT INTO item_definitions (id, kind, category, name, rarity, payload, coin_value, in_packs)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       ON CONFLICT (id) DO UPDATE SET
+         kind=$2, category=$3, name=$4, rarity=$5, payload=$6, coin_value=$7, in_packs=$8`,
+      [it.id, it.kind, it.category, it.name, it.rarity, JSON.stringify(it.payload || {}), it.coin_value, it.in_packs !== false]
+    );
+  }
+
+  // Daily quest defs
+  for (const q of QUESTS) {
+    await db.query(
+      `INSERT INTO daily_quest_defs (id, description, metric, target, filter_value, reward_coins, reward_gems, weight)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       ON CONFLICT (id) DO UPDATE SET
+         description=$2, metric=$3, target=$4, filter_value=$5, reward_coins=$6, reward_gems=$7, weight=$8`,
+      [q.id, q.description, q.metric, q.target, q.filter_value || null, q.reward_coins || 0, q.reward_gems || 0, q.weight || 1]
+    );
+  }
+
+  // Season + tiers
+  await db.query(
+    `INSERT INTO season_defs (id, name, starts_at, ends_at, active)
+     VALUES ($1,$2,$3,$4,$5)
+     ON CONFLICT (id) DO UPDATE SET name=$2, starts_at=$3, ends_at=$4, active=$5`,
+    [SEASON.id, SEASON.name, SEASON.starts_at, SEASON.ends_at, SEASON.active]
+  );
+  for (const t of SEASON.tiers) {
+    await db.query(
+      `INSERT INTO season_tiers (season_id, tier_index, xp_required, reward_coins, reward_gems, reward_item)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (season_id, tier_index) DO UPDATE SET
+         xp_required=$3, reward_coins=$4, reward_gems=$5, reward_item=$6`,
+      [SEASON.id, t.tier_index, t.xp_required, t.reward_coins || 0, t.reward_gems || 0, t.reward_item || null]
+    );
+  }
+}
+
 async function initDb() {
   try {
     await db.query(SCHEMA);
     await db.query(QUESTION_SETS);
+    await seedCatalogs();
     console.log('✓ Database schema ready');
   } catch (err) {
     console.error('✗ Database init error:', err.message);

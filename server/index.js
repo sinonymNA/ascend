@@ -16,6 +16,12 @@ const progressRoutes    = require('./routes/progress');
 const masteryRoutes     = require('./routes/mastery');
 const leaderboardRoutes = require('./routes/leaderboard');
 const friendsRoutes     = require('./routes/friends');
+const economyRoutes     = require('./routes/economy');
+const packsRoutes       = require('./routes/packs');
+const questsRoutes      = require('./routes/quests');
+const leaguesRoutes     = require('./routes/leagues');
+const seasonRoutes      = require('./routes/season');
+const minigameRoutes    = require('./routes/minigame');
 const initGameSocket    = require('./socket/gameSocket');
 const initDb            = require('./services/initDb');
 
@@ -65,6 +71,12 @@ app.use('/api/progress',    progressRoutes);
 app.use('/api/mastery',     masteryRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/friends',     friendsRoutes);
+app.use('/api/economy',     economyRoutes);
+app.use('/api/packs',       packsRoutes);
+app.use('/api/quests',      questsRoutes);
+app.use('/api/leagues',     leaguesRoutes);
+app.use('/api/season',      seasonRoutes);
+app.use('/api/minigame',    minigameRoutes);
 
 // ── Serve client build ────────────────────────────────────────────────────────
 // Always serve if dist exists (Railway doesn't set NODE_ENV=production by default)

@@ -189,6 +189,129 @@ CREATE TABLE friendships (
   UNIQUE(user_id, friend_id)
 );
 
+-- ─── Economy: currency, packs, inventory, quests, leagues, season, boosts ──────
+-- NOTE: These are also defined in server/services/initDb.js (CREATE TABLE IF NOT
+-- EXISTS run on every boot) which is the runtime source of truth. Keep mirrored.
+ALTER TABLE user_subject_progress ADD COLUMN IF NOT EXISTS coins_awarded INTEGER DEFAULT 0;
+
+CREATE TABLE user_wallets (
+  user_id      UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  coins        BIGINT DEFAULT 0,
+  gems         INTEGER DEFAULT 0,
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE currency_ledger (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID REFERENCES users(id) ON DELETE CASCADE,
+  coins_delta BIGINT DEFAULT 0,
+  gems_delta  INTEGER DEFAULT 0,
+  reason      TEXT NOT NULL,
+  ref_id      TEXT,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE item_definitions (
+  id           TEXT PRIMARY KEY,
+  kind         TEXT NOT NULL,
+  category     TEXT NOT NULL,
+  name         TEXT NOT NULL,
+  rarity       TEXT NOT NULL,
+  payload      JSONB DEFAULT '{}',
+  coin_value   INTEGER DEFAULT 0,
+  in_packs     BOOLEAN DEFAULT TRUE,
+  created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE user_inventory (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID REFERENCES users(id) ON DELETE CASCADE,
+  item_id      TEXT REFERENCES item_definitions(id),
+  quantity     INTEGER DEFAULT 1,
+  equipped     BOOLEAN DEFAULT FALSE,
+  acquired_at  TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, item_id)
+);
+
+CREATE TABLE daily_quest_defs (
+  id           TEXT PRIMARY KEY,
+  description  TEXT NOT NULL,
+  metric       TEXT NOT NULL,
+  target       INTEGER NOT NULL,
+  filter_value TEXT,
+  reward_coins INTEGER DEFAULT 0,
+  reward_gems  INTEGER DEFAULT 0,
+  weight       INTEGER DEFAULT 1
+);
+
+CREATE TABLE user_daily_quests (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID REFERENCES users(id) ON DELETE CASCADE,
+  quest_id     TEXT REFERENCES daily_quest_defs(id),
+  quest_date   DATE NOT NULL,
+  progress     INTEGER DEFAULT 0,
+  target       INTEGER NOT NULL,
+  claimed      BOOLEAN DEFAULT FALSE,
+  UNIQUE(user_id, quest_id, quest_date)
+);
+
+CREATE TABLE leagues (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tier         TEXT NOT NULL,
+  week_start   DATE NOT NULL,
+  cohort_index INTEGER DEFAULT 0,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(tier, week_start, cohort_index)
+);
+
+CREATE TABLE league_members (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  league_id    UUID REFERENCES leagues(id) ON DELETE CASCADE,
+  user_id      UUID REFERENCES users(id) ON DELETE CASCADE,
+  weekly_xp    INTEGER DEFAULT 0,
+  final_rank   INTEGER,
+  result       TEXT,
+  UNIQUE(league_id, user_id)
+);
+
+CREATE TABLE season_defs (
+  id           TEXT PRIMARY KEY,
+  name         TEXT NOT NULL,
+  starts_at    DATE NOT NULL,
+  ends_at      DATE NOT NULL,
+  active       BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE season_tiers (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  season_id    TEXT REFERENCES season_defs(id) ON DELETE CASCADE,
+  tier_index   INTEGER NOT NULL,
+  xp_required  INTEGER NOT NULL,
+  reward_coins INTEGER DEFAULT 0,
+  reward_gems  INTEGER DEFAULT 0,
+  reward_item  TEXT,
+  UNIQUE(season_id, tier_index)
+);
+
+CREATE TABLE user_season_progress (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID REFERENCES users(id) ON DELETE CASCADE,
+  season_id     TEXT REFERENCES season_defs(id) ON DELETE CASCADE,
+  season_xp     INTEGER DEFAULT 0,
+  claimed_tiers INTEGER[] DEFAULT '{}',
+  UNIQUE(user_id, season_id)
+);
+
+CREATE TABLE boost_activations (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID REFERENCES users(id) ON DELETE CASCADE,
+  item_id      TEXT REFERENCES item_definitions(id),
+  category     TEXT NOT NULL,
+  activated_at TIMESTAMPTZ DEFAULT NOW(),
+  expires_at   TIMESTAMPTZ,
+  consumed     BOOLEAN DEFAULT FALSE
+);
+
 -- ─── Migration script (run this against existing databases to apply new columns/tables) ───
 -- Copy lines below into your Railway/Supabase SQL console to upgrade an existing DB:
 --

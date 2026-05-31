@@ -99,6 +99,47 @@ const SOUNDS = {
     const ctx = getCtx(); if (!ctx) return;
     tone(800, 'sine', ctx.currentTime, 0.04, 0.12);
   },
+  coin() {
+    const ctx = getCtx(); if (!ctx) return;
+    const t = ctx.currentTime;
+    tone(988, 'sine', t, 0.06, 0.18);        // B5
+    tone(1319, 'sine', t + 0.05, 0.08, 0.16); // E6
+  },
+  'pack-open'() {
+    const ctx = getCtx(); if (!ctx) return;
+    const t = ctx.currentTime;
+    tone(392, 'sine', t, 0.18, 0.2);
+    tone(523, 'sine', t + 0.12, 0.18, 0.22);
+    tone(659, 'sine', t + 0.24, 0.25, 0.22);
+  },
+  'pack-rare'() {
+    const ctx = getCtx(); if (!ctx) return;
+    const t = ctx.currentTime;
+    [659, 880, 1047].forEach((f, i) => tone(f, 'sine', t + i * 0.1, 0.2, 0.24));
+  },
+  'pack-legendary'() {
+    const ctx = getCtx(); if (!ctx) return;
+    const t = ctx.currentTime;
+    const chord = [523, 659, 784, 1047, 1319];
+    chord.forEach((f, i) => tone(f, 'sine', t + i * 0.08, 0.5, 0.22));
+    tone(2093, 'sine', t + 0.6, 0.6, 0.2);
+  },
+  'quest-complete'() {
+    const ctx = getCtx(); if (!ctx) return;
+    const t = ctx.currentTime;
+    [784, 1047, 1319].forEach((f, i) => tone(f, 'sine', t + i * 0.08, 0.18, 0.24));
+  },
+  'line-clear'() {
+    const ctx = getCtx(); if (!ctx) return;
+    const t = ctx.currentTime;
+    [880, 1175, 1397].forEach((f, i) => tone(f, 'triangle', t + i * 0.05, 0.12, 0.2));
+  },
+  boost() {
+    const ctx = getCtx(); if (!ctx) return;
+    const t = ctx.currentTime;
+    tone(330, 'sawtooth', t, 0.1, 0.16);
+    tone(660, 'sine', t + 0.08, 0.2, 0.2);
+  },
 };
 
 export const SoundService = {

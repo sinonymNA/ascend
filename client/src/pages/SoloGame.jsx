@@ -12,6 +12,8 @@ import XPFloat from '../components/game/XPFloat.jsx';
 import AchievementToast from '../components/common/AchievementToast.jsx';
 import LevelUp from '../components/common/LevelUp.jsx';
 import SoundService from '../lib/sound.js';
+import CoinFloat from '../components/economy/CoinFloat.jsx';
+import BoostBar from '../components/economy/BoostBar.jsx';
 
 function normalizeQuestions(rawQuestions) {
   return rawQuestions.map((q) => ({
@@ -37,7 +39,7 @@ function shuffle(arr) {
 }
 
 export default function SoloGame() {
-  const { navigate, screenParams, user, setUser } = useApp();
+  const { navigate, screenParams, user, setUser, setWallet } = useApp();
   const { setId, setTitle } = screenParams || {};
   const playerName = user?.name || user?.username || 'You';
 
@@ -64,6 +66,12 @@ export default function SoloGame() {
   const [xpFloatAmt,      setXpFloatAmt]        = useState(0);
   const [xpFloatKey,      setXpFloatKey]        = useState(0);
   const [correctTrigger,  setCorrectTrigger]    = useState(0);
+
+  // ── Economy state ────────────────────────────────────────────────────────────
+  const [coinFloatAmt, setCoinFloatAmt] = useState(0);
+  const [coinFloatKey, setCoinFloatKey] = useState(0);
+  const [eliminated, setEliminated]     = useState([]); // 50/50 hidden letters
+  const correctCountRef = useRef(0);
 
   // ── Gamification state ─────────────────────────────────────────────────────────
   const [pendingAchievements, setPendingAchievements] = useState([]);
@@ -150,6 +158,8 @@ export default function SoloGame() {
         questionsTotal: questions.length,
         xpEarned: xpRef.current,
         streakBest: streakBestRef.current,
+        answered: answeredCountRef.current,
+        correct: correctCountRef.current,
         summited,
       });
       if (resp.newAchievements?.length) {
@@ -161,6 +171,7 @@ export default function SoloGame() {
         prevLevelRef.current = resp.level;
         setUser((u) => u ? { ...u, level: resp.level, xp: resp.xp } : u);
       }
+      if (resp.wallet) setWallet(resp.wallet);
     } catch (_) {}
 
     // Sync per-question mastery
@@ -168,7 +179,7 @@ export default function SoloGame() {
       api.post('/api/mastery/sync', { setId, answers: sessionAnswersRef.current }).catch(() => {});
     }
     return earned;
-  }, [setId, questions.length, setUser]);
+  }, [setId, questions.length, setUser, setWallet]);
 
   // ── Process answer ─────────────────────────────────────────────────────────────
   const handleAnswer = useCallback((letter) => {
@@ -191,12 +202,20 @@ export default function SoloGame() {
     let newStreak = streak;
 
     if (correct) {
+      correctCountRef.current += 1;
       newStreak = streak + 1;
       if (newStreak > streakBestRef.current) streakBestRef.current = newStreak;
       const wrongCount = wrongCountsRef.current[question.id] || 0;
       mastered = !masteredIdsRef.current.includes(question.id);
       if (mastered) masteredIdsRef.current = [...masteredIdsRef.current, question.id];
       xpGained = calculateXP(wrongCount + 1, newStreak, mastered);
+
+      // Optimistic coin float (server reconciles authoritative balance)
+      const coinGain = mastered ? 10 : 0;
+      if (coinGain > 0) {
+        setCoinFloatAmt(coinGain);
+        setCoinFloatKey((k) => k + 1);
+      }
 
       queueRef.current = queueRef.current.filter((item) => item.question.id !== question.id);
 
@@ -294,9 +313,27 @@ export default function SoloGame() {
       setPhase('question');
       setSelectedAnswer(null);
       setAnswerResult(null);
+      setEliminated([]);
       if (nextQ) setCurrentQuestion({ ...nextQ, _startTime: Date.now() });
     }, delay);
   }, [selectedAnswer, phase, currentQuestion, streak, questions, setTitle, screenParams, saveProgress]);
+
+  // 50/50 boost — eliminate two wrong options on the current question
+  const handleFifty = useCallback(() => {
+    if (!currentQuestion || selectedAnswer) return;
+    const wrong = ['A', 'B', 'C', 'D'].filter(
+      (l) => l !== currentQuestion.correct && currentQuestion.options?.[l]
+    );
+    const toHide = shuffle(wrong).slice(0, 2);
+    setEliminated(toHide);
+  }, [currentQuestion, selectedAnswer]);
+
+  // Build the question shown to the player (with 50/50 eliminations applied)
+  const displayQuestion = currentQuestion && eliminated.length
+    ? { ...currentQuestion, options: Object.fromEntries(
+        Object.entries(currentQuestion.options || {}).map(([k, v]) => [k, eliminated.includes(k) ? '' : v])
+      ) }
+    : currentQuestion;
 
   // Cleanup
   useEffect(() => () => { if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current); }, []);
@@ -379,6 +416,7 @@ export default function SoloGame() {
         />
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           <XPFloat key={xpFloatKey} show={showXPFloat} amount={xpFloatAmt} />
+          <CoinFloat amount={coinFloatAmt} triggerKey={coinFloatKey} />
         </div>
       </div>
 
@@ -409,7 +447,7 @@ export default function SoloGame() {
               exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.24 }}
             >
               <QuestionCard
-                question={currentQuestion}
+                question={displayQuestion}
                 onAnswer={handleAnswer}
                 disabled={!!selectedAnswer}
                 selected={selectedAnswer}
@@ -426,6 +464,10 @@ export default function SoloGame() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {phase === 'question' && !selectedAnswer && (
+          <BoostBar onFifty={handleFifty} />
+        )}
       </div>
 
       <SummitCelebration

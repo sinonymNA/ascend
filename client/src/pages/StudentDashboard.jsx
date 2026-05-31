@@ -5,6 +5,7 @@ import api from '../lib/api.js';
 import ScorePrediction from '../components/score/ScorePrediction.jsx';
 import AchievementToast from '../components/common/AchievementToast.jsx';
 import SoundService from '../lib/sound.js';
+import WalletPill from '../components/economy/WalletPill.jsx';
 
 const SAT_SETS = {
   sat_math: { id: '00000000-0000-0000-0000-000000000010', title: 'SAT Math', emoji: '📐' },
@@ -508,6 +509,15 @@ export default function StudentDashboard() {
             </motion.div>
           )}
 
+          {/* Wallet */}
+          <WalletPill onClick={() => { SoundService.play('click'); navigate('shop'); }} />
+
+          {/* Quests */}
+          <button onClick={() => navigate('quests')} title="Daily Quests"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 6px', lineHeight: 1 }}>
+            📋
+          </button>
+
           {/* Leaderboard */}
           <button
             onClick={() => navigate('leaderboard')}
@@ -636,8 +646,57 @@ export default function StudentDashboard() {
           </div>
         )}
 
+        {/* Game Modes */}
+        <div style={{ marginBottom: '28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '15px', fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '0.04em' }}>
+              Game Modes
+            </h3>
+            <button onClick={() => navigate('season')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#F5A623', fontWeight: 700, fontFamily: 'Nunito, sans-serif' }}>
+              🎟️ Season Pass →
+            </button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
+            {[
+              { key: 'blitz_game', emoji: '⚡', name: 'Blitz', desc: '60s coin rush', color: '#FBBF24' },
+              { key: 'boss_game', emoji: '👹', name: 'Boss Climb', desc: 'Win a rare pack', color: '#E85D4A' },
+              { key: 'block_blast', emoji: '🧩', name: 'Block Blast', desc: 'Puzzle + quiz', color: '#A78BFA' },
+            ].map((m, i) => {
+              const firstSet = Object.values(currentSets)[0];
+              return (
+                <motion.button
+                  key={m.key}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.06 }}
+                  whileHover={{ y: -4 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => { SoundService.play('click'); navigate(m.key, { setId: firstSet.id, setTitle: firstSet.title }); }}
+                  style={{
+                    background: 'var(--bg-elevated)', border: `1px solid ${m.color}55`,
+                    borderRadius: '16px', padding: '18px 14px', cursor: 'pointer',
+                    textAlign: 'center', fontFamily: 'Nunito, sans-serif',
+                    boxShadow: `0 0 18px ${m.color}22`,
+                  }}
+                >
+                  <div style={{ fontSize: '32px', marginBottom: '6px' }}>{m.emoji}</div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text)' }}>{m.name}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>{m.desc}</div>
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Climber customization */}
         <ClimberCustomization user={user} onColorChange={setClimberColor} />
+
+        {/* League + Bottom actions */}
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+          <button className="btn-ghost" style={{ fontSize: '14px', padding: '11px 24px', borderColor: 'var(--border-gold)', color: '#F5A623' }} onClick={() => navigate('leagues')}>
+            🏅 View League
+          </button>
+        </div>
 
         {/* Bottom actions */}
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
