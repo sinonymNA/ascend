@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
+import AchievementToast from '../components/common/AchievementToast.jsx';
 
 const SUBJECT_LABELS = {
   sat_math: 'SAT Math',
@@ -41,7 +42,10 @@ export default function SessionResults() {
     streakBest = 0,
     subject,
     setId,
+    newAchievements = [],
   } = screenParams || {};
+
+  const [pendingAchievements, setPendingAchievements] = useState(newAchievements);
 
   const canvasRef = useRef(null);
   const [shareReady, setShareReady] = useState(false);
@@ -310,6 +314,16 @@ export default function SessionResults() {
       </motion.div>
 
       <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+      {/* Achievement toasts */}
+      <AnimatePresence>
+        {pendingAchievements.length > 0 && (
+          <AchievementToast
+            achievement={pendingAchievements[0]}
+            onDone={() => setPendingAchievements((prev) => prev.slice(1))}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

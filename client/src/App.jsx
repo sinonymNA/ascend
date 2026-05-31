@@ -35,6 +35,8 @@ const AuthPage             = React.lazy(() => import('./pages/AuthPage.jsx'));
 const StudentDashboard     = React.lazy(() => import('./pages/StudentDashboard.jsx'));
 const SoloGame             = React.lazy(() => import('./pages/SoloGame.jsx'));
 const SessionResults       = React.lazy(() => import('./pages/SessionResults.jsx'));
+const Leaderboard          = React.lazy(() => import('./pages/Leaderboard.jsx'));
+const DiagnosticQuiz       = React.lazy(() => import('./pages/DiagnosticQuiz.jsx'));
 
 const SCREEN_MAP = {
   landing:           LandingPage,
@@ -51,6 +53,8 @@ const SCREEN_MAP = {
   student_dashboard: StudentDashboard,
   solo_game:         SoloGame,
   session_results:   SessionResults,
+  leaderboard:       Leaderboard,
+  diagnostic:        DiagnosticQuiz,
 };
 
 // ─── Page transition variants ─────────────────────────────────────────────────
@@ -118,6 +122,9 @@ function AppProvider({ children }) {
       .then((data) => {
         const u = data.user || data;
         setUser(u);
+        if (data.streakUpdate?.isNewDay) {
+          window.__summitStreakUpdate = data.streakUpdate;
+        }
         if (u.role === 'teacher') {
           navigate('teacher_dashboard');
         } else {

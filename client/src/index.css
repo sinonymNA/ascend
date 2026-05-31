@@ -26,6 +26,13 @@
     --border-gold:  rgba(245,166,35,0.3);
     --shadow-md:    0 4px 20px rgba(0,0,0,0.4);
     --shadow-gold:  0 0 20px rgba(245,166,35,0.2);
+
+    /* Biome palette */
+    --biome-forest:    #1A4A28;
+    --biome-meadow:    #3D7A45;
+    --biome-alpine:    #5A6A70;
+    --biome-snowfield: #C8D8E0;
+    --biome-peak:      #F5E6C0;
   }
 
   * {
@@ -302,5 +309,37 @@
   }
   .animate-slide-up {
     animation: slide-up 0.35s ease-out;
+  }
+
+  /* Progress bar shimmer */
+  @keyframes shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+  }
+
+  .shimmer-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%);
+    animation: shimmer 2.4s ease-in-out infinite;
+    border-radius: inherit;
+  }
+
+  /* Biome twinkle for stars */
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50%       { opacity: 1;    transform: scale(1.4); }
+  }
+
+  .star-twinkle {
+    animation: twinkle var(--twinkle-dur, 2s) ease-in-out infinite;
+    animation-delay: var(--twinkle-delay, 0s);
+  }
+
+  /* Particle burst keyframes (fallback for non-SVG usage) */
+  @keyframes particle-up {
+    0%   { opacity: 1; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--px, 0px), var(--py, -30px)) scale(0.4); }
   }
 }

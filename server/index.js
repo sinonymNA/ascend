@@ -11,9 +11,12 @@ const classRoutes = require('./routes/classes');
 const questionRoutes = require('./routes/questions');
 const sessionRoutes = require('./routes/sessions');
 const paymentRoutes = require('./routes/payments');
-const waitlistRoutes = require('./routes/waitlist');
-const progressRoutes = require('./routes/progress');
-const initGameSocket = require('./socket/gameSocket');
+const waitlistRoutes    = require('./routes/waitlist');
+const progressRoutes    = require('./routes/progress');
+const masteryRoutes     = require('./routes/mastery');
+const leaderboardRoutes = require('./routes/leaderboard');
+const friendsRoutes     = require('./routes/friends');
+const initGameSocket    = require('./socket/gameSocket');
 
 const app = express();
 const server = http.createServer(app);
@@ -51,12 +54,16 @@ app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 
 // ── API Routes ─────────────────────────────────────────────────────────────────
 app.use('/auth', authRoutes);
+app.use('/api/users', authRoutes); // reuse auth router for /api/users/me/customization
 app.use('/api/classes', classRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/waitlist', waitlistRoutes);
-app.use('/api/progress', progressRoutes);
+app.use('/api/waitlist',     waitlistRoutes);
+app.use('/api/progress',    progressRoutes);
+app.use('/api/mastery',     masteryRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/friends',     friendsRoutes);
 
 // ── Serve client build ────────────────────────────────────────────────────────
 // Always serve if dist exists (Railway doesn't set NODE_ENV=production by default)

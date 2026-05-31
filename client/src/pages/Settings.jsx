@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
+import SoundService from '../lib/sound.js';
 
 // ─── Decorative SVG ───────────────────────────────────────────────────────────
 
@@ -281,7 +282,10 @@ export default function Settings() {
   const [notifSaving, setNotifSaving] = useState(false);
   const [notifStatus, setNotifStatus] = useState('');
 
-  // 4. Danger zone
+  // 4. Sound
+  const [soundMuted, setSoundMuted] = useState(SoundService.muted);
+
+  // 5. Danger zone
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -421,7 +425,7 @@ export default function Settings() {
         }}
       >
         <button
-          onClick={() => navigate('teacher_dashboard')}
+          onClick={() => navigate(user?.role === 'student' ? 'student_dashboard' : 'teacher_dashboard')}
           style={{
             background: 'none',
             border: 'none',
@@ -442,7 +446,7 @@ export default function Settings() {
         <button
           className="btn-ghost"
           style={{ padding: '8px 16px', fontSize: '13px' }}
-          onClick={() => navigate('teacher_dashboard')}
+          onClick={() => navigate(user?.role === 'student' ? 'student_dashboard' : 'teacher_dashboard')}
         >
           ← Dashboard
         </button>
@@ -701,6 +705,58 @@ export default function Settings() {
               <SaveStatus status={notifStatus} />
             </div>
           </form>
+        </SectionCard>
+
+        {/* ── 3b. Sound & Streak ── */}
+        <SectionCard title="Sound & Progress" icon="🔊">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '14px', fontWeight: 800, color: 'var(--text)', margin: '0 0 4px' }}>
+                Sound Effects
+              </p>
+              <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+                {soundMuted ? 'Sounds are off' : 'Sounds are on'}
+              </p>
+            </div>
+            <Toggle
+              id="sound-toggle"
+              checked={!soundMuted}
+              onChange={(val) => {
+                const muted = !val;
+                setSoundMuted(muted);
+                SoundService.setMuted(muted);
+                if (!muted) SoundService.play('click');
+              }}
+            />
+          </div>
+
+          {/* Streak info */}
+          <div style={{
+            background: 'rgba(245,166,35,0.06)',
+            border: '1px solid var(--border-gold)',
+            borderRadius: '12px',
+            padding: '14px 18px',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '14px', fontWeight: 800, color: '#F5A623', margin: '0 0 2px' }}>
+                  🔥 {user?.login_streak || 0}-Day Streak
+                </p>
+                <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+                  {user?.streak_shield_count || 0} streak shield{(user?.streak_shield_count || 0) !== 1 ? 's' : ''} available
+                </p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '24px' }}>🛡️</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>
+                  ×{user?.streak_shield_count || 0}
+                </div>
+              </div>
+            </div>
+            <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '11px', color: 'var(--text-muted)', margin: '10px 0 0', lineHeight: 1.5 }}>
+              Shields protect your streak if you miss a day. Earn 1 shield every 7-day streak milestone.
+            </p>
+          </div>
         </SectionCard>
 
         {/* ── 4. Danger Zone ── */}

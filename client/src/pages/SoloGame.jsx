@@ -3,13 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
 import { calculateXP, calculateElevation, getNextQuestion } from '../lib/mastery.js';
-import Mountain from '../components/mountain/Mountain.jsx';
-import ElevationBar from '../components/mountain/ElevationBar.jsx';
+import MountainWorld from '../components/mountain/MountainWorld.jsx';
 import SummitCelebration from '../components/mountain/SummitCelebration.jsx';
 import QuestionCard from '../components/game/QuestionCard.jsx';
 import ResultFlash from '../components/game/ResultFlash.jsx';
 import StreakIndicator from '../components/game/StreakIndicator.jsx';
 import XPFloat from '../components/game/XPFloat.jsx';
+import AchievementToast from '../components/common/AchievementToast.jsx';
+import LevelUp from '../components/common/LevelUp.jsx';
+import SoundService from '../lib/sound.js';
 
 function normalizeQuestions(rawQuestions) {
   return rawQuestions.map((q) => ({
@@ -35,7 +37,7 @@ function shuffle(arr) {
 }
 
 export default function SoloGame() {
-  const { navigate, screenParams, user } = useApp();
+  const { navigate, screenParams, user, setUser } = useApp();
   const { setId, setTitle } = screenParams || {};
   const playerName = user?.name || user?.username || 'You';
 
@@ -43,11 +45,12 @@ export default function SoloGame() {
   const [questions, setQuestions] = useState([]);
   const [phase, setPhase] = useState('loading'); // loading | question | result | summited
 
-  // ── Mastery state (refs for mutable game logic, mirrored to state for render) ──
-  const masteredIdsRef  = useRef([]);
-  const wrongCountsRef  = useRef({});
-  const queueRef        = useRef([]);
+  // ── Mastery state ──────────────────────────────────────────────────────────────
+  const masteredIdsRef   = useRef([]);
+  const wrongCountsRef   = useRef({});
+  const queueRef         = useRef([]);
   const answeredCountRef = useRef(0);
+  const sessionAnswersRef = useRef([]); // for cross-session sync
 
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [selectedAnswer,  setSelectedAnswer]   = useState(null);
@@ -60,34 +63,112 @@ export default function SoloGame() {
   const [showXPFloat,     setShowXPFloat]       = useState(false);
   const [xpFloatAmt,      setXpFloatAmt]        = useState(0);
   const [xpFloatKey,      setXpFloatKey]        = useState(0);
+  const [correctTrigger,  setCorrectTrigger]    = useState(0);
+
+  // ── Gamification state ─────────────────────────────────────────────────────────
+  const [pendingAchievements, setPendingAchievements] = useState([]);
+  const [levelUpLevel, setLevelUpLevel] = useState(null);
 
   const advanceTimerRef = useRef(null);
-  const streakBestRef = useRef(0);
-  const xpRef = useRef(0);
+  const streakBestRef   = useRef(0);
+  const xpRef           = useRef(0);
+  const prevLevelRef    = useRef(user?.level || 1);
   const [sessionResultsParams, setSessionResultsParams] = useState(null);
+  const [climberColor, setClimberColor] = useState('#F5A623');
 
-  // ── Load questions ─────────────────────────────────────────────────────────────
+  // ── Load questions + cross-session mastery ──────────────────────────────────────
   useEffect(() => {
     if (!setId) { navigate('student_dashboard'); return; }
     let cancelled = false;
-    api.get(`/api/questions/sets/${setId}`)
-      .then((data) => {
+
+    async function load() {
+      try {
+        // Fetch question set
+        const data = await api.get(`/api/questions/sets/${setId}`);
         if (cancelled) return;
         const raw = data.set?.questions || [];
         if (!raw.length) { navigate('student_dashboard'); return; }
+
         let pool = normalizeQuestions(raw);
-        if (user?.subscription !== 'pro' && pool.length > 20) {
-          pool = [...pool].sort((a, b) => a.difficulty - b.difficulty).slice(0, 20);
-        } else {
-          pool = shuffle(pool);
+
+        // Fetch cross-session mastery state
+        let serverMastery = { masteredIds: [], dueIds: [], wrongCounts: {} };
+        if (user) {
+          try { serverMastery = await api.get(`/api/mastery/${setId}`); } catch (_) {}
         }
-        setQuestions(pool);
-        setCurrentQuestion({ ...pool[0], _startTime: Date.now() });
+
+        // Questions that are solidly mastered and not due for review → exclude
+        const skipIds = new Set(serverMastery.masteredIds);
+        serverMastery.dueIds.forEach((id) => skipIds.delete(id)); // due = include
+
+        // Pre-populate mastered state from server
+        masteredIdsRef.current = [...serverMastery.masteredIds];
+        wrongCountsRef.current = { ...serverMastery.wrongCounts };
+
+        // Filter pool: remove solidly mastered (but keep due-for-review)
+        let activePool = pool.filter((q) => !skipIds.has(q.id));
+
+        // If everything is mastered (no due questions), show all for a refresh session
+        if (activePool.length === 0) activePool = pool;
+
+        // Free tier: limit to 20
+        if (user?.subscription !== 'pro' && activePool.length > 20) {
+          activePool = [...activePool].sort((a, b) => a.difficulty - b.difficulty).slice(0, 20);
+        } else {
+          activePool = shuffle(activePool);
+        }
+
+        // Load climber color
+        try {
+          const custData = await api.get('/api/users/me/customization').catch(() => null);
+          if (custData?.color) setClimberColor(custData.color);
+        } catch (_) {}
+
+        setQuestions(activePool);
+        const initialElevation = calculateElevation(masteredIdsRef.current.length, pool.length);
+        setElevation(initialElevation);
+        setMasteredCount(masteredIdsRef.current.length);
+        setCurrentQuestion({ ...activePool[0], _startTime: Date.now() });
         setPhase('question');
-      })
-      .catch(() => { if (!cancelled) navigate('student_dashboard'); });
+      } catch (_) {
+        if (!cancelled) navigate('student_dashboard');
+      }
+    }
+
+    load();
     return () => { cancelled = true; };
-  }, [setId, navigate]);
+  }, [setId, navigate, user]);
+
+  // ── Save progress helper ───────────────────────────────────────────────────────
+  const saveProgress = useCallback(async (summited = false) => {
+    if (!setId || masteredIdsRef.current.length === 0) return [];
+    let earned = [];
+    try {
+      const resp = await api.post('/api/progress/solo', {
+        setId,
+        masteredCount: masteredIdsRef.current.length,
+        questionsTotal: questions.length,
+        xpEarned: xpRef.current,
+        streakBest: streakBestRef.current,
+        summited,
+      });
+      if (resp.newAchievements?.length) {
+        earned = resp.newAchievements;
+        setPendingAchievements((prev) => [...prev, ...resp.newAchievements]);
+      }
+      if (resp.level && resp.level > prevLevelRef.current) {
+        setLevelUpLevel(resp.level);
+        prevLevelRef.current = resp.level;
+        setUser((u) => u ? { ...u, level: resp.level, xp: resp.xp } : u);
+      }
+    } catch (_) {}
+
+    // Sync per-question mastery
+    if (sessionAnswersRef.current.length) {
+      api.post('/api/mastery/sync', { setId, answers: sessionAnswersRef.current }).catch(() => {});
+    }
+    return earned;
+  }, [setId, questions.length, setUser]);
 
   // ── Process answer ─────────────────────────────────────────────────────────────
   const handleAnswer = useCallback((letter) => {
@@ -95,8 +176,15 @@ export default function SoloGame() {
     setSelectedAnswer(letter);
 
     const question = currentQuestion;
-    const correct = letter === question.correct;
+    const correct  = letter === question.correct;
     answeredCountRef.current += 1;
+
+    // Track for server sync
+    sessionAnswersRef.current.push({
+      questionId: question.id,
+      correct,
+      wrongCount: (wrongCountsRef.current[question.id] || 0) + (correct ? 0 : 1),
+    });
 
     let xpGained = 0;
     let mastered = false;
@@ -118,12 +206,28 @@ export default function SoloGame() {
       setXp(xpRef.current);
       setMasteredCount(masteredIdsRef.current.length);
 
+      // Particles + XP float
+      setCorrectTrigger((n) => n + 1);
       if (xpGained > 0) {
         setXpFloatAmt(xpGained);
         setXpFloatKey((k) => k + 1);
         setShowXPFloat(true);
         setTimeout(() => setShowXPFloat(false), 1200);
       }
+
+      // Sounds
+      if (mastered) {
+        SoundService.play('mastery');
+      } else if (newStreak === 10) {
+        SoundService.play('streak-10');
+      } else if (newStreak === 5) {
+        SoundService.play('streak-5');
+      } else if (newStreak === 3) {
+        SoundService.play('streak-3');
+      } else {
+        SoundService.play('correct');
+      }
+
       setShowFlash(true);
       setTimeout(() => setShowFlash(false), 600);
     } else {
@@ -137,6 +241,7 @@ export default function SoloGame() {
       const dueAt = answeredCountRef.current + (wc === 1 ? 3 : wc === 2 ? 2 : 1);
       queueRef.current = [...queueRef.current, { question, dueAtIndex: dueAt }];
       setStreak(0);
+      SoundService.play('wrong');
     }
 
     const newElevation = calculateElevation(masteredIdsRef.current.length, questions.length);
@@ -154,7 +259,7 @@ export default function SoloGame() {
     });
     setPhase('result');
 
-    // Check summit
+    // Summit check
     if (correct && masteredIdsRef.current.length >= questions.length) {
       const resultParams = {
         setTitle: setTitle || 'Practice Session',
@@ -165,15 +270,10 @@ export default function SoloGame() {
         subject: screenParams.subject,
         setId,
       };
-      setTimeout(() => {
-        api.post('/api/progress/solo', {
-          setId,
-          masteredCount: resultParams.masteredCount,
-          questionsTotal: resultParams.questionsTotal,
-          xpEarned: resultParams.xpEarned,
-          streakBest: resultParams.streakBest,
-        }).catch(() => {});
-        setSessionResultsParams(resultParams);
+      SoundService.play('summit');
+      setTimeout(async () => {
+        const earned = await saveProgress(true);
+        setSessionResultsParams({ ...resultParams, newAchievements: earned });
         setPhase('summited');
       }, 1600);
       return;
@@ -194,105 +294,71 @@ export default function SoloGame() {
       setPhase('question');
       setSelectedAnswer(null);
       setAnswerResult(null);
-      if (nextQ) {
-        setCurrentQuestion({ ...nextQ, _startTime: Date.now() });
-      }
+      if (nextQ) setCurrentQuestion({ ...nextQ, _startTime: Date.now() });
     }, delay);
-  }, [selectedAnswer, phase, currentQuestion, streak, questions]);
+  }, [selectedAnswer, phase, currentQuestion, streak, questions, setTitle, screenParams, saveProgress]);
 
   // Cleanup
   useEffect(() => () => { if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current); }, []);
 
-  const players = [{ id: 'solo', name: playerName, elevation, summited: elevation >= 100, color: '#F5A623' }];
-
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        height: '100dvh',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'var(--bg)',
-        fontFamily: 'Nunito, sans-serif',
-        overflow: 'hidden',
-        position: 'relative',
-      }}
-    >
+    <div style={{
+      minHeight: '100vh', height: '100dvh',
+      display: 'flex', flexDirection: 'column',
+      background: 'var(--bg)', fontFamily: 'Nunito, sans-serif',
+      overflow: 'hidden', position: 'relative',
+    }}>
       <ResultFlash correct={answerResult?.correct} show={showFlash} />
 
+      {/* Achievement + Level Up overlays */}
+      <AchievementToast
+        achievements={pendingAchievements}
+        onDismiss={() => setPendingAchievements((prev) => prev.slice(1))}
+      />
+      <LevelUp
+        show={!!levelUpLevel}
+        level={levelUpLevel}
+        onDone={() => setLevelUpLevel(null)}
+      />
+
       {/* Top bar */}
-      <div
-        style={{
-          flexShrink: 0,
-          height: '64px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 16px',
-          background: 'rgba(15,23,32,0.85)',
-          borderBottom: '1px solid var(--border)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          zIndex: 20,
-          gap: '12px',
-        }}
-      >
+      <div style={{
+        flexShrink: 0, height: '64px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 16px',
+        background: 'rgba(15,23,32,0.88)',
+        borderBottom: '1px solid var(--border)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        zIndex: 20, gap: '12px',
+      }}>
         <button
-          onClick={() => {
-            if (setId && masteredIdsRef.current.length > 0) {
-              api.post('/api/progress/solo', {
-                setId,
-                masteredCount: masteredIdsRef.current.length,
-                questionsTotal: questions.length,
-                xpEarned: xpRef.current,
-                streakBest: streakBestRef.current,
-              }).catch(() => {});
-            }
+          onClick={async () => {
+            await saveProgress(false);
             navigate('student_dashboard');
           }}
           style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: 700,
-            padding: '4px 8px',
-            borderRadius: '8px',
-            fontFamily: 'Nunito, sans-serif',
-            flexShrink: 0,
+            background: 'none', border: 'none', color: 'var(--text-muted)',
+            cursor: 'pointer', fontSize: '14px', fontWeight: 700,
+            padding: '4px 8px', borderRadius: '8px',
+            fontFamily: 'Nunito, sans-serif', flexShrink: 0,
           }}
         >
           ← Back
         </button>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 0 }}>
-          <span
-            style={{
-              fontFamily: 'Cinzel, serif',
-              fontSize: '11px',
-              fontWeight: 700,
-              color: 'var(--text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              maxWidth: '100%',
-            }}
-          >
+          <span style={{
+            fontFamily: 'Cinzel, serif', fontSize: '11px', fontWeight: 700,
+            color: 'var(--text-muted)', textTransform: 'uppercase',
+            letterSpacing: '0.08em', overflow: 'hidden',
+            textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%',
+          }}>
             {setTitle || 'Solo Practice'}
           </span>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
             {masteredCount}/{questions.length || '?'} mastered
           </span>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-          <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>
-            ⬆ {elevation}%
-          </span>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>elevation</span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
@@ -303,58 +369,34 @@ export default function SoloGame() {
         </div>
       </div>
 
-      {/* Mountain */}
-      <div
-        style={{
-          flexShrink: 0,
-          height: '34vh',
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'stretch',
-          overflow: 'hidden',
-        }}
-      >
-        <div style={{ flex: 1, position: 'relative' }}>
-          <Mountain players={players} highlightId="solo" showLabels interactive={false} />
-          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-            <XPFloat key={xpFloatKey} show={showXPFloat} amount={xpFloatAmt} />
-          </div>
-        </div>
-        <div
-          style={{
-            width: '80px',
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '8px 8px 8px 0',
-          }}
-        >
-          <ElevationBar elevation={elevation} masteredCount={masteredCount} totalCount={questions.length || 0} />
+      {/* Mountain world — full living biome */}
+      <div style={{ flexShrink: 0, height: '38vh', position: 'relative', overflow: 'hidden' }}>
+        <MountainWorld
+          elevation={elevation}
+          streak={streak}
+          correctTrigger={correctTrigger}
+          climberColor={climberColor}
+        />
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+          <XPFloat key={xpFloatKey} show={showXPFloat} amount={xpFloatAmt} />
         </div>
       </div>
 
       {/* Question / Result */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '16px 16px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-        }}
-      >
+      <div style={{
+        flex: 1, overflowY: 'auto',
+        padding: '16px 16px 24px',
+        display: 'flex', flexDirection: 'column', gap: '12px',
+      }}>
         <AnimatePresence mode="wait">
           {phase === 'loading' && (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <motion.div key="loading"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '60px 24px', color: 'var(--text-muted)', fontWeight: 600 }}
             >
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                 style={{ width: '28px', height: '28px', border: '3px solid var(--border)', borderTopColor: 'var(--gold)', borderRadius: '50%' }}
               />
               Loading questions…
@@ -362,12 +404,9 @@ export default function SoloGame() {
           )}
 
           {phase === 'question' && (
-            <motion.div
-              key={`q-${currentQuestion?.id}`}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.24 }}
+            <motion.div key={`q-${currentQuestion?.id}`}
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.24 }}
             >
               <QuestionCard
                 question={currentQuestion}
@@ -379,12 +418,9 @@ export default function SoloGame() {
           )}
 
           {phase === 'result' && answerResult && (
-            <motion.div
-              key="result"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.24 }}
+            <motion.div key="result"
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }} transition={{ duration: 0.24 }}
             >
               <ResultCard result={answerResult} />
             </motion.div>
@@ -413,11 +449,8 @@ function ResultCard({ result }) {
       style={{
         background: 'var(--bg-card)',
         border: `2px solid ${correct ? 'var(--pine-light)' : 'var(--sunset)'}`,
-        borderRadius: '18px',
-        padding: '20px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '14px',
+        borderRadius: '18px', padding: '20px',
+        display: 'flex', flexDirection: 'column', gap: '14px',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
@@ -445,8 +478,7 @@ function ResultCard({ result }) {
 
       {correct && streak >= 3 && (
         <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.15 }}
           style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,112,67,0.1)', border: '1px solid rgba(255,112,67,0.35)', borderRadius: '12px', padding: '6px 14px', fontSize: '13px', fontWeight: 700, color: '#FF7043', alignSelf: 'flex-start' }}
         >
@@ -467,8 +499,7 @@ function ResultCard({ result }) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         {[0, 0.2, 0.4].map((delay, i) => (
-          <motion.div
-            key={i}
+          <motion.div key={i}
             animate={{ opacity: [0.3, 1, 0.3] }}
             transition={{ duration: 1.2, repeat: Infinity, delay }}
             style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--text-muted)' }}

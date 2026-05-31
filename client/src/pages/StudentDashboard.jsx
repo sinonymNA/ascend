@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
+import ScorePrediction from '../components/score/ScorePrediction.jsx';
+import AchievementToast from '../components/common/AchievementToast.jsx';
+import SoundService from '../lib/sound.js';
 
 const SAT_SETS = {
   sat_math: { id: '00000000-0000-0000-0000-000000000010', title: 'SAT Math', emoji: '📐' },
@@ -14,6 +17,12 @@ const ACT_SETS = {
   act_reading: { id: '00000000-0000-0000-0000-000000000022', title: 'ACT Reading', emoji: '📖' },
   act_science: { id: '00000000-0000-0000-0000-000000000023', title: 'ACT Science', emoji: '🔬' },
 };
+
+const CLIMBER_COLORS = [
+  '#F5A623', '#52B788', '#4A90D9', '#E85D4A',
+  '#A78BFA', '#F472B6', '#34D399', '#FBBF24',
+  '#60A5FA', '#FB923C', '#C084FC', '#F0EDE6',
+];
 
 const WEEKLY_GOAL = 50;
 
@@ -45,26 +54,28 @@ function XPBar({ xp = 0, level = 1 }) {
       border: '1px solid var(--border)',
       borderRadius: '14px',
       padding: '16px 20px',
-      marginBottom: '20px',
+      marginBottom: '16px',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontFamily: 'Cinzel, serif', fontSize: '15px', fontWeight: 700, color: '#F5A623' }}>
             Level {level}
           </span>
-          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>{xp} XP</span>
+          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>{xp.toLocaleString()} XP</span>
         </div>
         <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
           {xpInLevel}/500 → Lv.{level + 1}
         </span>
       </div>
-      <div style={{ height: '8px', background: 'var(--bg)', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+      <div style={{ position: 'relative', height: '8px', background: 'var(--bg)', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border)' }}>
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ delay: 0.3, duration: 0.7, ease: 'easeOut' }}
           style={{ height: '100%', background: 'linear-gradient(90deg, #2D6A4F, #F5A623)', borderRadius: '4px' }}
         />
+        {/* Shimmer */}
+        <div className="shimmer-bar" style={{ position: 'absolute', inset: 0, borderRadius: '4px' }} />
       </div>
     </div>
   );
@@ -77,31 +88,31 @@ function WeeklyGoal({ weeklyCount }) {
       background: 'var(--bg-elevated)',
       border: '1px solid var(--border)',
       borderRadius: '14px',
-      padding: '16px 20px',
-      marginBottom: '28px',
+      padding: '14px 20px',
+      marginBottom: '20px',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-        <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text)' }}>🎯 Weekly Goal</span>
-        <span style={{ fontSize: '13px', color: pct >= 100 ? '#F5A623' : 'var(--text-muted)', fontWeight: 700 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+        <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>Weekly Goal</span>
+        <span style={{ fontSize: '12px', color: pct >= 100 ? '#F5A623' : 'var(--text-muted)', fontWeight: 700 }}>
           {weeklyCount}/{WEEKLY_GOAL} questions
         </span>
       </div>
-      <div style={{ height: '8px', background: 'var(--bg)', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+      <div style={{ height: '6px', background: 'var(--bg)', borderRadius: '3px', overflow: 'hidden', border: '1px solid var(--border)' }}>
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ delay: 0.4, duration: 0.6, ease: 'easeOut' }}
-          style={{ height: '100%', background: pct >= 100 ? '#F5A623' : 'linear-gradient(90deg, #2D6A4F, #52B788)', borderRadius: '4px' }}
+          style={{ height: '100%', background: pct >= 100 ? '#F5A623' : 'linear-gradient(90deg, #2D6A4F, #52B788)', borderRadius: '3px' }}
         />
       </div>
       {pct >= 100 && (
-        <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#F5A623', fontWeight: 700 }}>✨ Weekly goal reached!</p>
+        <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#F5A623', fontWeight: 700 }}>Weekly goal reached!</p>
       )}
     </div>
   );
 }
 
-function SubjectCard({ subject, meta, progress, onClimb }) {
+function SubjectCard({ subject, meta, progress, onClimb, index }) {
   const mastered = progress?.mastered_count || 0;
   const total = progress?.questions_total || 0;
   const streakBest = progress?.streak_best || 0;
@@ -110,8 +121,10 @@ function SubjectCard({ subject, meta, progress, onClimb }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.07, duration: 0.3 }}
+      whileHover={{ y: -4, boxShadow: '0 8px 32px rgba(245,166,35,0.15)' }}
       style={{
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border)',
@@ -120,6 +133,8 @@ function SubjectCard({ subject, meta, progress, onClimb }) {
         display: 'flex',
         flexDirection: 'column',
         gap: '14px',
+        cursor: 'default',
+        transition: 'border-color 0.2s',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -128,15 +143,9 @@ function SubjectCard({ subject, meta, progress, onClimb }) {
           <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '15px', fontWeight: 800, color: 'var(--text)', margin: '0 0 2px' }}>
             {meta.title}
           </p>
-          {lastDate ? (
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, fontWeight: 600 }}>
-              Last practiced: {lastDate}
-            </p>
-          ) : (
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, fontWeight: 600 }}>
-              Not started yet
-            </p>
-          )}
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, fontWeight: 600 }}>
+            {lastDate ? `Last: ${lastDate}` : 'Not started yet'}
+          </p>
         </div>
       </div>
 
@@ -146,17 +155,16 @@ function SubjectCard({ subject, meta, progress, onClimb }) {
             {mastered}{total > 0 ? `/${total}` : ''} mastered
           </span>
           {streakBest > 0 && (
-            <span style={{ fontSize: '12px', color: '#F5A623', fontWeight: 700 }}>🔥 {streakBest} streak</span>
+            <span style={{ fontSize: '12px', color: '#F5A623', fontWeight: 700 }}>🔥 {streakBest}</span>
           )}
         </div>
-        <div style={{ height: '6px', background: 'var(--bg)', borderRadius: '3px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-          <div style={{
-            height: '100%',
-            width: `${pct}%`,
-            background: pct > 0 ? 'linear-gradient(90deg, #2D6A4F, #F5A623)' : 'transparent',
-            borderRadius: '3px',
-            transition: 'width 0.6s ease',
-          }} />
+        <div style={{ position: 'relative', height: '6px', background: 'var(--bg)', borderRadius: '3px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${pct}%` }}
+            transition={{ delay: 0.3 + index * 0.07, duration: 0.6, ease: 'easeOut' }}
+            style={{ height: '100%', background: pct > 0 ? 'linear-gradient(90deg, #2D6A4F, #F5A623)' : 'transparent', borderRadius: '3px' }}
+          />
         </div>
       </div>
 
@@ -173,26 +181,250 @@ function SubjectCard({ subject, meta, progress, onClimb }) {
   );
 }
 
+function LeaderboardTeaser({ navigate }) {
+  const [topBoard, setTopBoard] = useState([]);
+  const [userRank, setUserRank] = useState(null);
+
+  useEffect(() => {
+    api.get('/api/leaderboard/weekly')
+      .then((data) => {
+        setTopBoard((data.board || []).slice(0, 3));
+        setUserRank(data.userRank || null);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!topBoard.length) return null;
+
+  const MEDAL = ['🥇', '🥈', '🥉'];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+      style={{
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border)',
+        borderRadius: '16px',
+        padding: '16px 20px',
+        marginBottom: '20px',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>Weekly Leaderboard</span>
+        <button
+          onClick={() => navigate('leaderboard')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#F5A623', fontWeight: 700, fontFamily: 'Nunito, sans-serif' }}
+        >
+          View All →
+        </button>
+      </div>
+      {topBoard.map((entry, i) => (
+        <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: i < topBoard.length - 1 ? '1px solid var(--border)' : 'none' }}>
+          <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>{MEDAL[i]}</span>
+          <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: entry.climber_color || '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: '#0F1720', flexShrink: 0 }}>
+            {(entry.username || '?')[0].toUpperCase()}
+          </div>
+          <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{entry.username}</span>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: '#F5A623' }}>{entry.weekly_xp} XP</span>
+        </div>
+      ))}
+      {userRank && (
+        <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textAlign: 'center' }}>
+          Your rank: #{userRank} this week
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+function ClimberCustomization({ user, onColorChange }) {
+  const [open, setOpen] = useState(false);
+  const [selectedColor, setSelectedColor] = useState('#F5A623');
+  const [saving, setSaving] = useState(false);
+  const level = user?.level || 1;
+
+  useEffect(() => {
+    api.get('/api/users/me/customization').catch(() => null).then((data) => {
+      if (data?.color) setSelectedColor(data.color);
+    });
+  }, []);
+
+  const handleColorSelect = async (color, unlockLevel) => {
+    if (level < unlockLevel) return;
+    setSelectedColor(color);
+    setSaving(true);
+    try {
+      await api.patch('/api/users/me/customization', { color });
+      onColorChange(color);
+    } catch (_) {}
+    setSaving(false);
+  };
+
+  const COLORS_WITH_LEVELS = [
+    { color: '#F5A623', level: 1 },
+    { color: '#52B788', level: 1 },
+    { color: '#4A90D9', level: 1 },
+    { color: '#E85D4A', level: 2 },
+    { color: '#A78BFA', level: 3 },
+    { color: '#F472B6', level: 3 },
+    { color: '#34D399', level: 5 },
+    { color: '#FBBF24', level: 5 },
+    { color: '#60A5FA', level: 7 },
+    { color: '#FB923C', level: 7 },
+    { color: '#C084FC', level: 10 },
+    { color: '#F0EDE6', level: 10 },
+  ];
+
+  return (
+    <div style={{ marginBottom: '20px' }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+          borderRadius: '14px', padding: '14px 20px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: '12px',
+          fontFamily: 'Nunito, sans-serif',
+        }}
+      >
+        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: selectedColor, border: '2px solid rgba(255,255,255,0.2)', flexShrink: 0 }} />
+        <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text)', flex: 1, textAlign: 'left' }}>Climber Color</span>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div style={{
+              background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+              borderTop: 'none', borderBottomLeftRadius: '14px', borderBottomRightRadius: '14px',
+              padding: '16px 20px',
+            }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                {COLORS_WITH_LEVELS.map(({ color, level: reqLevel }) => {
+                  const locked = level < reqLevel;
+                  const active = selectedColor === color;
+                  return (
+                    <button
+                      key={color}
+                      onClick={() => handleColorSelect(color, reqLevel)}
+                      title={locked ? `Unlock at Level ${reqLevel}` : color}
+                      style={{
+                        position: 'relative',
+                        width: '36px', height: '36px', borderRadius: '50%',
+                        background: locked ? 'var(--bg)' : color,
+                        border: active ? '3px solid #F5A623' : '2px solid rgba(255,255,255,0.1)',
+                        cursor: locked ? 'not-allowed' : 'pointer',
+                        opacity: locked ? 0.45 : 1,
+                        transition: 'transform 0.15s, border-color 0.15s',
+                      }}
+                    >
+                      {locked && (
+                        <span style={{
+                          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+                          justifyContent: 'center', fontSize: '9px', color: 'var(--text-muted)', fontWeight: 800,
+                          fontFamily: 'Nunito, sans-serif',
+                        }}>
+                          {reqLevel}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {saving && (
+                <p style={{ margin: '10px 0 0', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>Saving…</p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// Streak toast — shown once per new day login
+function StreakToast({ streak, onDone }) {
+  useEffect(() => {
+    SoundService.play('daily-login');
+    const t = setTimeout(onDone, 3500);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 60, scale: 0.92 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 40, scale: 0.92 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      style={{
+        position: 'fixed', bottom: '28px', left: '50%', transform: 'translateX(-50%)',
+        background: 'var(--bg-elevated)', border: '1px solid var(--border-gold)',
+        borderRadius: '16px', padding: '16px 28px', zIndex: 9000,
+        display: 'flex', alignItems: 'center', gap: '14px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+        minWidth: '260px',
+      }}
+    >
+      <span style={{ fontSize: '32px' }}>🔥</span>
+      <div>
+        <div style={{ fontFamily: 'Cinzel, serif', fontSize: '16px', fontWeight: 700, color: '#F5A623' }}>
+          Day {streak} Streak!
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '2px' }}>
+          Keep the momentum going
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function StudentDashboard() {
   const { navigate, user, setToken, setUser } = useApp();
   const [tab, setTab] = useState('sat');
   const [progress, setProgress] = useState({});
+  const [progressList, setProgressList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [weeklyCount, setWeeklyCount] = useState(0);
+  const [showStreakToast, setShowStreakToast] = useState(false);
+  const [pendingAchievements, setPendingAchievements] = useState([]);
+  const [climberColor, setClimberColor] = useState('#F5A623');
+  const streakCheckedRef = useRef(false);
 
   const displayName = user?.name || user?.username || 'Student';
+  const loginStreak = user?.login_streak || 0;
 
   useEffect(() => {
     setWeeklyCount(parseInt(localStorage.getItem(getWeekKey()) || '0', 10));
   }, []);
+
+  // Check for new day streak toast from screenParams (set by App.jsx after auth/me)
+  useEffect(() => {
+    if (streakCheckedRef.current) return;
+    streakCheckedRef.current = true;
+    const streakUpdate = window.__summitStreakUpdate;
+    if (streakUpdate?.isNewDay && (user?.login_streak || 0) > 0) {
+      setShowStreakToast(true);
+      window.__summitStreakUpdate = null;
+    }
+  }, [user]);
 
   useEffect(() => {
     let cancelled = false;
     api.get('/api/progress/solo')
       .then((data) => {
         if (cancelled) return;
+        const list = data.progress || [];
+        setProgressList(list);
         const map = {};
-        (data.progress || []).forEach((row) => { map[row.set_id] = row; });
+        list.forEach((row) => { map[row.set_id] = row; });
         setProgress(map);
         setLoading(false);
       })
@@ -210,6 +442,7 @@ export default function StudentDashboard() {
   }, [navigate, setToken, setUser]);
 
   const handleClimb = useCallback((subject, meta) => {
+    SoundService.play('click');
     navigate('solo_game', { setId: meta.id, setTitle: meta.title, subject });
   }, [navigate]);
 
@@ -229,26 +462,79 @@ export default function StudentDashboard() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '16px 32px',
+        padding: '14px 24px',
         borderBottom: '1px solid var(--border)',
-        background: 'rgba(15,23,32,0.88)',
+        background: 'rgba(15,23,32,0.9)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
         position: 'sticky',
         top: 0,
         zIndex: 20,
+        gap: '12px',
       }}>
         <span style={{
           fontFamily: 'Cinzel, serif',
-          fontSize: '20px',
+          fontSize: '18px',
           fontWeight: 700,
           background: 'linear-gradient(135deg, #F5A623, #C8851A)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
           letterSpacing: '0.08em',
+          flexShrink: 0,
         }}>SUMMIT</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          {/* Streak flame */}
+          {loginStreak > 0 && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              style={{
+                background: 'rgba(245,166,35,0.12)',
+                border: '1px solid rgba(245,166,35,0.3)',
+                borderRadius: '20px',
+                padding: '4px 10px',
+                fontSize: '13px',
+                fontWeight: 800,
+                color: '#F5A623',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              🔥 {loginStreak}
+            </motion.div>
+          )}
+
+          {/* Leaderboard */}
+          <button
+            onClick={() => navigate('leaderboard')}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: '18px', padding: '4px 6px', lineHeight: 1,
+            }}
+            title="Leaderboard"
+          >
+            🏆
+          </button>
+
+          {/* Settings */}
+          <button
+            onClick={() => {
+              SoundService.play('click');
+              navigate('settings');
+            }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: '18px', padding: '4px 6px', lineHeight: 1,
+            }}
+            title="Settings"
+          >
+            ⚙️
+          </button>
+
           <div style={{
             background: 'rgba(245,166,35,0.1)',
             border: '1px solid rgba(245,166,35,0.25)',
@@ -257,36 +543,71 @@ export default function StudentDashboard() {
             fontSize: '13px',
             fontWeight: 700,
             color: '#F5A623',
+            flexShrink: 0,
           }}>
             Lv.{user?.level || 1} · {displayName}
           </div>
-          <button className="btn-ghost" style={{ padding: '8px 18px', fontSize: '13px' }} onClick={handleSignOut}>
-            Sign Out
+
+          <button
+            className="btn-ghost"
+            style={{ padding: '7px 14px', fontSize: '13px', flexShrink: 0 }}
+            onClick={handleSignOut}
+          >
+            Out
           </button>
         </div>
       </nav>
 
       {/* Main */}
-      <main style={{ flex: 1, maxWidth: '860px', width: '100%', margin: '0 auto', padding: '36px 24px 60px' }}>
+      <main style={{ flex: 1, maxWidth: '860px', width: '100%', margin: '0 auto', padding: '28px 20px 60px' }}>
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
           <XPBar xp={user?.xp || 0} level={user?.level || 1} />
           <WeeklyGoal weeklyCount={weeklyCount} />
+
+          {/* Score Prediction */}
+          {!loading && progressList.length > 0 && (
+            <ScorePrediction
+              progress={progressList.map((p) => ({
+                set_subject: Object.entries({
+                  '00000000-0000-0000-0000-000000000010': 'sat_math',
+                  '00000000-0000-0000-0000-000000000011': 'sat_rw',
+                  '00000000-0000-0000-0000-000000000020': 'act_math',
+                  '00000000-0000-0000-0000-000000000021': 'act_english',
+                  '00000000-0000-0000-0000-000000000022': 'act_reading',
+                  '00000000-0000-0000-0000-000000000023': 'act_science',
+                }).find(([id]) => id === p.set_id)?.[1] || p.set_id,
+                mastered_count: p.mastered_count || 0,
+                questions_total: p.questions_total || 200,
+              }))}
+              onImprove={() => {
+                SoundService.play('click');
+                // find weakest subject and jump to it
+                const weakest = progressList.reduce((a, b) =>
+                  (a.mastered_count / (a.questions_total || 1)) < (b.mastered_count / (b.questions_total || 1)) ? a : b
+                , progressList[0]);
+                if (weakest) {
+                  const allSets = { ...SAT_SETS, ...ACT_SETS };
+                  const entry = Object.entries(allSets).find(([, m]) => m.id === weakest.set_id);
+                  if (entry) navigate('solo_game', { setId: entry[1].id, setTitle: entry[1].title, subject: entry[0] });
+                }
+              }}
+            />
+          )}
         </motion.div>
 
+        {/* Leaderboard teaser */}
+        <LeaderboardTeaser navigate={navigate} />
+
         {/* Test tabs */}
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '24px', background: 'var(--bg-elevated)', borderRadius: '12px', padding: '4px', border: '1px solid var(--border)', width: 'fit-content' }}>
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', background: 'var(--bg-elevated)', borderRadius: '12px', padding: '4px', border: '1px solid var(--border)', width: 'fit-content' }}>
           {[{ key: 'sat', label: 'SAT' }, { key: 'act', label: 'ACT' }].map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
               style={{
-                padding: '8px 28px',
-                borderRadius: '8px',
-                border: 'none',
-                cursor: 'pointer',
-                fontFamily: 'Nunito, sans-serif',
-                fontSize: '14px',
-                fontWeight: 700,
+                padding: '8px 28px', borderRadius: '8px', border: 'none',
+                cursor: 'pointer', fontFamily: 'Nunito, sans-serif',
+                fontSize: '14px', fontWeight: 700,
                 transition: 'background 0.18s, color 0.18s',
                 background: tab === key ? '#F5A623' : 'transparent',
                 color: tab === key ? '#0F1720' : 'var(--text-muted)',
@@ -301,30 +622,60 @@ export default function StudentDashboard() {
         {loading ? (
           <p style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Loading progress…</p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginBottom: '40px' }}>
-            {Object.entries(currentSets).map(([subject, meta]) => (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+            {Object.entries(currentSets).map(([subject, meta], i) => (
               <SubjectCard
                 key={subject}
                 subject={subject}
                 meta={meta}
                 progress={progress[meta.id]}
                 onClimb={handleClimb}
+                index={i}
               />
             ))}
           </div>
         )}
 
-        {/* Join live game */}
-        <div style={{ textAlign: 'center' }}>
+        {/* Climber customization */}
+        <ClimberCustomization user={user} onColorChange={setClimberColor} />
+
+        {/* Bottom actions */}
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button
             className="btn-ghost"
             style={{ fontSize: '14px', padding: '11px 24px' }}
             onClick={() => navigate('student_join')}
           >
-            🏔️ Join a Live Game
+            Join a Live Game
           </button>
+          {!user?.diagnostic_done && (
+            <button
+              className="btn-ghost"
+              style={{ fontSize: '14px', padding: '11px 24px', borderColor: 'var(--border-gold)', color: '#F5A623' }}
+              onClick={() => navigate('diagnostic')}
+            >
+              Take Diagnostic Quiz →
+            </button>
+          )}
         </div>
       </main>
+
+      {/* Achievement toasts */}
+      <AnimatePresence>
+        {pendingAchievements.length > 0 && (
+          <AchievementToast
+            achievement={pendingAchievements[0]}
+            onDone={() => setPendingAchievements((prev) => prev.slice(1))}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Streak toast */}
+      <AnimatePresence>
+        {showStreakToast && (
+          <StreakToast streak={loginStreak} onDone={() => setShowStreakToast(false)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

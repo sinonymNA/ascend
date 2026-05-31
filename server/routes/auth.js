@@ -125,7 +125,7 @@ router.post('/sync', async (req, res) => {
   }
 });
 
-// GET /auth/me — return current user record
+// GET /auth/me — return current user record + update login streak
 router.get('/me', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
@@ -141,9 +141,140 @@ router.get('/me', async (req, res) => {
   try {
     const { rows } = await db.query('SELECT * FROM users WHERE clerk_id = $1 LIMIT 1', [clerkId]);
     if (!rows[0]) return res.status(404).json({ error: 'User not found' });
-    const { password_hash: _ph, ...safeUser } = rows[0];
-    return res.json({ user: safeUser });
+
+    const user = rows[0];
+    const today = new Date().toISOString().slice(0, 10);
+    const lastDate = user.last_login_date ? String(user.last_login_date).slice(0, 10) : null;
+
+    let streakUpdate = null;
+    if (lastDate !== today) {
+      // Check if yesterday
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+      let newStreak;
+      let shieldUsed = false;
+      if (lastDate === yesterdayStr) {
+        newStreak = (user.login_streak || 0) + 1;
+      } else if (lastDate) {
+        // Missed — check for streak shield
+        if ((user.streak_shield_count || 0) > 0) {
+          newStreak = (user.login_streak || 0) + 1;
+          shieldUsed = true;
+        } else {
+          newStreak = 1;
+        }
+      } else {
+        newStreak = 1;
+      }
+
+      // Award shield at 7-day streaks (multiples)
+      const earnedShield = newStreak > 0 && newStreak % 7 === 0;
+
+      await db.query(
+        `UPDATE users SET
+           last_login_date   = $2,
+           login_streak      = $3,
+           streak_shield_count = GREATEST(0, streak_shield_count - $4) + $5
+         WHERE id = $1`,
+        [user.id, today, newStreak, shieldUsed ? 1 : 0, earnedShield ? 1 : 0]
+      );
+
+      streakUpdate = { newStreak, shieldUsed, earnedShield, isNewDay: true };
+      user.login_streak = newStreak;
+      user.last_login_date = today;
+      if (shieldUsed) user.streak_shield_count = Math.max(0, (user.streak_shield_count || 0) - 1);
+      if (earnedShield) user.streak_shield_count = (user.streak_shield_count || 0) + 1;
+    }
+
+    const { password_hash: _ph, ...safeUser } = user;
+    return res.json({ user: safeUser, streakUpdate });
   } catch (e) {
+    console.error('auth/me error:', e.message);
+    return res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// POST /auth/diagnostic-done — mark diagnostic as complete
+router.post('/diagnostic-done', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
+  let payload;
+  try { payload = verifyToken(authHeader.slice(7)); } catch (e) {
+    return res.status(401).json({ error: e.message });
+  }
+  const clerkId = payload.sub || payload.id;
+  try {
+    await db.query('UPDATE users SET diagnostic_done = TRUE WHERE clerk_id = $1', [clerkId]);
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('diagnostic-done error:', e.message);
+    return res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// GET /api/users/me/customization
+router.get('/users/me/customization', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
+  let payload;
+  try { payload = verifyToken(authHeader.slice(7)); } catch (e) {
+    return res.status(401).json({ error: e.message });
+  }
+  const clerkId = payload.sub || payload.id;
+  try {
+    const userRes = await db.query('SELECT id FROM users WHERE clerk_id = $1 LIMIT 1', [clerkId]);
+    if (!userRes.rows[0]) return res.status(404).json({ error: 'Not found' });
+    const userId = userRes.rows[0].id;
+    const { rows } = await db.query(
+      `INSERT INTO climber_customizations (student_id) VALUES ($1)
+       ON CONFLICT (student_id) DO NOTHING`,
+      [userId]
+    );
+    const custRes = await db.query(
+      'SELECT silhouette, color, trail_effect, flag_design FROM climber_customizations WHERE student_id = $1',
+      [userId]
+    );
+    return res.json(custRes.rows[0] || { silhouette: 'default', color: '#F5A623', trail_effect: 'none', flag_design: 'default' });
+  } catch (e) {
+    console.error('customization GET error:', e.message);
+    return res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// PATCH /api/users/me/customization
+router.patch('/users/me/customization', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
+  let payload;
+  try { payload = verifyToken(authHeader.slice(7)); } catch (e) {
+    return res.status(401).json({ error: e.message });
+  }
+  const clerkId = payload.sub || payload.id;
+  const { color, silhouette, trail_effect, flag_design } = req.body;
+  try {
+    const userRes = await db.query('SELECT id FROM users WHERE clerk_id = $1 LIMIT 1', [clerkId]);
+    if (!userRes.rows[0]) return res.status(404).json({ error: 'Not found' });
+    const userId = userRes.rows[0].id;
+    await db.query(
+      `INSERT INTO climber_customizations (student_id, color, silhouette, trail_effect, flag_design)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (student_id) DO UPDATE SET
+         color         = COALESCE($2, climber_customizations.color),
+         silhouette    = COALESCE($3, climber_customizations.silhouette),
+         trail_effect  = COALESCE($4, climber_customizations.trail_effect),
+         flag_design   = COALESCE($5, climber_customizations.flag_design),
+         updated_at    = NOW()`,
+      [userId, color || null, silhouette || null, trail_effect || null, flag_design || null]
+    );
+    const { rows } = await db.query(
+      'SELECT silhouette, color, trail_effect, flag_design FROM climber_customizations WHERE student_id = $1',
+      [userId]
+    );
+    return res.json(rows[0]);
+  } catch (e) {
+    console.error('customization PATCH error:', e.message);
     return res.status(500).json({ error: 'DB error' });
   }
 });
