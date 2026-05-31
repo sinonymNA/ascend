@@ -1406,5 +1406,342 @@ module.exports = {
       difficulty: 2,
       tags: ["Key Ideas and Details", "purpose"]
     },
+    // ─── CRAFT & STRUCTURE (109–150) ──────────────────────────────────────────
+    {
+      question: "As used in the passage, the word 'ephemeral' most nearly means:\n\n\"The ephemeral beauty of cherry blossoms draws millions of visitors each spring, yet the blooms last only one to two weeks before falling.\"",
+      options: { A: "vibrant", B: "short-lived", C: "fragile", D: "distant" },
+      correct: "B",
+      explanation: "The passage immediately explains that the blossoms last only one to two weeks — defining ephemeral as short-lived. A (vibrant) refers to quality, not duration. C (fragile) describes physical delicacy, not lifespan. D (distant) is unrelated.",
+      difficulty: 1,
+      tags: ["Craft and Structure", "vocabulary in context"]
+    },
+    {
+      question: "The author's primary purpose in the following passage is to:\n\n\"For decades, scientists dismissed the idea that plants could communicate. Recent studies, however, reveal that trees release chemical signals through the air and share nutrients via underground fungal networks, suggesting a form of community far more sophisticated than previously imagined.\"",
+      options: { A: "argue that plants are more intelligent than animals", B: "describe a scientific reversal regarding plant communication", C: "explain the chemistry of plant hormones", D: "advocate for protecting forest ecosystems" },
+      correct: "B",
+      explanation: "The passage explicitly notes that scientists 'dismissed' an idea that 'recent studies' now support — a classic reversal. A overstates the claim. C focuses on chemistry, which the passage does not detail. D is not the passage's concern.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "author's purpose"]
+    },
+    {
+      question: "Which word best describes the author's tone in the following passage?\n\n\"The new policy promises sweeping change yet offers no timeline, no funding mechanism, and no accountability measures. In short, it promises everything and guarantees nothing.\"",
+      options: { A: "optimistic", B: "nostalgic", C: "skeptical", D: "indifferent" },
+      correct: "C",
+      explanation: "The author lists what the policy lacks and concludes it 'guarantees nothing' — a critical, skeptical stance. Optimistic is the opposite. Nostalgic implies longing for the past, absent here. Indifferent would mean the author has no strong view, but the passage is clearly critical.",
+      difficulty: 1,
+      tags: ["Craft and Structure", "author's tone"]
+    },
+    {
+      question: "The structure of the following passage can best be described as:\n\n\"Paragraph 1: A problem is introduced. Paragraph 2: Historical attempts to solve the problem are reviewed. Paragraph 3: A new solution is proposed. Paragraph 4: Objections to the solution are acknowledged and addressed.\"",
+      options: { A: "chronological narrative", B: "problem-solution with counterargument", C: "compare and contrast", D: "cause and effect" },
+      correct: "B",
+      explanation: "The passage introduces a problem, surveys past attempts, proposes a solution, then addresses objections — a problem-solution structure with built-in counterargument. Chronological narrative tells events in order without necessarily proposing solutions. Compare and contrast weighs two or more things equally. Cause and effect traces outcomes from causes.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "text structure"]
+    },
+    {
+      question: "In the context of the passage, the phrase 'shadow economy' most likely refers to:\n\n\"Millions of workers participate in the shadow economy, exchanging labor for cash that goes unreported to tax authorities. This informal sector represents, by some estimates, 15% of global GDP.\"",
+      options: { A: "jobs performed at night", B: "economic activity that avoids official oversight", C: "industries dealing in counterfeit goods", D: "financial markets in developing nations" },
+      correct: "B",
+      explanation: "The passage defines the shadow economy as labor exchanged for unreported cash — activity outside official oversight. A conflates 'shadow' with nighttime work. C is too narrow (counterfeits are one subset, not the whole). D limits the concept geographically in a way the passage does not.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "vocabulary in context"]
+    },
+    {
+      question: "Which of the following best describes the relationship between the two paragraphs?\n\nP1: 'Early explorers believed the Amazon was a wilderness untouched by human hands.'\nP2: 'Archaeologists have since uncovered evidence of large pre-Columbian cities, earthworks, and managed forests throughout the region.'",
+      options: { A: "P2 contradicts the assumption stated in P1", B: "P2 provides an example that supports P1", C: "P2 narrows the scope of P1's argument", D: "P2 describes a cause of the event in P1" },
+      correct: "A",
+      explanation: "P1 claims the Amazon was untouched; P2 presents archaeological evidence of complex human activity — directly contradicting that claim. B is wrong because P2 undermines rather than supports P1. C would mean P2 focuses on a subset of P1, which it doesn't. D has no causal relationship.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "text structure", "paragraph relationships"]
+    },
+    {
+      question: "The author most likely uses the word 'merely' in the following sentence to:\n\n\"The committee's report is merely a recommendation; the final decision rests entirely with the board.\"",
+      options: { A: "suggest the report is poorly written", B: "downplay the committee's authority relative to the board's", C: "imply the board will ignore the recommendation", D: "praise the committee for its limited role" },
+      correct: "B",
+      explanation: "'Merely' signals that the report is of lesser standing — the real power is the board's. A is about quality, not authority. C is an inference the passage does not support. D mistakes minimizing language for praise.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "word choice", "connotation"]
+    },
+    {
+      question: "The author includes the statistic in the following passage most likely in order to:\n\n\"Sea levels have risen approximately 8 inches since 1880. If current emissions trends continue, scientists project an additional rise of 1 to 4 feet by 2100.\"",
+      options: { A: "show that sea level rise began recently", B: "quantify past change and project future risk with measurable evidence", C: "argue that humans are solely responsible for climate change", D: "dismiss concerns about rising sea levels" },
+      correct: "B",
+      explanation: "The statistics ground both historical change (8 inches) and future projection (1–4 feet) in concrete numbers — providing measurable evidence of past and potential future change. A misreads '1880' as recent. C goes beyond the passage's scope. D is the opposite of the passage's apparent message.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "author's purpose", "use of evidence"]
+    },
+    {
+      question: "Which inference is most directly supported by the following passage?\n\n\"The library's circulation of physical books has declined 40% over the past decade, while digital downloads have increased by 200%. Despite this, the library has expanded its physical space and hired additional staff.\"",
+      options: { A: "The library expects digital downloads to reverse", B: "The library values services beyond book lending", C: "Physical books will be obsolete within five years", D: "Staff prefer working with digital rather than physical collections" },
+      correct: "B",
+      explanation: "Expanding space and hiring staff despite declining physical book use implies the library offers valuable services beyond lending books (e.g., programs, study spaces, community events). A is speculative. C is an extreme prediction unsupported by the data. D is not mentioned.",
+      difficulty: 3,
+      tags: ["Key Ideas and Details", "inference"]
+    },
+    {
+      question: "The repetition of the word 'never' in the following passage most likely serves to:\n\n\"She had never asked for help. She had never admitted weakness. She had never let anyone see her cry.\"",
+      options: { A: "indicate that the character is unreliable", B: "create rhythmic emphasis on the character's self-reliance", C: "suggest the character is lying about her past", D: "show that the character has no emotions" },
+      correct: "B",
+      explanation: "Anaphora (repeated 'never') creates rhythm and builds emphasis on the character's consistent self-reliance. A introduces an idea of unreliability the passage does not support. C imports a motive not present. D contradicts the passage — 'never let anyone see her cry' implies she does have emotions.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "rhetorical devices", "repetition"]
+    },
+    {
+      question: "Based on the passage, Scientist 2 would most likely respond to Scientist 1's claim by arguing that:\n\nScientist 1: 'The decline in bee populations is caused primarily by pesticide use.'\nScientist 2: 'Our data show that habitat loss accounts for 70% of bee colony collapse, while pesticide exposure accounts for only 12%.'",
+      options: { A: "pesticides are more harmful than previously believed", B: "the primary cause is different from what Scientist 1 claims", C: "bees can adapt to pesticide environments over time", D: "habitat loss and pesticide use are equally damaging" },
+      correct: "B",
+      explanation: "Scientist 2's data assign 70% of collapse to habitat loss versus 12% to pesticides — directly challenging Scientist 1's claim that pesticides are the primary cause. A supports Scientist 1, not Scientist 2. C introduces adaptation, not discussed. D misreads the statistics (70% ≠ equal).",
+      difficulty: 2,
+      tags: ["Craft and Structure", "conflicting viewpoints"]
+    },
+    {
+      question: "The author's shift from formal to colloquial language midway through the passage suggests:\n\n\"The phenomenon of cognitive dissonance — the psychological discomfort of holding contradictory beliefs — has been extensively documented in academic literature. In plain terms: people really, really hate admitting they're wrong.\"",
+      options: { A: "the author lost control of the essay's register", B: "the author is addressing two different audiences simultaneously", C: "the author wants to make an academic concept accessible and memorable", D: "the author disagrees with the academic research" },
+      correct: "C",
+      explanation: "The deliberate shift to colloquial language ('really, really hate') translates the formal definition into something vivid and relatable — a technique for broad accessibility. A misreads the intentional shift as error. B imagines two audiences rather than one broadened audience. D imports a disagreement the passage does not express.",
+      difficulty: 3,
+      tags: ["Craft and Structure", "tone", "register shift"]
+    },
+    {
+      question: "Which of the following best states the main idea of the passage?\n\n\"Microplastics have been detected in ocean water, freshwater rivers, arctic ice, and even human blood. What began as a pollution concern for marine biologists has become a global health issue affecting every ecosystem and organism on Earth.\"",
+      options: { A: "Marine biologists are responsible for solving the microplastics crisis", B: "Microplastic pollution has grown from a niche concern into a universal environmental and health problem", C: "Humans ingest more microplastics than other organisms", D: "Microplastics affect only aquatic environments" },
+      correct: "B",
+      explanation: "The passage tracks the expansion of microplastic pollution from marine biology to all ecosystems and human health — the essence of B. A misattributes responsibility. C introduces a comparison not made in the passage. D is directly contradicted by the list of environments (oceans, rivers, ice, human blood).",
+      difficulty: 1,
+      tags: ["Key Ideas and Details", "main idea"]
+    },
+    {
+      question: "In the following passage, the author's use of the phrase 'in theory' signals:\n\n\"In theory, universal basic income would eliminate poverty by guaranteeing every citizen a minimum monthly payment. In practice, pilot programs have produced mixed results, with some participants leaving the workforce entirely.\"",
+      options: { A: "the author fully endorses universal basic income", B: "a contrast between an ideal and its real-world application", C: "the author believes the pilot programs were poorly designed", D: "the concept of universal basic income is widely accepted" },
+      correct: "B",
+      explanation: "'In theory' sets up an ideal; 'in practice' introduces the complication — classic contrast between concept and application. A is contradicted by the mixed results. C speculates about design flaws not mentioned. D is not supported by the passage.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "transitions", "contrast"]
+    },
+    {
+      question: "Based on the following passage, which statement would the author most likely agree with?\n\n\"Despite widespread belief that multitasking improves productivity, cognitive research consistently shows that the brain processes tasks sequentially, not simultaneously. Switching rapidly between tasks degrades performance on each.\"",
+      options: { A: "Multitasking is an effective strategy for complex projects", B: "The popular belief in multitasking contradicts scientific evidence", C: "Cognitive research is less reliable than personal experience", D: "Sequential task processing is a modern problem caused by technology" },
+      correct: "B",
+      explanation: "The passage directly states that 'widespread belief' contradicts what 'cognitive research consistently shows' — aligning with B. A is the popular view the passage refutes. C attacks research reliability, which the author trusts. D introduces technology as a cause, not mentioned.",
+      difficulty: 2,
+      tags: ["Key Ideas and Details", "author's view", "inference"]
+    },
+    {
+      question: "The comparison in the following passage primarily serves to:\n\n\"Trying to understand quantum mechanics using everyday intuition is like trying to navigate a city using a map of the ocean — the tools are simply wrong for the terrain.\"",
+      options: { A: "suggest that quantum mechanics is impossible to learn", B: "illustrate why ordinary intuition fails to explain quantum phenomena", C: "argue that better maps are needed to teach physics", D: "compare the ocean to subatomic particles" },
+      correct: "B",
+      explanation: "The analogy shows that everyday intuition (like an ocean map) is the wrong tool for quantum terrain — illustrating the mismatch. A overstates to 'impossible.' C takes the analogy literally. D conflates the vehicle of the metaphor (ocean map) with its meaning.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "figurative language", "analogy"]
+    },
+    {
+      question: "Which of the following best describes how the two paragraphs are related?\n\nP1: 'Ancient Greek philosophers believed that reason alone could reveal truths about the natural world.'\nP2: 'The Scientific Revolution replaced pure reasoning with systematic experimentation, transforming how humans understand nature.'",
+      options: { A: "P2 gives an example of P1's method", B: "P2 describes a historical shift away from the approach in P1", C: "P2 proves that P1's philosophers were wrong about everything", D: "P2 and P1 describe the same method using different terms" },
+      correct: "B",
+      explanation: "P2 explicitly marks a historical transformation away from pure reason (P1's approach) toward experimentation. A would mean P2 uses pure reasoning, which it does not. C overstates — the shift doesn't imply they were wrong about everything. D is incorrect since the methods are explicitly different.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "paragraph relationships"]
+    },
+    {
+      question: "The word 'ostensibly' in the following sentence most nearly means:\n\n\"The committee met ostensibly to review budget proposals, though most observers believed the real agenda was to delay the vote indefinitely.\"",
+      options: { A: "secretly", B: "reluctantly", C: "apparently but perhaps not actually", D: "frequently" },
+      correct: "C",
+      explanation: "Ostensibly means appearing to be the case on the surface, but perhaps not in reality — matching the contrast with the 'real agenda.' A (secretly) is the opposite direction. B (reluctantly) describes attitude, not appearance. D (frequently) is unrelated.",
+      difficulty: 3,
+      tags: ["Craft and Structure", "vocabulary in context"]
+    },
+    {
+      question: "The following passage is primarily organized by:\n\n\"First, the author explains the causes of soil degradation. Next, she documents regions where the problem is most severe. Finally, she proposes a set of agricultural practices to restore soil health.\"",
+      options: { A: "comparison of two competing theories", B: "cause, evidence, and proposed solution", C: "chronological narrative of a single event", D: "point-by-point rebuttal of an opposing view" },
+      correct: "B",
+      explanation: "The three-part structure moves from causes → evidence of severity → proposed solutions, matching B. A would require two competing theories. C would tell events in time order without proposing solutions. D would systematically counter an opponent's argument.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "text structure"]
+    },
+    {
+      question: "The author would most likely characterize the study described in the following passage as:\n\n\"Researchers surveyed 200 college students about their social media habits and stress levels. Those who used social media more than 3 hours per day reported higher stress. The researchers concluded that social media causes stress.\"",
+      options: { A: "a landmark study that definitively proves social media's harms", B: "a study whose conclusion overreaches its evidence by assuming causation from correlation", C: "a well-designed experiment with rigorous controls", D: "a study that exaggerates the benefits of limiting screen time" },
+      correct: "B",
+      explanation: "The study shows correlation (high use + high stress) but the conclusion claims causation ('causes stress') — a logical overreach. A overstates. C is wrong because a survey of self-reported data lacks experimental controls. D misidentifies the direction of overreach.",
+      difficulty: 3,
+      tags: ["Key Ideas and Details", "evaluating evidence", "research design"]
+    },
+    {
+      question: "Which of the following best describes the effect of the final sentence in the following passage?\n\n\"For centuries, the village had resisted every outside influence — new languages, new religions, new governments. Yet on that Tuesday morning, for the first time in living memory, a stranger walked through the gate and no one turned to look.\"",
+      options: { A: "it resolves the central conflict of the passage", B: "it signals a subtle but significant break in the village's long-standing tradition of insularity", C: "it suggests the villagers have become hostile to outsiders", D: "it provides statistical evidence of demographic change" },
+      correct: "B",
+      explanation: "The final sentence marks a quiet but meaningful shift: after centuries of resistance to outside influence, a stranger passes unnoticed — implying change is beginning. A would require full resolution. C contradicts 'no one turned to look' (indifference, not hostility). D has no statistics.",
+      difficulty: 3,
+      tags: ["Craft and Structure", "effect of a sentence", "literary analysis"]
+    },
+    {
+      question: "The author most likely cites the expert's opinion in the following passage in order to:\n\n\"Dr. Anand Krishnaswamy, a leading climate scientist at MIT, states: 'Without significant policy changes by 2030, limiting warming to 1.5°C becomes mathematically impossible.'\"",
+      options: { A: "suggest that MIT researchers are more credible than government officials", B: "lend authoritative scientific support to a claim about climate policy urgency", C: "show that all scientists agree on climate change solutions", D: "introduce a viewpoint the author plans to refute" },
+      correct: "B",
+      explanation: "The passage uses the expert's specific, quantified claim to add scientific authority to the urgency of policy change. A makes a comparison the passage doesn't draw. C overstates ('all scientists'). D would require the author to then argue against the expert.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "use of evidence", "citing sources"]
+    },
+    {
+      question: "Based on the following passage, which question would the author most want readers to consider?\n\n\"We routinely discard electronics after two or three years, yet the rare earth metals inside them took millions of years to form. We treat time as disposable, not realizing that we are drawing on a geological inheritance no future generation can replenish.\"",
+      options: { A: "How can manufacturers reduce production costs?", B: "Are we consuming finite planetary resources at a rate that future generations cannot sustain?", C: "Which rare earth metals are most valuable on the market?", D: "Should governments regulate the electronics industry?" },
+      correct: "B",
+      explanation: "The passage's concern is generational: we consume ancient, irreplaceable resources as if they're disposable, raising sustainability questions for future generations — matching B. A focuses on cost, unrelated to the passage's theme. C is market-focused, not the author's concern. D may follow from B, but B is the underlying question the passage poses.",
+      difficulty: 3,
+      tags: ["Key Ideas and Details", "author's purpose", "inference"]
+    },
+    {
+      question: "The contrast between the two sentences in the following passage serves primarily to:\n\n\"The official report stated that air quality in the region had 'improved significantly.' Residents, however, described children coughing through the night and elderly neighbors unable to leave their homes.\"",
+      options: { A: "show that residents and officials always disagree", B: "highlight a gap between official data and the lived experience of residents", C: "prove that the official report contained deliberate falsehoods", D: "argue that air quality measurement methods need updating" },
+      correct: "B",
+      explanation: "The juxtaposition of 'improved significantly' with vivid accounts of suffering illustrates a disconnect between official metrics and resident experience. A overgeneralizes to 'always.' C claims deliberate deception, which the passage does not establish. D focuses on methodology, not the passage's concern.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "contrast", "text structure"]
+    },
+    {
+      question: "As used in the following passage, 'nascent' most nearly means:\n\n\"The nascent renewable energy sector, barely a decade old, already employs more workers than the coal industry it is gradually replacing.\"",
+      options: { A: "declining", B: "dominant", C: "newly developed", D: "controversial" },
+      correct: "C",
+      explanation: "Nascent means just beginning to develop or emerge. The passage reinforces this: 'barely a decade old.' A (declining) is the opposite — the passage shows growth. B (dominant) contradicts 'barely a decade old.' D (controversial) is not addressed.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "vocabulary in context"]
+    },
+    {
+      question: "Which best explains why the author opens the following passage with a question?\n\n\"What would you do if your city ran out of water? In Chennai, India, that scenario became reality in 2019, when the city's four main reservoirs ran completely dry.\"",
+      options: { A: "to suggest the reader is responsible for water scarcity", B: "to engage the reader personally before presenting a real-world example", C: "to argue that Chennai's crisis was caused by individual behavior", D: "to indicate that the author does not know the answer" },
+      correct: "B",
+      explanation: "The rhetorical question invites the reader to imagine the situation personally, then the passage grounds that imagination in a real event. A assigns blame not present in the passage. C goes beyond the passage's scope. D mistakes a rhetorical question for genuine uncertainty.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "rhetorical devices", "author's purpose"]
+    },
+    {
+      question: "Based on the following passage, which statement would Scientist 1 most directly challenge in Scientist 2's argument?\n\nScientist 1: 'Dinosaurs were warm-blooded, metabolically active animals, similar to modern birds.'\nScientist 2: 'Dinosaur bone structures show growth rings similar to those of cold-blooded reptiles, suggesting a slow, reptile-like metabolism.'",
+      options: { A: "that dinosaurs are related to modern birds", B: "that bone growth rings reliably indicate cold-blooded metabolism", C: "that reptiles are cold-blooded", D: "that all dinosaurs had the same metabolism" },
+      correct: "B",
+      explanation: "Scientist 1's warm-blooded view would require challenging Scientist 2's key interpretive claim: that growth rings indicate cold-blooded metabolism. A is not directly contested here. C is accepted by both. D introduces variation not addressed by either scientist.",
+      difficulty: 3,
+      tags: ["Craft and Structure", "conflicting viewpoints", "evaluating arguments"]
+    },
+    {
+      question: "The author of the following passage uses specific numerical details primarily to:\n\n\"In the past 50 years, the number of wild vertebrate animals on Earth has declined by 68%, according to the World Wildlife Fund's 2020 Living Planet Report.\"",
+      options: { A: "blame a specific industry for the decline", B: "lend precision and credibility to the scale of biodiversity loss", C: "predict future extinction rates", D: "show that the WWF's methods are unreliable" },
+      correct: "B",
+      explanation: "The specific figure (68% decline over 50 years from a named report) grounds the claim in measurable, credible data. A assigns blame not present. C interprets future trajectory not mentioned. D contradicts relying on the report as evidence.",
+      difficulty: 1,
+      tags: ["Craft and Structure", "use of evidence", "author's purpose"]
+    },
+    {
+      question: "In the following passage, the final sentence functions primarily as:\n\n\"Renewable energy advocates have long argued that solar and wind power would eventually outcompete fossil fuels on cost alone. That moment arrived in 2020, when solar became the cheapest source of electricity in history.\"",
+      options: { A: "a counterargument to the advocates' position", B: "evidence that confirms the prediction described in the first sentence", C: "a transition to a new topic", D: "an example of a claim the author doubts" },
+      correct: "B",
+      explanation: "The first sentence describes a long-standing prediction; the final sentence reports the moment it was confirmed by real-world data. A would require the sentence to challenge the prediction. C would introduce new subject matter. D contradicts using the 2020 data as evidence.",
+      difficulty: 1,
+      tags: ["Craft and Structure", "relationship between sentences"]
+    },
+    {
+      question: "Which of the following best describes what the author implies in the following passage?\n\n\"The average American spends more time each year managing passwords, updating software, and reading privacy policies than the entire population of ancient Rome spent on written communication in a lifetime.\"",
+      options: { A: "Ancient Romans were illiterate", B: "Americans should spend more time reading ancient texts", C: "Digital administration consumes a disproportionate and arguably absurd amount of modern life", D: "Software companies should simplify their update procedures" },
+      correct: "C",
+      explanation: "The hyperbolic comparison to ancient Rome's entire written output implies that digital overhead has reached a level that is excessive and somewhat absurd. A misreads the comparison — it says nothing about literacy. B introduces a recommendation not implied. D is a practical policy conclusion the author does not draw.",
+      difficulty: 3,
+      tags: ["Key Ideas and Details", "inference", "tone"]
+    },
+    {
+      question: "The word 'lament' in the following passage most strongly implies that the author:\n\n\"Literary critics lament the decline of the long-form essay, a genre that once demanded sustained attention from both writer and reader.\"",
+      options: { A: "is neutral about the decline of long-form essays", B: "views the decline as a loss worth mourning", C: "believes long-form essays were overly demanding", D: "thinks critics are exaggerating the decline" },
+      correct: "B",
+      explanation: "'Lament' means to mourn or express grief — it signals that the critics (and implicitly the author, who uses their view approvingly) see the decline as a genuine loss. A contradicts a word that expresses emotion. C would require 'thankfully' or similar language. D misreads 'lament' as critique of the critics.",
+      difficulty: 1,
+      tags: ["Craft and Structure", "connotation", "vocabulary in context"]
+    },
+    {
+      question: "Based on the following passage, which of the following best expresses the author's attitude toward social media?\n\n\"Social media platforms have given marginalized communities unprecedented tools for organizing and amplifying their voices. At the same time, those same platforms have enabled the rapid spread of misinformation at a scale no previous medium could match.\"",
+      options: { A: "unequivocal enthusiasm", B: "complete rejection", C: "balanced acknowledgment of both benefits and harms", D: "indifference to its effects on society" },
+      correct: "C",
+      explanation: "The passage explicitly presents both a major benefit (organizing marginalized voices) and a major harm (misinformation spread) — a balanced view. A would require only positive framing. B would require only negative framing. D is contradicted by the substantive analysis the author provides.",
+      difficulty: 1,
+      tags: ["Key Ideas and Details", "author's attitude"]
+    },
+    {
+      question: "The following passage is best described as an example of which rhetorical strategy?\n\n\"If we can spend $700 billion per year on national defense, surely we can find $50 billion for universal pre-kindergarten education — an investment that researchers consistently show yields ten dollars in economic return for every one spent.\"",
+      options: { A: "appeal to tradition", B: "appeal to authority combined with a cost-benefit argument", C: "comparison of spending to undermine an objection about affordability", D: "personal anecdote used to build emotional connection" },
+      correct: "C",
+      explanation: "The author compares a large accepted expenditure (defense) with a much smaller proposed one (pre-K) to argue that cost is not a valid objection — a classic comparative rhetorical move. A appeals to tradition, absent here. B cites researchers but the primary strategy is the comparison. D has no personal anecdote.",
+      difficulty: 3,
+      tags: ["Craft and Structure", "rhetorical strategy", "argument analysis"]
+    },
+    {
+      question: "In the following passage, the detail about the scientist's childhood serves primarily to:\n\n\"Elena Sokolova grew up near the polluted Volga River, watching fish die and water turn brown. Decades later, as director of Russia's leading environmental agency, she made clean water legislation her career's defining mission.\"",
+      options: { A: "prove that childhood environment determines adult career", B: "suggest a biographical link between her personal experience and her professional priorities", C: "argue that all environmental scientists were motivated by personal trauma", D: "show that the Volga River has been cleaned up" },
+      correct: "B",
+      explanation: "The childhood detail provides biographical context — a plausible personal motivation for her later professional focus. A overstates causation as universal determination. C overgeneralizes to all environmental scientists. D is not implied; the passage is about her career, not the river's current state.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "author's purpose", "use of detail"]
+    },
+    {
+      question: "Which of the following is an unstated assumption in the following argument?\n\n\"Since students who participate in music programs score higher on math tests, schools should invest more in music education to improve math performance.\"",
+      options: { A: "Music is more important than math", B: "The correlation between music participation and math scores is causal, not merely associative", C: "All schools currently have music programs", D: "Math scores are the most important measure of school success" },
+      correct: "B",
+      explanation: "The argument moves from a correlation (music participation + higher scores) to a causal recommendation (invest in music to improve math) — the unstated assumption is that the relationship is causal. A is not implied. C is not assumed — the argument is about investment, not current existence of programs. D may be a value judgment behind the argument but is not the core logical assumption.",
+      difficulty: 3,
+      tags: ["Craft and Structure", "argument analysis", "assumptions"]
+    },
+    {
+      question: "The following passage uses the word 'curiously' to indicate that the author:\n\n\"Curiously, the countries with the highest rates of chocolate consumption also tend to have the highest numbers of Nobel Prize winners per capita.\"",
+      options: { A: "believes chocolate causes intellectual achievement", B: "finds the correlation surprising or unexpected and is not asserting a causal explanation", C: "intends to argue that Nobel committees favor chocolate-consuming nations", D: "is reporting data he considers unreliable" },
+      correct: "B",
+      explanation: "'Curiously' signals genuine surprise at an unexpected pattern without asserting cause — the author is noting an interesting correlation, not explaining it. A would require the author to claim causation. C introduces bias in Nobel committees, not implied. D would require skeptical language about the data's reliability.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "author's tone", "word choice"]
+    },
+    {
+      question: "Which of the following is the most accurate summary of the following passage?\n\n\"Antibiotics, once considered miracle drugs, are losing their effectiveness. Overuse in medicine and agriculture has accelerated the evolution of drug-resistant bacteria. Scientists warn that without new treatments and stricter prescribing practices, common infections could again become life-threatening.\"",
+      options: { A: "Antibiotics were never as effective as claimed", B: "Antibiotic resistance is growing due to overuse, threatening to make common infections dangerous again", C: "Doctors prescribe too many medications of all types", D: "New antibiotics are currently being developed and will solve the resistance problem" },
+      correct: "B",
+      explanation: "B accurately captures all three elements: overuse driving resistance, and the resulting threat to treating common infections. A contradicts 'once considered miracle drugs.' C overgeneralizes beyond antibiotics. D introduces an optimistic development the passage explicitly does not mention.",
+      difficulty: 1,
+      tags: ["Key Ideas and Details", "summarizing"]
+    },
+    {
+      question: "The transition word 'nevertheless' in the following passage signals:\n\n\"The expedition faced brutal conditions: frostbite, equipment failures, and supply shortages. Nevertheless, the team reached the summit on the final day of the weather window.\"",
+      options: { A: "the hardships caused the team's eventual failure", B: "a contrast between the difficulties and the team's ultimate success", C: "an explanation of how the team overcame each obstacle", D: "a concession that the summit was not worth the effort" },
+      correct: "B",
+      explanation: "'Nevertheless' introduces a contrast — despite the severe challenges, the team succeeded. A is the opposite of what happened. C describes a detailed explanation the passage does not provide. D is a value judgment the passage does not make.",
+      difficulty: 1,
+      tags: ["Craft and Structure", "transitions"]
+    },
+    {
+      question: "Based on the following passage, the author would most likely agree that:\n\n\"Standardized tests measure a narrow band of skills efficiently. However, they leave unmeasured the creativity, collaboration, and ethical reasoning that employers consistently rank among the most valuable qualities in new hires.\"",
+      options: { A: "standardized tests should be eliminated immediately", B: "standardized tests are efficient but incomplete measures of student capability", C: "employers should design their own tests for schools to administer", D: "creativity cannot be taught and should not be assessed" },
+      correct: "B",
+      explanation: "The passage acknowledges efficiency ('measure efficiently') while noting limitations ('leave unmeasured') — matching B's balanced view. A goes further than the passage's critique. C is a policy proposal the author does not make. D contradicts the passage's implication that creativity is important and presumably assessable in some way.",
+      difficulty: 2,
+      tags: ["Key Ideas and Details", "author's view"]
+    },
+    {
+      question: "In the following passage, the phrase 'double-edged sword' is used to convey:\n\n\"Social mobility is a double-edged sword. While it offers individuals the chance to rise above their origins, it can also sever the cultural and familial ties that once gave their lives meaning.\"",
+      options: { A: "social mobility is primarily harmful", B: "social mobility involves both benefits and losses", C: "swords are appropriate metaphors for economic concepts", D: "families always oppose individual advancement" },
+      correct: "B",
+      explanation: "A double-edged sword cuts both ways — the passage immediately explains both the opportunity (rise above origins) and the cost (severed cultural ties). A is one-sided. C takes the metaphor too literally. D overstates a consequence the passage describes as possible, not universal.",
+      difficulty: 1,
+      tags: ["Craft and Structure", "figurative language"]
+    },
+    {
+      question: "Which statement best describes how the author uses evidence in the following passage?\n\n\"According to a 2022 Gallup poll, 74% of American workers report feeling disengaged at work. Researchers at Harvard Business School link disengagement to poor management practices rather than employee attitudes, citing studies from 14 countries with consistent findings.\"",
+      options: { A: "The author uses only anecdotal evidence to support a broad claim", B: "The author combines survey data with research findings to support a specific causal explanation", C: "The author relies on a single study to draw universal conclusions", D: "The author presents data without offering any explanatory framework" },
+      correct: "B",
+      explanation: "The passage uses a Gallup poll (survey data) and Harvard research from 14 countries (research findings) to support the causal claim that disengagement stems from management, not employees. A is wrong — neither piece of evidence is anecdotal. C is wrong — two sources are cited, not one, and neither makes a 'universal' claim. D is wrong because the Harvard research offers a causal explanation.",
+      difficulty: 2,
+      tags: ["Craft and Structure", "use of evidence"]
+    },
+    {
+      question: "What can be inferred about the author's view of urban sprawl from the following passage?\n\n\"As cities expand outward, wetlands disappear, commute times lengthen, and social cohesion frays. The American suburb, often described as a paradise of privacy and space, exacts a high cost on the environment and the community bonds that make civic life possible.\"",
+      options: { A: "Urban sprawl is an unavoidable consequence of population growth", B: "The costs of suburban expansion outweigh its perceived benefits", C: "All Americans prefer suburban living to city life", D: "Wetland preservation is more important than housing development" },
+      correct: "B",
+      explanation: "The passage catalogs harms (wetlands lost, longer commutes, fraying social bonds) and frames the suburb's 'paradise' as an illusion that 'exacts a high cost' — expressing that the costs exceed the benefits. A is fatalistic; the passage implies criticism, not inevitability. C is a demographic claim the passage does not make. D prioritizes one harm, while the passage lists multiple.",
+      difficulty: 2,
+      tags: ["Key Ideas and Details", "author's view", "inference"]
+    },
   ]
 };
