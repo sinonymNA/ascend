@@ -17,6 +17,7 @@ const masteryRoutes     = require('./routes/mastery');
 const leaderboardRoutes = require('./routes/leaderboard');
 const friendsRoutes     = require('./routes/friends');
 const initGameSocket    = require('./socket/gameSocket');
+const initDb            = require('./services/initDb');
 
 const app = express();
 const server = http.createServer(app);
@@ -106,8 +107,34 @@ initGameSocket(io);
 
 // ── Start ──────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Summit server listening on port ${PORT} (${process.env.NODE_ENV || 'development'})`);
-});
+
+async function start() {
+  // Init DB schema + seed question sets (safe to run on every boot — all idempotent)
+  await initDb();
+
+  // Seed questions if DB is fresh
+  try {
+    const db = require('./services/db');
+    const { rows } = await db.query('SELECT COUNT(*) AS cnt FROM questions');
+    if (parseInt(rows[0].cnt, 10) === 0) {
+      console.log('🌱 Empty questions table — seeding question banks...');
+      const { execSync } = require('child_process');
+      execSync('node ' + path.join(__dirname, 'scripts/seed-questions.js'), {
+        stdio: 'inherit',
+        env: process.env,
+      });
+    } else {
+      console.log(`✓ Questions table has ${rows[0].cnt} questions`);
+    }
+  } catch (e) {
+    console.warn('Seed check skipped:', e.message);
+  }
+
+  server.listen(PORT, () => {
+    console.log(`Summit server listening on port ${PORT} (${process.env.NODE_ENV || 'development'})`);
+  });
+}
+
+start();
 
 module.exports = { app, server };
