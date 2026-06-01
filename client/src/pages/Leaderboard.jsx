@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
 import SoundService from '../lib/sound.js';
+import Icon from '../components/ui/Icon.jsx';
 
 const TABS = [
-  { key: 'weekly',   label: '🌎 Weekly Global' },
-  { key: 'friends',  label: '👥 Friends' },
-  { key: 'subject',  label: '📚 By Subject' },
+  { key: 'weekly',   label: 'Weekly Global', icon: 'globe' },
+  { key: 'friends',  label: 'Friends',       icon: 'users' },
+  { key: 'subject',  label: 'By Subject',    icon: 'book' },
 ];
 
 const SUBJECT_OPTIONS = [
@@ -19,7 +20,11 @@ const SUBJECT_OPTIONS = [
   { id: '00000000-0000-0000-0000-000000000023', label: 'ACT Science' },
 ];
 
-const MEDAL = { 0: '🥇', 1: '🥈', 2: '🥉' };
+const MEDAL = {
+  0: <Icon name="medal" size={20} color="#F5A623" fill="#F5A623" />,
+  1: <Icon name="medal" size={20} color="#C0C7D0" fill="#C0C7D0" />,
+  2: <Icon name="medal" size={20} color="#CD7F32" fill="#CD7F32" />,
+};
 
 function RankRow({ rank, entry, isYou, stat, statLabel }) {
   return (
@@ -88,6 +93,7 @@ export default function Leaderboard() {
   const [friendUsername, setFriendUsername] = useState('');
   const [addingFriend, setAddingFriend] = useState(false);
   const [friendMsg, setFriendMsg] = useState('');
+  const [friendMsgOk, setFriendMsgOk] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -112,11 +118,13 @@ export default function Leaderboard() {
     setFriendMsg('');
     try {
       const data = await api.post(`/api/friends/${friendUsername.trim()}`);
-      setFriendMsg(`✓ Added ${data.friend.username}!`);
+      setFriendMsg(`Added ${data.friend.username}!`);
+      setFriendMsgOk(true);
       SoundService.play('achievement');
       setFriendUsername('');
     } catch (e) {
       setFriendMsg(e.message || 'User not found');
+      setFriendMsgOk(false);
     } finally {
       setAddingFriend(false);
     }
@@ -161,9 +169,10 @@ export default function Leaderboard() {
                 cursor: 'pointer', whiteSpace: 'nowrap',
                 fontFamily: 'Nunito, sans-serif',
                 transition: 'background 0.18s, color 0.18s',
+                display: 'inline-flex', alignItems: 'center', gap: '5px',
               }}
             >
-              {t.label}
+              <Icon name={t.icon} size={14} /> {t.label}
             </button>
           ))}
         </div>
@@ -215,8 +224,8 @@ export default function Leaderboard() {
           </div>
         )}
         {friendMsg && (
-          <div style={{ fontSize: '13px', fontWeight: 700, color: friendMsg.startsWith('✓') ? '#52B788' : '#E85D4A', marginBottom: '12px' }}>
-            {friendMsg}
+          <div style={{ fontSize: '13px', fontWeight: 700, color: friendMsgOk ? '#52B788' : '#E85D4A', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            {friendMsgOk && <Icon name="check" size={14} color="#52B788" />}{friendMsg}
           </div>
         )}
 

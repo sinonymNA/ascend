@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Icon from '../ui/Icon.jsx';
 
 /**
  * GameCode — displays the game join code prominently.
@@ -96,7 +97,7 @@ export default function GameCode({ code = '' }) {
               transition={{ duration: 0.15 }}
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
-              ✓ Copied!
+              <Icon name="check" size={14} /> Copied!
             </motion.span>
           ) : (
             <motion.span

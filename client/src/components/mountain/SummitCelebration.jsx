@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import Icon from '../ui/Icon.jsx';
 
 /**
  * Full-screen summit celebration overlay.
@@ -87,14 +88,14 @@ export default function SummitCelebration({
             cursor: 'pointer',
           }}
         >
-          {/* Mountain emoji hero */}
+          {/* Mountain icon hero */}
           <motion.div
             initial={{ scale: 0, rotate: -20 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: 'spring', stiffness: 200, damping: 18, delay: 0.15 }}
-            style={{ fontSize: '72px', lineHeight: 1, marginBottom: '16px' }}
+            style={{ lineHeight: 1, marginBottom: '16px', display: 'flex' }}
           >
-            🏔️
+            <Icon name="mountain" size={72} color="var(--gold)" />
           </motion.div>
 
           {/* Summit Reached headline */}

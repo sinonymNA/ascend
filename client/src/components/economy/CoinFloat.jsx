@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Icon from '../ui/Icon.jsx';
 
 // Optimistic per-answer coin float — cosmetic only.
 export default function CoinFloat({ amount, triggerKey, x = '50%', y = '62%' }) {
@@ -18,9 +19,10 @@ export default function CoinFloat({ amount, triggerKey, x = '50%', y = '62%' }) 
             fontFamily: 'Cinzel, serif', fontSize: '18px', fontWeight: 700,
             color: '#F5A623', textShadow: '0 2px 8px rgba(0,0,0,0.5)',
             whiteSpace: 'nowrap',
+            display: 'flex', alignItems: 'center', gap: '5px',
           }}
         >
-          🪙 +{amount}
+          <Icon name="coins" size={18} color="#F5A623" fill="rgba(245,166,35,0.25)" /> +{amount}
         </motion.div>
       )}
     </AnimatePresence>

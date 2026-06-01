@@ -14,6 +14,7 @@ import LevelUp from '../components/common/LevelUp.jsx';
 import SoundService from '../lib/sound.js';
 import CoinFloat from '../components/economy/CoinFloat.jsx';
 import BoostBar from '../components/economy/BoostBar.jsx';
+import Icon from '../components/ui/Icon.jsx';
 
 function normalizeQuestions(rawQuestions) {
   return rawQuestions.map((q) => ({
@@ -274,7 +275,7 @@ export default function SoloGame() {
       explanation: correct || (wrongCountsRef.current[question.id] || 0) >= 3
         ? question.explanation
         : null,
-      hint: (wrongCountsRef.current[question.id] || 0) === 2 ? '💡 Think carefully about this one.' : null,
+      hint: (wrongCountsRef.current[question.id] || 0) === 2 ? 'Think carefully about this one.' : null,
     });
     setPhase('result');
 
@@ -399,8 +400,8 @@ export default function SoloGame() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-          <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>
-            ⚡ {xp} XP
+          <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '16px', fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>
+            <Icon name="boost" size={16} color="#F5A623" /> {xp} XP
           </span>
           <StreakIndicator streak={streak} />
         </div>
@@ -496,8 +497,8 @@ function ResultCard({ result }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-        <span style={{ fontSize: '22px', fontWeight: 800, color: correct ? 'var(--pine-light)' : 'var(--sunset)' }}>
-          {correct ? 'Correct! ✓' : 'Not quite —'}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '22px', fontWeight: 800, color: correct ? 'var(--pine-light)' : 'var(--sunset)' }}>
+          {correct ? <>Correct! <Icon name="check" size={22} color="var(--pine-light)" /></> : 'Not quite —'}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {xpGained > 0 && (
@@ -510,9 +511,9 @@ function ResultCard({ result }) {
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 380, damping: 18, delay: 0.2 }}
-              style={{ background: 'rgba(245,166,35,0.12)', border: '1px solid var(--gold)', borderRadius: '20px', padding: '4px 12px', fontSize: '13px', fontWeight: 800, color: 'var(--gold)' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(245,166,35,0.12)', border: '1px solid var(--gold)', borderRadius: '20px', padding: '4px 12px', fontSize: '13px', fontWeight: 800, color: 'var(--gold)' }}
             >
-              ✨ Mastered!
+              <Icon name="sparkles" size={13} color="var(--gold)" /> Mastered!
             </motion.span>
           )}
         </div>
@@ -524,7 +525,7 @@ function ResultCard({ result }) {
           transition={{ delay: 0.15 }}
           style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,112,67,0.1)', border: '1px solid rgba(255,112,67,0.35)', borderRadius: '12px', padding: '6px 14px', fontSize: '13px', fontWeight: 700, color: '#FF7043', alignSelf: 'flex-start' }}
         >
-          🔥 {streak}x streak!
+          <Icon name="streak" size={14} color="#FF7043" /> {streak}x streak!
         </motion.div>
       )}
 

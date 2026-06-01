@@ -6,6 +6,7 @@ import { loadQuestionSet, shuffle } from '../lib/loadQuestions.js';
 import QuestionCard from '../components/game/QuestionCard.jsx';
 import BlockGrid from '../components/minigame/BlockGrid.jsx';
 import SoundService from '../lib/sound.js';
+import Icon from '../components/ui/Icon.jsx';
 
 const SIZE = 8;
 
@@ -208,11 +209,11 @@ export default function BlockBlast() {
   if (phase === 'over') {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', fontFamily: 'Nunito, sans-serif', textAlign: 'center' }}>
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }} style={{ fontSize: '64px' }}>🧩</motion.div>
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}><Icon name="puzzle" size={64} color="var(--gold)" /></motion.div>
         <h1 style={{ fontFamily: 'Cinzel, serif', fontSize: '26px', color: 'var(--gold)', margin: '12px 0' }}>Block Blast Over</h1>
         <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text)' }}>Score {score} · {linesTotal} lines</div>
-        <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '6px', marginBottom: '24px' }}>
-          {correctCount} questions answered · coins added 🪙
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '14px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '6px', marginBottom: '24px' }}>
+          {correctCount} questions answered · coins added <Icon name="coins" size={14} color="#F5A623" fill="rgba(245,166,35,0.25)" />
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button className="btn-primary" onClick={() => {
@@ -231,7 +232,7 @@ export default function BlockBlast() {
       {/* Header */}
       <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <button onClick={() => navigate('student_dashboard')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontWeight: 700, cursor: 'pointer', fontFamily: 'Nunito, sans-serif', fontSize: '13px' }}>← Quit</button>
-        <span style={{ flex: 1, fontFamily: 'Cinzel, serif', fontWeight: 700, color: 'var(--gold)', fontSize: '15px' }}>🧩 Block Blast</span>
+        <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '5px', fontFamily: 'Cinzel, serif', fontWeight: 700, color: 'var(--gold)', fontSize: '15px' }}><Icon name="puzzle" size={15} color="var(--gold)" /> Block Blast</span>
         <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>Score {score}</span>
         {phase === 'place' && tray.length > 0 && (
           <button onClick={finish} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '14px', padding: '5px 12px', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}>Cash Out</button>
@@ -267,10 +268,13 @@ export default function BlockBlast() {
               <QuestionCard question={q} onAnswer={handleAnswer} selected={selected} disabled={!!selected} />
               {answerResult && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{
-                  marginTop: '14px', textAlign: 'center', fontSize: '14px', fontWeight: 700,
+                  marginTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: '5px', fontSize: '14px', fontWeight: 700,
                   color: answerResult.correct ? '#52B788' : '#E85D4A',
                 }}>
-                  {answerResult.correct ? `✓ +${answerResult.earned} block${answerResult.earned > 1 ? 's' : ''}!` : `✗ ${answerResult.explanation || 'Try the next one.'}`}
+                  {answerResult.correct
+                    ? <><Icon name="check" size={14} color="#52B788" /> +{answerResult.earned} block{answerResult.earned > 1 ? 's' : ''}!</>
+                    : <><Icon name="xCircle" size={14} color="#E85D4A" /> {answerResult.explanation || 'Try the next one.'}</>}
                 </motion.div>
               )}
             </div>

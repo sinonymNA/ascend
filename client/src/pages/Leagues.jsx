@@ -3,14 +3,15 @@ import { motion } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
 import WalletPill from '../components/economy/WalletPill.jsx';
+import Icon from '../components/ui/Icon.jsx';
 
 const TIER_META = {
-  bronze:   { name: 'Bronze',   color: '#CD7F32', emoji: '🥉' },
-  silver:   { name: 'Silver',   color: '#C0C0C0', emoji: '🥈' },
-  gold:     { name: 'Gold',     color: '#F5A623', emoji: '🥇' },
-  sapphire: { name: 'Sapphire', color: '#4A90D9', emoji: '💠' },
-  ruby:     { name: 'Ruby',     color: '#E85D4A', emoji: '🔴' },
-  diamond:  { name: 'Diamond',  color: '#A78BFA', emoji: '💎' },
+  bronze:   { name: 'Bronze',   color: '#CD7F32', icon: 'medal', iconColor: '#CD7F32' },
+  silver:   { name: 'Silver',   color: '#C0C0C0', icon: 'medal', iconColor: '#C0C7D0' },
+  gold:     { name: 'Gold',     color: '#F5A623', icon: 'medal', iconColor: '#F5A623' },
+  sapphire: { name: 'Sapphire', color: '#4A90D9', icon: 'gems',  iconColor: '#4A90D9' },
+  ruby:     { name: 'Ruby',     color: '#E85D4A', icon: 'gems',  iconColor: '#E85D4A' },
+  diamond:  { name: 'Diamond',  color: '#A78BFA', icon: 'gems',  iconColor: '#A78BFA' },
 };
 
 export default function Leagues() {
@@ -45,7 +46,9 @@ export default function Leagues() {
         ) : (
           <>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '52px' }}>{tier.emoji}</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
+                <Icon name={tier.icon} size={52} color={tier.iconColor} fill={`${tier.iconColor}40`} />
+              </div>
               <div style={{ fontFamily: 'Cinzel, serif', fontSize: '22px', fontWeight: 700, color: tier.color }}>{tier.name} League</div>
               <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>
                 Top {promoteCount} promote · Bottom {relegateCount} relegate · Resets Monday

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
+import Icon from '../components/ui/Icon.jsx';
 
 function MountainMark() {
   return (
@@ -212,6 +213,7 @@ export default function AuthPage() {
                         onClick={() => setRole(r)}
                         style={{
                           flex: 1, padding: '9px', borderRadius: '10px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                           border: `1px solid ${role === r ? '#F5A623' : 'var(--border)'}`,
                           cursor: 'pointer', fontFamily: 'Nunito, sans-serif',
                           fontSize: '14px', fontWeight: 700,
@@ -220,7 +222,8 @@ export default function AuthPage() {
                           color: role === r ? '#F5A623' : 'var(--text-muted)',
                         }}
                       >
-                        {r === 'student' ? '🧗 Student' : '📚 Teacher'}
+                        <Icon name={r === 'student' ? 'peak' : 'book'} size={15} />
+                        {r === 'student' ? 'Student' : 'Teacher'}
                       </button>
                     ))}
                   </div>

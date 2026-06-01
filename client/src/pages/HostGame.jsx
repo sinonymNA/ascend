@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
+import Icon from '../components/ui/Icon.jsx';
 import { connectSocket, disconnectSocket } from '../lib/socket.js';
 
 // ─── Decorative SVGs ──────────────────────────────────────────────────────────
@@ -123,7 +124,7 @@ function StepIndicator({ currentStep }) {
                   transition: 'background 0.2s',
                 }}
               >
-                {done ? '✓' : stepNum}
+                {done ? <Icon name="check" size={14} color="#0F1720" /> : stepNum}
               </div>
               <span
                 style={{
@@ -194,7 +195,7 @@ function SetCard({ set, selected, onSelect, locked }) {
             padding: '3px 8px',
           }}
         >
-          <span style={{ fontSize: '11px' }}>🔒</span>
+          <Icon name="lock" size={11} color="var(--gold)" />
           <span
             style={{
               fontFamily: 'Cinzel, serif',
@@ -427,8 +428,8 @@ function Step1SelectSet({ selectedSet, onSelect, onNext }) {
             {/* Summit Library */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                <h3 style={{ fontFamily: 'Nunito, sans-serif', fontSize: '16px', fontWeight: 800, color: 'var(--text)', margin: 0 }}>
-                  🏔️ Summit Library
+                <h3 style={{ fontFamily: 'Nunito, sans-serif', fontSize: '16px', fontWeight: 800, color: 'var(--text)', margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Icon name="mountain" size={16} color="var(--gold)" /> Summit Library
                 </h3>
                 <span style={{ fontFamily: 'Nunito, sans-serif', fontSize: '11px', color: 'var(--pine-light)', fontWeight: 700, background: 'rgba(82,183,136,0.15)', padding: '2px 8px', borderRadius: '10px' }}>
                   Unit 1 FREE
@@ -771,7 +772,7 @@ function Step3Lobby({ selectedSet, selectedClassId, onBack }) {
               gap: '8px',
             }}
           >
-            <span style={{ fontSize: '36px' }}>📱</span>
+            <Icon name="phone" size={36} color="var(--text-muted)" />
             <span style={{ fontFamily: 'Nunito, sans-serif', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
               QR Code
             </span>

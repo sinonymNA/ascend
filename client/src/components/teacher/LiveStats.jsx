@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import Icon from '../ui/Icon.jsx';
 
 /**
  * LiveStats — real-time game stats for teacher view.
@@ -31,7 +32,7 @@ export default function LiveStats({ players = [] }) {
 
   const statItems = [
     { label: 'Students', value: totalPlayers, color: 'var(--text)' },
-    { label: 'Summited', value: summited, color: 'var(--gold)', icon: '🏔️' },
+    { label: 'Summited', value: summited, color: 'var(--gold)', icon: 'mountain' },
     { label: 'Avg Elevation', value: `${avgElevation}%`, color: 'var(--pine-light)' },
     { label: 'Questions Answered', value: totalAnswered, color: 'var(--text-mid)' },
   ];
@@ -63,7 +64,7 @@ export default function LiveStats({ players = [] }) {
               lineHeight: 1,
               marginBottom: 4,
             }}>
-              {s.icon && <span style={{ marginRight: 4 }}>{s.icon}</span>}
+              {s.icon && <Icon name={s.icon} size={20} color={s.color} style={{ marginRight: 4 }} />}
               {s.value}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
@@ -131,8 +132,11 @@ export default function LiveStats({ players = [] }) {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
                 }}>
-                  {isSummited && '🏔️ '}{p.name}
+                  {isSummited && <Icon name="mountain" size={13} color="var(--gold)" />}{p.name}
                 </span>
 
                 {/* Elevation bar */}

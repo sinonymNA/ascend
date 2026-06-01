@@ -5,6 +5,7 @@ import api from '../lib/api.js';
 import { loadQuestionSet, shuffle } from '../lib/loadQuestions.js';
 import QuestionCard from '../components/game/QuestionCard.jsx';
 import SoundService from '../lib/sound.js';
+import Icon from '../components/ui/Icon.jsx';
 
 const DURATION = 60; // seconds
 
@@ -77,10 +78,10 @@ export default function BlitzGame() {
   if (phase === 'done') {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', fontFamily: 'Nunito, sans-serif', textAlign: 'center' }}>
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }} style={{ fontSize: '64px' }}>⚡</motion.div>
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}><Icon name="boost" size={64} color="#F5A623" /></motion.div>
         <h1 style={{ fontFamily: 'Cinzel, serif', fontSize: '28px', color: 'var(--gold)', margin: '12px 0' }}>Blitz Complete!</h1>
         <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)' }}>{correctCount} correct of {answered}</div>
-        <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '6px', marginBottom: '24px' }}>Coins added to your wallet 🪙</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '14px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '6px', marginBottom: '24px' }}>Coins added to your wallet <Icon name="coins" size={14} color="#F5A623" fill="rgba(245,166,35,0.25)" /></div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button className="btn-primary" onClick={() => { finishedRef.current = false; setIdx(0); setCorrectCount(0); setAnswered(0); setTimeLeft(DURATION); startRef.current = Date.now(); setPhase('playing'); }} style={{ padding: '12px 24px' }}>Again</button>
           <button className="btn-ghost" onClick={() => navigate('student_dashboard')} style={{ padding: '12px 24px' }}>Done</button>
@@ -94,9 +95,9 @@ export default function BlitzGame() {
       {/* Header */}
       <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button onClick={() => navigate('student_dashboard')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontWeight: 700, cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}>← Quit</button>
-        <span style={{ flex: 1, fontFamily: 'Cinzel, serif', fontWeight: 700, color: 'var(--gold)' }}>⚡ Blitz · {setTitle}</span>
+        <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '5px', fontFamily: 'Cinzel, serif', fontWeight: 700, color: 'var(--gold)' }}><Icon name="boost" size={16} color="var(--gold)" /> Blitz · {setTitle}</span>
         <span style={{ fontSize: '16px', fontWeight: 800, color: barColor }}>{timeLeft}s</span>
-        <span style={{ fontSize: '14px', fontWeight: 800, color: '#52B788' }}>✓ {correctCount}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '14px', fontWeight: 800, color: '#52B788' }}><Icon name="check" size={14} color="#52B788" /> {correctCount}</span>
       </div>
       {/* Timer bar */}
       <div style={{ height: '6px', background: 'var(--bg-elevated)' }}>

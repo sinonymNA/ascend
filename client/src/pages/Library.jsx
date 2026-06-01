@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
+import Icon from '../components/ui/Icon.jsx';
 
 // ─── Decorative SVG ───────────────────────────────────────────────────────────
 
@@ -188,7 +189,7 @@ function ProUpgradeModal({ onClose }) {
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: '48px', marginBottom: '12px' }}>🏔️</div>
+        <div style={{ marginBottom: '12px' }}><Icon name="mountain" size={48} color="var(--gold)" /></div>
         <h2
           style={{
             fontFamily: 'Cinzel, serif',
@@ -385,9 +386,9 @@ function SetDetailView({ set, onClose, onUse }) {
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '20px', padding: '4px', lineHeight: 1, flexShrink: 0 }}
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', lineHeight: 1, flexShrink: 0, display: 'flex', alignItems: 'center' }}
           >
-            ✕
+            <Icon name="xCircle" size={20} />
           </button>
         </div>
 
@@ -515,7 +516,7 @@ function SetCard({ set, isLocked, onOpen, onProClick, isMySet, onEdit, onPlay })
             padding: '3px 8px',
           }}
         >
-          <span style={{ fontSize: '10px' }}>🔒</span>
+          <Icon name="lock" size={10} color="var(--gold)" />
           <span style={{ fontFamily: 'Cinzel, serif', fontSize: '10px', color: 'var(--gold)', fontWeight: 700, letterSpacing: '0.06em' }}>
             PRO
           </span>
@@ -604,7 +605,7 @@ function NewSetCard({ onClick }) {
         transition: 'border-color 0.15s',
       }}
     >
-      <span style={{ fontSize: '28px', opacity: 0.5 }}>➕</span>
+      <Icon name="plus" size={28} style={{ opacity: 0.5 }} />
       <span style={{ fontFamily: 'Nunito, sans-serif', fontSize: '14px', fontWeight: 700, color: 'var(--text-muted)' }}>
         New Set
       </span>
@@ -735,8 +736,8 @@ export default function Library() {
               flexWrap: 'wrap',
             }}
           >
-            <span style={{ fontFamily: 'Nunito, sans-serif', fontSize: '13px', fontWeight: 700, color: 'var(--gold)' }}>
-              🏔️ Upgrade to Summit Pro — Unlock all units, AI generation, and more.{' '}
+            <span style={{ fontFamily: 'Nunito, sans-serif', fontSize: '13px', fontWeight: 700, color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Icon name="mountain" size={13} color="var(--gold)" /> Upgrade to Summit Pro — Unlock all units, AI generation, and more.{' '}
               <strong>$12/month.</strong>
             </span>
             <button
@@ -802,9 +803,11 @@ export default function Library() {
                   fontSize: '16px',
                   pointerEvents: 'none',
                   opacity: 0.5,
+                  display: 'flex',
+                  alignItems: 'center',
                 }}
               >
-                🔍
+                <Icon name="search" size={16} />
               </span>
             </div>
 
@@ -856,7 +859,7 @@ export default function Library() {
                   gap: '10px',
                 }}
               >
-                🏔️ Summit Library
+                <Icon name="mountain" size={18} color="var(--text)" /> Summit Library
               </h2>
 
               {filteredSummit.length === 0 ? (

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import Icon from './Icon.jsx';
 
 /**
  * Full-screen modal with backdrop blur.
@@ -102,7 +103,7 @@ export default function Modal({
                 onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text)')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
               >
-                ✕
+                <Icon name="xCircle" size={20} />
               </button>
             )}
             {children}

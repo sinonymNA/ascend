@@ -4,6 +4,7 @@ import confetti from 'canvas-confetti';
 import { useApp } from '../App.jsx';
 import SoundService from '../lib/sound.js';
 import ItemCard from '../components/economy/ItemCard.jsx';
+import Icon from '../components/ui/Icon.jsx';
 
 export default function PackOpening() {
   const { navigate, screenParams } = useApp();
@@ -64,8 +65,8 @@ export default function PackOpening() {
             >
               <ItemCard item={item} owned />
               {item.coinRefund > 0 && (
-                <div style={{ position: 'absolute', bottom: '-10px', left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', fontSize: '11px', fontWeight: 800, color: '#F5A623', background: 'var(--bg)', borderRadius: '8px', padding: '2px 8px', border: '1px solid var(--border-gold)' }}>
-                  dup · +{item.coinRefund} 🪙
+                <div style={{ position: 'absolute', bottom: '-10px', left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', fontSize: '11px', fontWeight: 800, color: '#F5A623', background: 'var(--bg)', borderRadius: '8px', padding: '2px 8px', border: '1px solid var(--border-gold)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  dup · +{item.coinRefund} <Icon name="coins" size={12} color="#F5A623" fill="rgba(245,166,35,0.25)" />
                 </div>
               )}
               {item.isNew && item.coinRefund === 0 && (

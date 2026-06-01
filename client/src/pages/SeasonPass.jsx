@@ -4,6 +4,7 @@ import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
 import SoundService from '../lib/sound.js';
 import WalletPill from '../components/economy/WalletPill.jsx';
+import Icon from '../components/ui/Icon.jsx';
 
 export default function SeasonPass() {
   const { navigate, setWallet } = useApp();
@@ -80,20 +81,19 @@ export default function SeasonPass() {
                       }}
                     >
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>
-                          {t.reward_item ? `🎁 ${t.reward_item.replace(/_/g, ' ')}` : ''}
-                          {t.reward_coins > 0 && `🪙 ${t.reward_coins}`}
-                          {t.reward_coins > 0 && t.reward_gems > 0 && '  '}
-                          {t.reward_gems > 0 && `💎 ${t.reward_gems}`}
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          {t.reward_item && <><Icon name="gift" size={14} color="#A78BFA" /> {t.reward_item.replace(/_/g, ' ')}</>}
+                          {t.reward_coins > 0 && <><Icon name="coins" size={14} color="#F5A623" fill="rgba(245,166,35,0.25)" /> {t.reward_coins}</>}
+                          {t.reward_gems > 0 && <><Icon name="gems" size={14} color="#60A5FA" fill="rgba(96,165,250,0.25)" /> {t.reward_gems}</>}
                         </div>
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>{t.xp_required.toLocaleString()} XP</div>
                       </div>
                       {isClaimed ? (
-                        <span style={{ fontSize: '12px', fontWeight: 800, color: '#52B788' }}>✓</span>
+                        <Icon name="check" size={14} color="#52B788" />
                       ) : reached ? (
                         <button onClick={() => claim(t.tier_index)} disabled={claiming} className="btn-primary" style={{ padding: '6px 14px', fontSize: '12px' }}>Claim</button>
                       ) : (
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)' }}>🔒</span>
+                        <Icon name="lock" size={13} color="var(--text-muted)" />
                       )}
                     </motion.div>
                   </div>

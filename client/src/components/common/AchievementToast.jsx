@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SoundService from '../../lib/sound.js';
+import Icon from '../ui/Icon.jsx';
 
 export default function AchievementToast({ achievements = [], onDismiss }) {
   const first = achievements[0];
@@ -40,7 +41,9 @@ export default function AchievementToast({ achievements = [], onDismiss }) {
           }}
           onClick={onDismiss}
         >
-          <div style={{ fontSize: '32px', flexShrink: 0 }}>🏆</div>
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+            <Icon name="trophy" size={32} color="#F5A623" fill="rgba(245,166,35,0.25)" />
+          </div>
           <div>
             <div style={{
               fontSize: '11px',

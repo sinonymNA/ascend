@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import Icon from '../ui/Icon.jsx';
 
 /**
  * StreakIndicator — shows current correct-answer streak.
@@ -67,7 +68,7 @@ export default function StreakIndicator({ streak = 0 }) {
           whiteSpace: 'nowrap',
         }}
       >
-        <span style={{ fontSize: '16px' }}>🔥</span>
+        <Icon name="streak" size={16} color={color} />
         <span>{streak}</span>
         {bonusLabel && (
           <span style={{ fontSize: '12px', opacity: 0.85, fontWeight: 700 }}>

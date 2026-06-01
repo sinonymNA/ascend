@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import Icon from '../ui/Icon.jsx';
 
 export const RARITY_COLORS = {
   common:    { border: '#6B7E8F', glow: 'rgba(107,126,143,0.3)',  label: 'Common' },
@@ -9,8 +10,8 @@ export const RARITY_COLORS = {
 };
 
 const CATEGORY_ICON = {
-  color: '🎨', trail: '✨', flag: '🚩', skin: '🧗', badge: '🎖️', banner: '🎌', theme: '🏔️',
-  xp2x: '⚡', fifty: '✂️', timefreeze: '⏱️', streak_shield: '🛡️',
+  color: 'palette', trail: 'sparkles', flag: 'flag', skin: 'user', badge: 'medal', banner: 'flag', theme: 'mountain',
+  xp2x: 'boost', fifty: 'fifty', timefreeze: 'timer', streak_shield: 'shield',
 };
 
 export default function ItemCard({ item, equipped, owned, quantity, onClick, compact }) {
@@ -48,10 +49,10 @@ export default function ItemCard({ item, equipped, owned, quantity, onClick, com
       <div style={{
         width: compact ? '34px' : '44px', height: compact ? '34px' : '44px', borderRadius: '50%',
         margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: swatch || 'var(--bg)', fontSize: compact ? '18px' : '22px',
+        background: swatch || 'var(--bg)', color: 'var(--text)',
         border: swatch ? '2px solid rgba(255,255,255,0.2)' : '1px solid var(--border)',
       }}>
-        {swatch ? '' : (CATEGORY_ICON[item.category] || '🎁')}
+        {swatch ? '' : <Icon name={CATEGORY_ICON[item.category] || 'gift'} size={compact ? 18 : 22} />}
       </div>
       <div style={{ fontSize: compact ? '12px' : '13px', fontWeight: 800, color: 'var(--text)', marginBottom: '2px', lineHeight: 1.2 }}>
         {item.name}

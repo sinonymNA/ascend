@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import AchievementToast from '../components/common/AchievementToast.jsx';
+import Icon from '../components/ui/Icon.jsx';
 
 const SUBJECT_LABELS = {
   sat_math: 'SAT Math',
@@ -191,8 +192,12 @@ export default function SessionResults() {
           color: '#F5A623',
           margin: '0 0 6px',
           letterSpacing: '0.04em',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
         }}>
-          Session Complete! 🏔️
+          Session Complete! <Icon name="mountain" size={28} color="#F5A623" />
         </h1>
         <p style={{ fontSize: '15px', color: 'var(--text-muted)', margin: '0 0 28px', fontWeight: 600 }}>
           {subjectLabel}
@@ -285,11 +290,14 @@ export default function SessionResults() {
                 fontSize: '13px',
                 fontWeight: 700,
                 color: '#F5A623',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
               }}
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.97 }}
             >
-              📤 Share Score
+              <Icon name="share" size={14} color="#F5A623" /> Share Score
             </motion.button>
             <motion.button
               onClick={handleDownload}
@@ -303,11 +311,14 @@ export default function SessionResults() {
                 fontSize: '13px',
                 fontWeight: 700,
                 color: 'var(--text-muted)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
               }}
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.97 }}
             >
-              ⬇️ Download
+              <Icon name="arrowDown" size={14} /> Download
             </motion.button>
           </div>
         )}

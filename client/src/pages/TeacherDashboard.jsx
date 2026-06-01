@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import ClassCard from '../components/teacher/ClassCard.jsx';
+import Icon from '../components/ui/Icon.jsx';
 import api from '../lib/api.js';
 
 // ─── Decorative SVGs ──────────────────────────────────────────────────────────
@@ -67,7 +68,7 @@ function UserAvatar({ name = '' }) {
 
 // ─── Quick Action Card ────────────────────────────────────────────────────────
 
-function QuickActionCard({ emoji, label, description, onClick, primary }) {
+function QuickActionCard({ icon, label, description, onClick, primary }) {
   return (
     <motion.button
       onClick={onClick}
@@ -89,7 +90,7 @@ function QuickActionCard({ emoji, label, description, onClick, primary }) {
         minWidth: 0,
       }}
     >
-      <span style={{ fontSize: '28px', lineHeight: 1 }}>{emoji}</span>
+      <Icon name={icon} size={28} color={primary ? '#0F1720' : 'var(--gold)'} />
       <span
         style={{
           fontFamily: 'Nunito, sans-serif',
@@ -213,7 +214,7 @@ function NewClassModal({ onClose, onCreated }) {
             }}
             aria-label="Close"
           >
-            ✕
+            <Icon name="xCircle" size={20} />
           </button>
         </div>
 
@@ -456,9 +457,12 @@ export default function TeacherDashboard() {
                 fontSize: '13px',
                 fontWeight: 700,
                 color: 'var(--gold)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
               }}
             >
-              👀 Demo Mode — Sign in to save your progress
+              <Icon name="eye" size={14} color="var(--gold)" /> Demo Mode — Sign in to save your progress
             </span>
             <button
               className="btn-primary"
@@ -554,9 +558,12 @@ export default function TeacherDashboard() {
               fontWeight: 800,
               color: 'var(--text)',
               margin: '0 0 6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
             }}
           >
-            {greeting}, {displayName} 👋
+            {greeting}, {displayName} <Icon name="wave" size={28} color="var(--gold)" />
           </h1>
           <p
             style={{
@@ -587,20 +594,20 @@ export default function TeacherDashboard() {
             }}
           >
             <QuickActionCard
-              emoji="🏔️"
+              icon="mountain"
               label="Host a Live Game"
               description="Launch a session with your class"
               onClick={() => navigate('host_game')}
               primary
             />
             <QuickActionCard
-              emoji="📚"
+              icon="book"
               label="Question Library"
               description="Browse Summit & your sets"
               onClick={() => navigate('library')}
             />
             <QuickActionCard
-              emoji="➕"
+              icon="plus"
               label="Create Question Set"
               description="Build custom question sets"
               onClick={() => navigate('question_builder')}

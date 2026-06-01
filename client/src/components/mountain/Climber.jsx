@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import Icon from '../ui/Icon.jsx';
 
 /**
  * Individual climber marker.
@@ -45,9 +46,9 @@ export default function Climber({
           initial={{ opacity: 0, scale: 0 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          style={{ fontSize: '14px', lineHeight: 1 }}
+          style={{ lineHeight: 1, display: 'flex' }}
         >
-          🚩
+          <Icon name="flag" size={14} color="#F5A623" />
         </motion.div>
       )}
 

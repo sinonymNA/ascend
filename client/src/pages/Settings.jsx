@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
 import SoundService from '../lib/sound.js';
+import Icon from '../components/ui/Icon.jsx';
 
 // ─── Decorative SVG ───────────────────────────────────────────────────────────
 
@@ -245,9 +246,12 @@ function SaveStatus({ status }) {
           fontSize: '13px',
           fontWeight: 700,
           color: isError ? 'var(--sunset, #E85D4A)' : 'var(--pine-light)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '5px',
         }}
       >
-        {isError ? '✗ ' : '✓ '}{status}
+        <Icon name={isError ? 'xCircle' : 'check'} size={14} />{status}
       </motion.span>
     </AnimatePresence>
   );
@@ -520,7 +524,7 @@ export default function Settings() {
         </motion.h1>
 
         {/* ── 1. Profile ── */}
-        <SectionCard title="Profile" icon="👤">
+        <SectionCard title="Profile" icon={<Icon name="user" size={20} />}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             {/* Avatar */}
             <div
@@ -595,7 +599,7 @@ export default function Settings() {
         </SectionCard>
 
         {/* ── 2. Subscription ── */}
-        <SectionCard title="Subscription" icon="🏔️">
+        <SectionCard title="Subscription" icon={<Icon name="mountain" size={20} />}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '14px', fontWeight: 700, color: 'var(--text-muted)', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '12px' }}>
@@ -644,9 +648,9 @@ export default function Settings() {
                 className="btn-primary"
                 onClick={handleUpgrade}
                 disabled={subLoading}
-                style={{ fontSize: '14px', padding: '10px 22px' }}
+                style={{ fontSize: '14px', padding: '10px 22px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
               >
-                {subLoading ? 'Loading…' : '🏔️ Upgrade to Pro — $12/mo'}
+                {subLoading ? 'Loading…' : (<><Icon name="mountain" size={16} /> Upgrade to Pro — $12/mo</>)}
               </button>
             )}
           </div>
@@ -676,7 +680,7 @@ export default function Settings() {
         </SectionCard>
 
         {/* ── 3. Notifications ── */}
-        <SectionCard title="Notification Preferences" icon="🔔">
+        <SectionCard title="Notification Preferences" icon={<Icon name="bell" size={20} />}>
           <form onSubmit={handleSaveNotifications} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             {/* Toggle row */}
             {[
@@ -744,7 +748,7 @@ export default function Settings() {
         </SectionCard>
 
         {/* ── 3b. Sound & Streak ── */}
-        <SectionCard title="Sound & Progress" icon="🔊">
+        <SectionCard title="Sound & Progress" icon={<Icon name="sound" size={20} />}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '14px', fontWeight: 800, color: 'var(--text)', margin: '0 0 4px' }}>
@@ -775,15 +779,15 @@ export default function Settings() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '14px', fontWeight: 800, color: '#F5A623', margin: '0 0 2px' }}>
-                  🔥 {user?.login_streak || 0}-Day Streak
+                <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '14px', fontWeight: 800, color: '#F5A623', margin: '0 0 2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Icon name="streak" size={16} color="#F5A623" /> {user?.login_streak || 0}-Day Streak
                 </p>
                 <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
                   {user?.streak_shield_count || 0} streak shield{(user?.streak_shield_count || 0) !== 1 ? 's' : ''} available
                 </p>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '24px' }}>🛡️</div>
+                <div style={{ fontSize: '24px' }}><Icon name="shield" size={24} /></div>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>
                   ×{user?.streak_shield_count || 0}
                 </div>
@@ -811,7 +815,7 @@ export default function Settings() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '20px' }}>⚠️</span>
+            <span style={{ fontSize: '20px' }}><Icon name="warning" size={20} color="#E85D4A" /></span>
             <h2
               style={{
                 fontFamily: 'Nunito, sans-serif',
@@ -887,9 +891,12 @@ export default function Settings() {
                   fontWeight: 800,
                   color: 'var(--gold)',
                   margin: '0 0 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
                 }}
               >
-                🔧 Developer Panel
+                <Icon name="wrench" size={20} /> Developer Panel
               </h2>
               <p
                 style={{
@@ -914,9 +921,9 @@ export default function Settings() {
                   className="btn-primary"
                   onClick={handleGrantCoins}
                   disabled={devLoading}
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
                 >
-                  {devLoading ? 'Granting…' : '💰 Grant 1M Coins'}
+                  {devLoading ? 'Granting…' : (<><Icon name="coins" size={16} color="#F5A623" /> Grant 1M Coins</>)}
                 </button>
               </div>
             </motion.div>

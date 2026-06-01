@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
 import Modal from '../components/ui/Modal.jsx';
+import Icon from '../components/ui/Icon.jsx';
 
 const THINKING_SKILLS = [
   { value: 'causation',            label: 'Causation' },
@@ -131,13 +132,13 @@ function AIModal({ show, onClose, onAdd, onAddMany, isPro }) {
             >
               {/* Header */}
               <div style={{ padding: '20px 24px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--gold)' }}>✨ AI Assist</span>
-                <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20 }}>×</button>
+                <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="sparkles" size={18} color="var(--gold)" /> AI Assist</span>
+                <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20, display: 'flex', alignItems: 'center' }}><Icon name="xCircle" size={20} /></button>
               </div>
 
               {!isPro && (
                 <div style={{ margin: '0 24px 12px', padding: '10px 14px', background: 'rgba(245,166,35,0.1)', border: '1px solid var(--border-gold)', borderRadius: 10 }}>
-                  <p style={{ margin: 0, fontSize: 13, color: 'var(--gold)', fontWeight: 600 }}>🔒 Pro Feature — AI generation requires Summit Pro.</p>
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--gold)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="lock" size={13} color="var(--gold)" /> Pro Feature — AI generation requires Summit Pro.</p>
                 </div>
               )}
 
@@ -174,8 +175,8 @@ function AIModal({ show, onClose, onAdd, onAddMany, isPro }) {
                       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: 10, padding: 16 }}>
                         <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>{result.question}</p>
                         {['A', 'B', 'C', 'D'].map(opt => (
-                          <p key={opt} style={{ fontSize: 13, color: opt === result.correct ? 'var(--pine-light)' : 'var(--text-mid)', margin: '4px 0' }}>
-                            {opt === result.correct ? '✓ ' : ''}{opt}. {result.options?.[opt]}
+                          <p key={opt} style={{ fontSize: 13, color: opt === result.correct ? 'var(--pine-light)' : 'var(--text-mid)', margin: '4px 0', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            {opt === result.correct && <Icon name="check" size={13} color="var(--pine-light)" />}{opt}. {result.options?.[opt]}
                           </p>
                         ))}
                         <button className="btn-primary" style={{ marginTop: 12, width: '100%' }} onClick={() => { onAdd(result); onClose(); }}>
@@ -211,7 +212,7 @@ function AIModal({ show, onClose, onAdd, onAddMany, isPro }) {
                             style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--bg-card)', borderRadius: 8, padding: '10px 14px', cursor: 'pointer', border: `1px solid ${selected.includes(i) ? 'rgba(82,183,136,0.4)' : 'var(--border)'}`, transition: 'all 0.15s' }}
                             onClick={() => setSelected(s => s.includes(i) ? s.filter(x => x !== i) : [...s, i])}>
                             <span style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${selected.includes(i) ? 'var(--pine-light)' : 'var(--border)'}`, background: selected.includes(i) ? 'var(--pine-light)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#0F1720', flexShrink: 0, marginTop: 1 }}>
-                              {selected.includes(i) ? '✓' : ''}
+                              {selected.includes(i) ? <Icon name="check" size={11} color="#0F1720" /> : ''}
                             </span>
                             <span style={{ fontSize: 13, color: 'var(--text)' }}>{q.question?.length > 80 ? q.question.slice(0, 78) + '…' : q.question}</span>
                           </div>
@@ -236,7 +237,7 @@ function AIModal({ show, onClose, onAdd, onAddMany, isPro }) {
         <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', padding: 24 }}
           onClick={() => setShowPaywall(false)}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-gold)', borderRadius: 20, padding: 32, maxWidth: 380, width: '100%', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ fontSize: 40 }}>🔒</div>
+            <div style={{ display: 'flex', justifyContent: 'center' }}><Icon name="lock" size={40} color="var(--gold)" /></div>
             <div>
               <h2 className="cinzel" style={{ fontSize: 18, fontWeight: 700, color: 'var(--gold)', margin: '0 0 8px' }}>Pro Feature</h2>
               <p style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600, lineHeight: 1.6, margin: 0 }}>
@@ -451,14 +452,14 @@ export default function QuestionBuilder() {
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(240,237,230,0.05)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               <span className="cinzel" style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.04em' }}>{setTitle || 'Untitled'}</span>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>✏️</span>
+              <Icon name="edit" size={12} color="var(--text-muted)" />
             </button>
           )}
         </div>
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
           <AnimatePresence>
-            {saved && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ fontSize: 13, color: '#52B788', fontWeight: 700 }}>✓ Saved</motion.span>}
+            {saved && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ fontSize: 13, color: '#52B788', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}><Icon name="check" size={13} color="#52B788" /> Saved</motion.span>}
           </AnimatePresence>
           <motion.button onClick={saveSet} disabled={saving} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
             className="btn-primary" style={{ padding: '8px 20px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -474,7 +475,7 @@ export default function QuestionBuilder() {
             style={{ overflow: 'hidden', background: 'rgba(232,93,74,0.1)', borderBottom: '1px solid rgba(232,93,74,0.3)', flexShrink: 0 }}>
             <div style={{ padding: '8px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 13, color: 'var(--sunset)', fontWeight: 600 }}>{saveError}</span>
-              <button onClick={() => setSaveError('')} style={{ background: 'none', border: 'none', color: 'var(--sunset)', cursor: 'pointer', fontSize: 14 }}>✕</button>
+              <button onClick={() => setSaveError('')} style={{ background: 'none', border: 'none', color: 'var(--sunset)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center' }}><Icon name="xCircle" size={14} color="var(--sunset)" /></button>
             </div>
           </motion.div>
         )}
@@ -510,7 +511,7 @@ export default function QuestionBuilder() {
             <button onClick={() => setShowAI(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.25)', borderRadius: 8, padding: '5px 10px', color: 'var(--gold)', fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'Nunito, sans-serif' }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,166,35,0.14)'}
               onMouseLeave={e => e.currentTarget.style.background = 'rgba(245,166,35,0.08)'}>
-              ✨ AI Generate
+              <Icon name="sparkles" size={12} color="var(--gold)" /> AI Generate
             </button>
           </div>
 
@@ -519,7 +520,7 @@ export default function QuestionBuilder() {
             <AnimatePresence initial={false}>
               {questionList.length === 0 ? (
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 14, fontWeight: 600, lineHeight: 1.7 }}>
-                  No questions yet.<br />Add one below or use ✨ AI.
+                  No questions yet.<br />Add one below or use <Icon name="sparkles" size={12} /> AI.
                 </div>
               ) : questionList.map((q, i) => {
                 const isActive  = activeQIdx === i;
@@ -537,7 +538,7 @@ export default function QuestionBuilder() {
                     {!valid && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--sunset)', background: 'rgba(232,93,74,0.1)', borderRadius: 6, padding: '2px 7px', flexShrink: 0 }}>draft</span>}
                     <button onClick={e => { e.stopPropagation(); deleteQuestion(i); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14, padding: '2px 4px', borderRadius: 4, flexShrink: 0, opacity: 0.55, transition: 'color 0.12s, opacity 0.12s' }}
                       onMouseEnter={e => { e.currentTarget.style.color = 'var(--sunset)'; e.currentTarget.style.opacity = '1'; }}
-                      onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.opacity = '0.55'; }}>✕</button>
+                      onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.opacity = '0.55'; }}><Icon name="xCircle" size={14} /></button>
                   </motion.div>
                 );
               })}
@@ -569,7 +570,7 @@ export default function QuestionBuilder() {
             </div>
           ) : (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, color: 'var(--text-muted)', textAlign: 'center', padding: 40 }}>
-              <span style={{ fontSize: 40, opacity: 0.35 }}>📝</span>
+              <Icon name="edit" size={40} style={{ opacity: 0.35 }} />
               <p style={{ fontWeight: 600, fontSize: 15, lineHeight: 1.6, margin: 0 }}>Select a question from the list<br />or click "+ Add Question" to begin.</p>
               <button onClick={() => addBlankQuestion()} className="btn-primary">+ Add First Question</button>
             </div>

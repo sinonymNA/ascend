@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import { connectSocket, getSocket } from '../lib/socket.js';
+import Icon from '../components/ui/Icon.jsx';
 
 // ─── Simple atmospheric mountain SVG ──────────────────────────────────────────
 
@@ -391,9 +392,11 @@ export default function StudentJoin() {
                   color: 'var(--text-muted)',
                   fontSize: '12px',
                   padding: '0 0 0 4px',
+                  display: 'flex',
+                  alignItems: 'center',
                 }}
               >
-                ✕
+                <Icon name="xCircle" size={12} />
               </button>
             </div>
 

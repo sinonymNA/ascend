@@ -5,6 +5,7 @@ import api from '../lib/api.js';
 import { loadQuestionSet, shuffle } from '../lib/loadQuestions.js';
 import QuestionCard from '../components/game/QuestionCard.jsx';
 import SoundService from '../lib/sound.js';
+import Icon from '../components/ui/Icon.jsx';
 
 const GAUNTLET = 10;       // questions
 const PASS_RATIO = 0.8;    // 80% to win
@@ -76,7 +77,7 @@ export default function BossClimb() {
   if (phase === 'done') {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', fontFamily: 'Nunito, sans-serif', textAlign: 'center' }}>
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }} style={{ fontSize: '64px' }}>{won ? '👑' : '💀'}</motion.div>
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}>{won ? <Icon name="crown" size={64} color="var(--gold)" /> : <Icon name="boss" size={64} color="var(--sunset)" />}</motion.div>
         <h1 style={{ fontFamily: 'Cinzel, serif', fontSize: '26px', color: won ? 'var(--gold)' : 'var(--sunset)', margin: '12px 0' }}>
           {won ? 'Boss Defeated!' : 'The Boss Prevails'}
         </h1>
@@ -98,9 +99,9 @@ export default function BossClimb() {
     <div style={{ minHeight: '100vh', height: '100dvh', background: 'linear-gradient(180deg, #1a0f1a, var(--bg))', display: 'flex', flexDirection: 'column', fontFamily: 'Nunito, sans-serif', overflow: 'hidden' }}>
       <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button onClick={() => navigate('student_dashboard')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontWeight: 700, cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}>← Flee</button>
-        <span style={{ flex: 1, fontFamily: 'Cinzel, serif', fontWeight: 700, color: '#E85D4A' }}>👹 Boss Climb · {setTitle}</span>
+        <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '5px', fontFamily: 'Cinzel, serif', fontWeight: 700, color: '#E85D4A' }}><Icon name="boss" size={16} color="#E85D4A" /> Boss Climb · {setTitle}</span>
         <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-muted)' }}>{idx + 1}/{GAUNTLET}</span>
-        <span style={{ fontSize: '14px', fontWeight: 800, color: '#52B788' }}>✓ {correctCount}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '14px', fontWeight: 800, color: '#52B788' }}><Icon name="check" size={14} color="#52B788" /> {correctCount}</span>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', maxWidth: '640px', width: '100%', margin: '0 auto' }}>
@@ -114,7 +115,11 @@ export default function BossClimb() {
             border: `1px solid ${result.correct ? 'rgba(82,183,136,0.3)' : 'rgba(232,93,74,0.3)'}`,
             fontSize: '14px', color: 'var(--text-mid)', lineHeight: 1.6, fontWeight: 600,
           }}>
-            {result.correct ? '✓ Correct!' : '✗ Incorrect.'} {result.explanation}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', verticalAlign: 'middle' }}>
+              {result.correct
+                ? <><Icon name="check" size={14} color="#52B788" /> Correct!</>
+                : <><Icon name="xCircle" size={14} color="#E85D4A" /> Incorrect.</>}
+            </span> {result.explanation}
           </motion.div>
         )}
       </div>

@@ -6,17 +6,18 @@ import ScorePrediction from '../components/score/ScorePrediction.jsx';
 import AchievementToast from '../components/common/AchievementToast.jsx';
 import SoundService from '../lib/sound.js';
 import WalletPill from '../components/economy/WalletPill.jsx';
+import Icon from '../components/ui/Icon.jsx';
 
 const SAT_SETS = {
-  sat_math: { id: '00000000-0000-0000-0000-000000000010', title: 'SAT Math', emoji: '📐' },
-  sat_rw:   { id: '00000000-0000-0000-0000-000000000011', title: 'SAT Reading & Writing', emoji: '📝' },
+  sat_math: { id: '00000000-0000-0000-0000-000000000010', title: 'SAT Math', emoji: 'ruler' },
+  sat_rw:   { id: '00000000-0000-0000-0000-000000000011', title: 'SAT Reading & Writing', emoji: 'edit' },
 };
 
 const ACT_SETS = {
-  act_math:    { id: '00000000-0000-0000-0000-000000000020', title: 'ACT Math', emoji: '📐' },
-  act_english: { id: '00000000-0000-0000-0000-000000000021', title: 'ACT English', emoji: '✏️' },
-  act_reading: { id: '00000000-0000-0000-0000-000000000022', title: 'ACT Reading', emoji: '📖' },
-  act_science: { id: '00000000-0000-0000-0000-000000000023', title: 'ACT Science', emoji: '🔬' },
+  act_math:    { id: '00000000-0000-0000-0000-000000000020', title: 'ACT Math', emoji: 'ruler' },
+  act_english: { id: '00000000-0000-0000-0000-000000000021', title: 'ACT English', emoji: 'edit' },
+  act_reading: { id: '00000000-0000-0000-0000-000000000022', title: 'ACT Reading', emoji: 'book' },
+  act_science: { id: '00000000-0000-0000-0000-000000000023', title: 'ACT Science', emoji: 'science' },
 };
 
 const CLIMBER_COLORS = [
@@ -139,7 +140,7 @@ function SubjectCard({ subject, meta, progress, onClimb, index }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-        <span style={{ fontSize: '28px', flexShrink: 0 }}>{meta.emoji}</span>
+        <Icon name={meta.emoji} size={28} color="#F5A623" />
         <div style={{ minWidth: 0 }}>
           <p style={{ fontFamily: 'Nunito, sans-serif', fontSize: '15px', fontWeight: 800, color: 'var(--text)', margin: '0 0 2px' }}>
             {meta.title}
@@ -156,7 +157,7 @@ function SubjectCard({ subject, meta, progress, onClimb, index }) {
             {mastered}{total > 0 ? `/${total}` : ''} mastered
           </span>
           {streakBest > 0 && (
-            <span style={{ fontSize: '12px', color: '#F5A623', fontWeight: 700 }}>🔥 {streakBest}</span>
+            <span style={{ fontSize: '12px', color: '#F5A623', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}><Icon name="streak" size={12} color="#F5A623" /> {streakBest}</span>
           )}
         </div>
         <div style={{ position: 'relative', height: '6px', background: 'var(--bg)', borderRadius: '3px', overflow: 'hidden', border: '1px solid var(--border)' }}>
@@ -197,7 +198,11 @@ function LeaderboardTeaser({ navigate }) {
 
   if (!topBoard.length) return null;
 
-  const MEDAL = ['🥇', '🥈', '🥉'];
+  const MEDAL = [
+    { name: 'medal', color: '#F5A623' },
+    { name: 'medal', color: '#C0C7D0' },
+    { name: 'medal', color: '#CD7F32' },
+  ];
 
   return (
     <motion.div
@@ -223,7 +228,7 @@ function LeaderboardTeaser({ navigate }) {
       </div>
       {topBoard.map((entry, i) => (
         <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: i < topBoard.length - 1 ? '1px solid var(--border)' : 'none' }}>
-          <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>{MEDAL[i]}</span>
+          <span style={{ width: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name={MEDAL[i].name} size={16} color={MEDAL[i].color} fill={`${MEDAL[i].color}40`} /></span>
           <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: entry.climber_color || '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: '#0F1720', flexShrink: 0 }}>
             {(entry.username || '?')[0].toUpperCase()}
           </div>
@@ -374,7 +379,7 @@ function StreakToast({ streak, onDone }) {
         minWidth: '260px',
       }}
     >
-      <span style={{ fontSize: '32px' }}>🔥</span>
+      <Icon name="streak" size={32} color="#F5A623" />
       <div>
         <div style={{ fontFamily: 'Cinzel, serif', fontSize: '16px', fontWeight: 700, color: '#F5A623' }}>
           Day {streak} Streak!
@@ -505,7 +510,7 @@ export default function StudentDashboard() {
                 gap: '4px',
               }}
             >
-              🔥 {loginStreak}
+              <Icon name="streak" size={14} color="#F5A623" /> {loginStreak}
             </motion.div>
           )}
 
@@ -514,20 +519,20 @@ export default function StudentDashboard() {
 
           {/* Quests */}
           <button onClick={() => navigate('quests')} title="Daily Quests"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', padding: '4px 6px', lineHeight: 1 }}>
-            📋
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px 6px', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+            <Icon name="clipboard" size={18} />
           </button>
 
           {/* Leaderboard */}
           <button
             onClick={() => navigate('leaderboard')}
             style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: '18px', padding: '4px 6px', lineHeight: 1,
+              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
+              padding: '4px 6px', lineHeight: 1, display: 'flex', alignItems: 'center',
             }}
             title="Leaderboard"
           >
-            🏆
+            <Icon name="trophy" size={18} />
           </button>
 
           {/* Settings */}
@@ -537,12 +542,12 @@ export default function StudentDashboard() {
               navigate('settings');
             }}
             style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: '18px', padding: '4px 6px', lineHeight: 1,
+              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
+              padding: '4px 6px', lineHeight: 1, display: 'flex', alignItems: 'center',
             }}
             title="Settings"
           >
-            ⚙️
+            <Icon name="settings" size={18} />
           </button>
 
           <div style={{
@@ -652,15 +657,15 @@ export default function StudentDashboard() {
             <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '15px', fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '0.04em' }}>
               Game Modes
             </h3>
-            <button onClick={() => navigate('season')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#F5A623', fontWeight: 700, fontFamily: 'Nunito, sans-serif' }}>
-              🎟️ Season Pass →
+            <button onClick={() => navigate('season')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#F5A623', fontWeight: 700, fontFamily: 'Nunito, sans-serif', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <Icon name="ticket" size={14} color="#F5A623" /> Season Pass →
             </button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
             {[
-              { key: 'blitz_game', emoji: '⚡', name: 'Blitz', desc: '60s coin rush', color: '#FBBF24' },
-              { key: 'boss_game', emoji: '👹', name: 'Boss Climb', desc: 'Win a rare pack', color: '#E85D4A' },
-              { key: 'block_blast', emoji: '🧩', name: 'Block Blast', desc: 'Puzzle + quiz', color: '#A78BFA' },
+              { key: 'blitz_game', emoji: 'boost', name: 'Blitz', desc: '60s coin rush', color: '#FBBF24' },
+              { key: 'boss_game', emoji: 'boss', name: 'Boss Climb', desc: 'Win a rare pack', color: '#E85D4A' },
+              { key: 'block_blast', emoji: 'puzzle', name: 'Block Blast', desc: 'Puzzle + quiz', color: '#A78BFA' },
             ].map((m, i) => {
               const firstSet = Object.values(currentSets)[0];
               return (
@@ -679,7 +684,7 @@ export default function StudentDashboard() {
                     boxShadow: `0 0 18px ${m.color}22`,
                   }}
                 >
-                  <div style={{ fontSize: '32px', marginBottom: '6px' }}>{m.emoji}</div>
+                  <div style={{ marginBottom: '6px', display: 'flex', justifyContent: 'center' }}><Icon name={m.emoji} size={32} color={m.color} /></div>
                   <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text)' }}>{m.name}</div>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>{m.desc}</div>
                 </motion.button>
@@ -693,8 +698,8 @@ export default function StudentDashboard() {
 
         {/* League + Bottom actions */}
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
-          <button className="btn-ghost" style={{ fontSize: '14px', padding: '11px 24px', borderColor: 'var(--border-gold)', color: '#F5A623' }} onClick={() => navigate('leagues')}>
-            🏅 View League
+          <button className="btn-ghost" style={{ fontSize: '14px', padding: '11px 24px', borderColor: 'var(--border-gold)', color: '#F5A623', display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => navigate('leagues')}>
+            <Icon name="medal" size={16} color="#F5A623" fill="rgba(245,166,35,0.25)" /> View League
           </button>
         </div>
 

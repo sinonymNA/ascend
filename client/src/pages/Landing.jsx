@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
+import Icon from '../components/ui/Icon.jsx';
 
 // ─── Animated mountain hero ───────────────────────────────────────────────────
 
@@ -124,7 +125,7 @@ function FeatureCard({ icon, title, desc, delay = 0 }) {
         transition: 'border-color 0.2s',
       }}
     >
-      <div style={{ fontSize: '32px', marginBottom: '14px' }}>{icon}</div>
+      <div style={{ marginBottom: '14px' }}><Icon name={icon} size={32} color="var(--gold)" /></div>
       <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '16px', fontWeight: 700, color: 'var(--text)', margin: '0 0 8px', letterSpacing: '0.04em' }}>
         {title}
       </h3>
@@ -175,32 +176,32 @@ export default function Landing() {
 
   const FEATURES = [
     {
-      icon: '🧠',
+      icon: 'brain',
       title: 'Spaced Repetition',
       desc: 'Our SM-2 algorithm resurfaces questions right before you\'d forget them — maximizing retention across every study session.',
     },
     {
-      icon: '📈',
+      icon: 'trending',
       title: 'Score Prediction',
       desc: 'See your projected SAT & ACT score update in real time as you master more questions. Watch the gauge climb.',
     },
     {
-      icon: '🏔️',
+      icon: 'mountain',
       title: 'Gamified Climbing',
       desc: 'Earn XP, level up, unlock climber customizations, and race friends on the weekly leaderboard. Studying feels like a game.',
     },
     {
-      icon: '🔥',
+      icon: 'streak',
       title: 'Streak System',
       desc: 'Daily login streaks, streak shields, and achievement badges keep you motivated and coming back every day.',
     },
     {
-      icon: '🎯',
+      icon: 'target',
       title: '1,050 Questions',
       desc: 'Expert-curated SAT Math, SAT R&W, and all four ACT sections. Difficulty-calibrated and tagged by topic.',
     },
     {
-      icon: '⚡',
+      icon: 'boost',
       title: 'Instant Feedback',
       desc: 'Know exactly why you got each answer right or wrong. Explanations for every question, every time.',
     },
@@ -302,7 +303,7 @@ export default function Landing() {
                 color: '#F5A623',
               }}
             >
-              🏔️ {count.toLocaleString()}+ students climbing
+              <Icon name="mountain" size={14} /> {count.toLocaleString()}+ students climbing
             </motion.div>
           )}
 
@@ -447,7 +448,7 @@ export default function Landing() {
               padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px',
             }}
           >
-            <span style={{ fontSize: '20px' }}>🔥</span>
+            <Icon name="streak" size={20} color="#F5A623" />
             <div>
               <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text)' }}>14-Day Streak</div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>Keep climbing!</div>
@@ -541,7 +542,7 @@ export default function Landing() {
           alignItems: 'center',
           gap: '20px',
         }}>
-          <div style={{ fontSize: '52px' }}>🏔️</div>
+          <div><Icon name="mountain" size={52} color="var(--gold)" /></div>
           <h2 style={{
             fontFamily: 'Cinzel, serif',
             fontSize: 'clamp(24px, 4vw, 36px)',

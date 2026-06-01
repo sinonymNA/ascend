@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SoundService from '../../lib/sound.js';
+import Icon from '../ui/Icon.jsx';
 
 const UNLOCKS = {
   3:  'New climber silhouette unlocked',
@@ -50,9 +51,13 @@ export default function LevelUp({ show, level, onDone }) {
             <motion.div
               animate={{ rotate: [0, -8, 8, -8, 8, 0] }}
               transition={{ delay: 0.3, duration: 0.6 }}
-              style={{ fontSize: '72px', marginBottom: '16px' }}
+              style={{
+                marginBottom: '16px',
+                display: 'flex',
+                justifyContent: 'center',
+              }}
             >
-              🏔️
+              <Icon name="mountain" size={72} color="var(--gold)" />
             </motion.div>
 
             <div style={{
@@ -98,9 +103,14 @@ export default function LevelUp({ show, level, onDone }) {
                   fontWeight: 700,
                   color: 'var(--gold)',
                   marginBottom: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '5px',
                 }}
               >
-                🎁 {unlock}
+                <Icon name="gift" size={16} color="var(--gold)" />
+                <span>{unlock}</span>
               </motion.div>
             )}
 

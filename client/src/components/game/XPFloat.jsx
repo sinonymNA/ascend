@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import Icon from '../ui/Icon.jsx';
 
 /**
  * XPFloat — floating "+100 XP ⚡" text that rises and fades.
@@ -25,20 +26,29 @@ export default function XPFloat({ show, amount, animKey }) {
             transform: 'translate(-50%, -50%)',
             pointerEvents: 'none',
             zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
             /* Cinzel font for the gold gradient text */
             fontFamily: 'Cinzel, serif',
             fontWeight: 700,
             fontSize: '20px',
             whiteSpace: 'nowrap',
-            /* Gold gradient text */
-            background: 'linear-gradient(135deg, #F5A623 0%, #E8D5A0 50%, #C8851A 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
             filter: 'drop-shadow(0 2px 8px rgba(245,166,35,0.6))',
           }}
         >
-          +{amount} XP ⚡
+          <span
+            style={{
+              /* Gold gradient text */
+              background: 'linear-gradient(135deg, #F5A623 0%, #E8D5A0 50%, #C8851A 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            +{amount} XP
+          </span>
+          <Icon name="boost" size={20} color="#F5A623" />
         </motion.div>
       )}
     </AnimatePresence>

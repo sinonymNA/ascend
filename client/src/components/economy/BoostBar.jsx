@@ -2,12 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import api from '../../lib/api.js';
 import SoundService from '../../lib/sound.js';
+import Icon from '../ui/Icon.jsx';
 
 const BOOST_META = {
-  fifty:         { icon: '✂️', label: '50/50' },
-  xp2x:          { icon: '⚡', label: '2× XP' },
-  timefreeze:    { icon: '⏱️', label: 'Freeze' },
-  streak_shield: { icon: '🛡️', label: 'Shield' },
+  fifty:         { icon: 'fifty', label: '50/50' },
+  xp2x:          { icon: 'boost', label: '2× XP' },
+  timefreeze:    { icon: 'timer', label: 'Freeze' },
+  streak_shield: { icon: 'shield', label: 'Shield' },
 };
 
 /**
@@ -43,7 +44,7 @@ export default function BoostBar({ onFifty, onActivate }) {
   return (
     <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', padding: '0 0 4px' }}>
       {usable.map((b) => {
-        const meta = BOOST_META[b.category] || { icon: '⭐', label: b.category };
+        const meta = BOOST_META[b.category] || { icon: 'star', label: b.category };
         return (
           <motion.button
             key={b.item_id}
@@ -56,7 +57,7 @@ export default function BoostBar({ onFifty, onActivate }) {
               fontFamily: 'Nunito, sans-serif', fontSize: '12px', fontWeight: 700, color: 'var(--text)',
             }}
           >
-            <span>{meta.icon}</span>
+            <Icon name={meta.icon} size={14} color="var(--gold)" />
             <span>{meta.label}</span>
             <span style={{ color: 'var(--text-muted)' }}>×{b.quantity}</span>
           </motion.button>

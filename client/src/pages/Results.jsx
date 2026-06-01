@@ -2,12 +2,13 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import Mountain from '../components/mountain/Mountain.jsx';
+import Icon from '../components/ui/Icon.jsx';
 
 // ─── Medal colors ─────────────────────────────────────────────────────────────
 const MEDAL = {
-  0: { bg: 'rgba(245,166,35,0.18)', border: 'rgba(245,166,35,0.6)', color: '#F5A623', label: '🥇' },
-  1: { bg: 'rgba(168,184,200,0.18)', border: 'rgba(168,184,200,0.5)', color: '#A8B8C8', label: '🥈' },
-  2: { bg: 'rgba(180,120,80,0.18)',  border: 'rgba(180,120,80,0.5)',  color: '#B47850', label: '🥉' },
+  0: { bg: 'rgba(245,166,35,0.18)', border: 'rgba(245,166,35,0.6)', color: '#F5A623', label: <Icon name="medal" size={18} color="#F5A623" fill="#F5A623" /> },
+  1: { bg: 'rgba(168,184,200,0.18)', border: 'rgba(168,184,200,0.5)', color: '#A8B8C8', label: <Icon name="medal" size={18} color="#C0C7D0" fill="#C0C7D0" /> },
+  2: { bg: 'rgba(180,120,80,0.18)',  border: 'rgba(180,120,80,0.5)',  color: '#B47850', label: <Icon name="medal" size={18} color="#CD7F32" fill="#CD7F32" /> },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -187,7 +188,7 @@ function TeacherResults({ gameState, navigate }) {
           {summited.length > 0 && (
             <section>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                <span style={{ fontSize: '20px' }}>🏔️</span>
+                <span style={{ fontSize: '20px', display: 'inline-flex', alignItems: 'center' }}><Icon name="mountain" size={20} color="#F5A623" /></span>
                 <h2 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--gold)', margin: 0 }}>
                   Summited — {summited.length} student{summited.length !== 1 ? 's' : ''}
                 </h2>
@@ -231,13 +232,13 @@ function TeacherResults({ gameState, navigate }) {
               }}
             >
               <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>📊</span> Class Insights
+                <Icon name="chart" size={16} /> Class Insights
               </h3>
               {insights.struggled && (
-                <InsightRow icon="⚠️" label="Your class struggled most with:" value={insights.struggled} color="var(--sunset)" />
+                <InsightRow icon={<Icon name="warning" size={13} color="#E85D4A" />} label="Your class struggled most with:" value={insights.struggled} color="var(--sunset)" />
               )}
               {insights.mastered && (
-                <InsightRow icon="✅" label="Your class mastered:" value={insights.mastered} color="var(--pine-light)" />
+                <InsightRow icon={<Icon name="check" size={13} color="#52B788" />} label="Your class mastered:" value={insights.mastered} color="var(--pine-light)" />
               )}
               {insights.suggestedReview?.length > 0 && (
                 <div>
@@ -361,8 +362,8 @@ function LeaderboardRow({ player, rank, totalQ, medal }) {
 
       {/* XP */}
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--gold)' }}>
-          ⚡ {xp}
+        <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px' }}>
+          <Icon name="boost" size={13} color="#F5A623" /> {xp}
         </div>
         <ElevationMini pct={elevation} color={medal ? medal.color : 'var(--pine-light)'} />
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '2px' }}>
@@ -402,25 +403,25 @@ function StudentResults({ gameState, user, navigate }) {
     {
       label: 'Questions Mastered',
       value: `${masteredCount} / ${totalQuestions || '?'}`,
-      icon:  '⛰️',
+      icon:  <Icon name="mountain" size={22} color="var(--pine-light)" />,
       color: 'var(--pine-light)',
     },
     {
       label: 'XP Earned',
-      value: `${finalXP} ⚡`,
-      icon:  '⚡',
+      value: (<span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>{finalXP} <Icon name="boost" size={20} color="#F5A623" /></span>),
+      icon:  <Icon name="boost" size={22} color="var(--gold)" />,
       color: 'var(--gold)',
     },
     {
       label: 'Best Streak',
-      value: `${bestStreak} 🔥`,
-      icon:  '🔥',
+      value: (<span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>{bestStreak} <Icon name="streak" size={20} color="#FF7043" /></span>),
+      icon:  <Icon name="streak" size={22} color="#FF7043" />,
       color: '#FF7043',
     },
     {
       label: 'Level Progress',
       value: `+${levelXP} XP`,
-      icon:  '📈',
+      icon:  <Icon name="trending" size={22} color="var(--text-mid)" />,
       color: 'var(--text-mid)',
     },
   ];
@@ -463,7 +464,9 @@ function StudentResults({ gameState, user, navigate }) {
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
           style={{ fontSize: '48px', marginBottom: '12px' }}
         >
-          {finalElevation >= 100 ? '🏆' : '⛰️'}
+          {finalElevation >= 100
+            ? <Icon name="trophy" size={48} color="#F5A623" fill="#F5A623" />
+            : <Icon name="mountain" size={48} color="#52B788" />}
         </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: 16 }}
@@ -631,15 +634,15 @@ function StudentResults({ gameState, user, navigate }) {
 }
 
 function QuestionHistoryRow({ q, index }) {
-  const statusIcon =
-    q.mastered    ? '✅' :
-    q.gotRight    ? '🟡' :
-    '❌';
-
   const statusColor =
     q.mastered    ? 'var(--pine-light)' :
     q.gotRight    ? '#F5A623' :
     'var(--sunset)';
+
+  const statusIcon =
+    q.mastered    ? <Icon name="check" size={16} color={statusColor} /> :
+    q.gotRight    ? <Icon name="checkCircle" size={16} color={statusColor} /> :
+    <Icon name="xCircle" size={16} color={statusColor} />;
 
   const truncatedText = q.text
     ? q.text.length > 70 ? q.text.slice(0, 68) + '…' : q.text
@@ -698,7 +701,7 @@ export default function Results() {
           fontFamily: 'Nunito, sans-serif',
         }}
       >
-        <div style={{ fontSize: '36px' }}>🏔️</div>
+        <div style={{ fontSize: '36px', display: 'flex' }}><Icon name="mountain" size={36} color="#52B788" /></div>
         <p style={{ color: 'var(--text-muted)', fontSize: '16px', fontWeight: 600 }}>
           No game data available.
         </p>

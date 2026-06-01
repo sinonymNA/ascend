@@ -9,6 +9,7 @@ import QuestionCard from '../components/game/QuestionCard.jsx';
 import ResultFlash from '../components/game/ResultFlash.jsx';
 import StreakIndicator from '../components/game/StreakIndicator.jsx';
 import XPFloat from '../components/game/XPFloat.jsx';
+import Icon from '../components/ui/Icon.jsx';
 
 // ─── StudentGame ──────────────────────────────────────────────────────────────
 
@@ -217,9 +218,9 @@ export default function StudentGame() {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
           <span
             className="cinzel"
-            style={{ fontSize: '18px', fontWeight: 700, color: 'var(--gold)', lineHeight: 1 }}
+            style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '18px', fontWeight: 700, color: 'var(--gold)', lineHeight: 1 }}
           >
-            ⬆ {elevation}%
+            <Icon name="arrowUp" size={18} /> {elevation}%
           </span>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
             elevation
@@ -237,13 +238,16 @@ export default function StudentGame() {
         >
           <span
             style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
               fontSize: '16px',
               fontWeight: 800,
               color: 'var(--text)',
               lineHeight: 1,
             }}
           >
-            ⚡ {xpEarned} XP
+            <Icon name="boost" size={16} color="#F5A623" /> {xpEarned} XP
           </span>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
             {masteredCount}/{totalCount || '?'} mastered
@@ -342,9 +346,9 @@ export default function StudentGame() {
               <motion.div
                 animate={{ scale: [1, 1.08, 1], opacity: [0.7, 1, 0.7] }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                style={{ fontSize: '40px', lineHeight: 1 }}
+                style={{ lineHeight: 1 }}
               >
-                ⛰️
+                <Icon name="mountain" size={40} color="var(--gold)" />
               </motion.div>
               <p
                 style={{
@@ -497,12 +501,15 @@ function ResultCard({ result }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span
             style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
               fontSize: '22px',
               fontWeight: 800,
               color: correct ? 'var(--pine-light)' : 'var(--sunset)',
             }}
           >
-            {correct ? 'Correct! ✓' : 'Not quite —'}
+            {correct ? <>Correct! <Icon name="check" size={20} /></> : 'Not quite —'}
           </span>
         </div>
 
@@ -530,6 +537,9 @@ function ResultCard({ result }) {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 380, damping: 18, delay: 0.2 }}
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
                 background: 'rgba(245,166,35,0.12)',
                 border: '1px solid var(--gold)',
                 borderRadius: '20px',
@@ -539,7 +549,7 @@ function ResultCard({ result }) {
                 color: 'var(--gold)',
               }}
             >
-              ✨ Mastered!
+              <Icon name="sparkles" size={13} /> Mastered!
             </motion.span>
           )}
         </div>
@@ -565,7 +575,7 @@ function ResultCard({ result }) {
             alignSelf: 'flex-start',
           }}
         >
-          🔥 {streak}x streak — keep going!
+          <Icon name="streak" size={13} color="#FF7043" /> {streak}x streak — keep going!
         </motion.div>
       )}
 

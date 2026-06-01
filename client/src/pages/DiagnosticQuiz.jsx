@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
 import SoundService from '../lib/sound.js';
+import Icon from '../components/ui/Icon.jsx';
 
 const TIMER_SECONDS = 30;
 
@@ -21,7 +22,7 @@ const DIAGNOSTIC = [
   { id: 'd11', subject: 'SAT Math',    difficulty: 2, question: 'A store sells a jacket originally priced at $80 at a 25% discount. What is the sale price?', options: { A: '$55', B: '$60', C: '$65', D: '$70' }, correct: 'B', explanation: '25% of $80 = $20. Sale price = $80 − $20 = $60.' },
   { id: 'd12', subject: 'SAT R&W',     difficulty: 2, question: 'As used in the passage, "nascent" most nearly means:', options: { A: 'Fully developed', B: 'Just beginning', C: 'Rapidly declining', D: 'Well-established' }, correct: 'B', explanation: '"Nascent" means just coming into existence or beginning to develop.' },
   { id: 'd13', subject: 'ACT Math',    difficulty: 3, question: 'If sin θ = 3/5 and θ is in the first quadrant, what is cos θ?', options: { A: '3/5', B: '4/5', C: '4/3', D: '5/4' }, correct: 'B', explanation: 'Using the Pythagorean identity: cos²θ = 1 − sin²θ = 1 − 9/25 = 16/25, so cos θ = 4/5.' },
-  { id: 'd14', subject: 'SAT Math',    difficulty: 3, question: 'The system of equations y = 2x − 1 and y = −x + 5 has a solution at:', options: { A: '(1, 4)', B: '(2, 3)', C: '(3, 2)', D: '(4, 1)' }, correct: 'B', explanation: 'Set 2x−1 = −x+5: 3x = 6, x = 2, y = 3. Check: 2(2)−1 = 3 ✓.' },
+  { id: 'd14', subject: 'SAT Math',    difficulty: 3, question: 'The system of equations y = 2x − 1 and y = −x + 5 has a solution at:', options: { A: '(1, 4)', B: '(2, 3)', C: '(3, 2)', D: '(4, 1)' }, correct: 'B', explanation: 'Set 2x−1 = −x+5: 3x = 6, x = 2, y = 3. Check: 2(2)−1 = 3.' },
   { id: 'd15', subject: 'ACT Reading', difficulty: 3, question: 'A passage argues that "innovation thrives in environments that tolerate failure." Which evidence most directly supports this?', options: { A: 'Successful companies have large research budgets.', B: 'Companies that penalize failure heavily saw a 40% drop in patent filings.', C: 'Many innovations were discovered accidentally.', D: 'Tolerating failure is a recent management philosophy.' }, correct: 'B', explanation: 'Option B directly shows that penalizing failure reduces innovation output (patents), supporting the causal claim.' },
   { id: 'd16', subject: 'ACT Science', difficulty: 3, question: 'Two scientists disagree about whether increased CO₂ causes ocean acidification. Scientist 1 cites pH drops in controlled experiments; Scientist 2 argues natural variation explains the data. Which additional data would most help resolve the disagreement?', options: { A: 'Ocean temperature data from the same locations', B: 'Long-term pH records from isolated ocean regions with stable CO₂', C: 'CO₂ emission data from nearby factories', D: 'pH measurements from freshwater lakes' }, correct: 'B', explanation: 'Measuring pH in regions with stable (controlled) CO₂ would isolate whether CO₂ — not natural variation — drives pH changes.' },
   { id: 'd17', subject: 'SAT R&W',     difficulty: 3, question: 'The author ends the essay with a question rather than a statement. This choice primarily suggests:', options: { A: 'The author lacks a clear position', B: 'The issue remains open, inviting further action', C: 'The question has an obvious implied answer', D: 'The essay is incomplete' }, correct: 'B', explanation: 'Ending with a genuine question signals the topic is unresolved and calls the reader to further inquiry or action.' },
@@ -203,8 +204,10 @@ export default function DiagnosticQuiz() {
                   animate={{ opacity: 1, y: 0 }}
                   style={{ marginTop: '16px' }}
                 >
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: result.correct ? '#52B788' : '#E85D4A', marginBottom: '8px' }}>
-                    {result.correct ? '✓ Correct!' : '✗ Not quite'}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '15px', fontWeight: 800, color: result.correct ? '#52B788' : '#E85D4A', marginBottom: '8px' }}>
+                    {result.correct
+                      ? <><Icon name="check" size={15} color="#52B788" /> Correct!</>
+                      : <><Icon name="xCircle" size={15} color="#E85D4A" /> Not quite</>}
                   </div>
                   <div style={{ fontSize: '13px', color: 'var(--text-mid)', lineHeight: 1.6, background: 'var(--bg-elevated)', borderRadius: '10px', padding: '10px 14px' }}>
                     {result.explanation}

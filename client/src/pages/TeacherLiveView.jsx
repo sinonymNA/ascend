@@ -6,6 +6,7 @@ import Mountain from '../components/mountain/Mountain.jsx';
 import LiveStats from '../components/teacher/LiveStats.jsx';
 import HeatMap from '../components/teacher/HeatMap.jsx';
 import Modal from '../components/ui/Modal.jsx';
+import Icon from '../components/ui/Icon.jsx';
 
 // ─── TeacherLiveView ──────────────────────────────────────────────────────────
 
@@ -317,7 +318,7 @@ export default function TeacherLiveView() {
                     gap: '6px',
                   }}
                 >
-                  🏔️ {summitedCount} summited
+                  <Icon name="mountain" size={13} color="var(--gold)" /> {summitedCount} summited
                 </motion.div>
               )}
             </AnimatePresence>
@@ -359,7 +360,7 @@ export default function TeacherLiveView() {
                   zIndex: 10,
                 }}
               >
-                🏔️ {flashSumm} summited!
+                <Icon name="mountain" size={14} color="var(--gold)" /> {flashSumm} summited!
               </motion.div>
             )}
           </AnimatePresence>

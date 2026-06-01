@@ -246,16 +246,16 @@ export default function Mountain({
               filter={isHighlighted ? 'url(#goldGlow)' : undefined}
             />
 
-            {/* Summited star */}
+            {/* Summited star (native SVG so it can live inside the <svg> tree) */}
             {player.elevation >= 90 && (
-              <text
-                x={player.svgX}
-                y={player.svgY - r - 4}
-                textAnchor="middle"
-                fontSize="9"
-              >
-                ⭐
-              </text>
+              <polygon
+                points="0,-5 1.47,-1.55 5,-1.55 2.27,0.59 3.09,4.05 0,2 -3.09,4.05 -2.27,0.59 -5,-1.55 -1.47,-1.55"
+                transform={`translate(${player.svgX}, ${player.svgY - r - 6})`}
+                fill="#F5A623"
+                stroke="#C8851A"
+                strokeWidth="0.5"
+                strokeLinejoin="round"
+              />
             )}
 
             {/* Name label */}

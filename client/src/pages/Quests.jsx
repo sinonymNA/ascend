@@ -4,6 +4,7 @@ import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
 import SoundService from '../lib/sound.js';
 import WalletPill from '../components/economy/WalletPill.jsx';
+import Icon from '../components/ui/Icon.jsx';
 
 function QuestCard({ quest, onClaim, claiming }) {
   const pct = Math.min(100, Math.round((quest.progress / quest.target) * 100));
@@ -27,11 +28,13 @@ function QuestCard({ quest, onClaim, claiming }) {
           style={{ height: '100%', background: complete ? '#52B788' : 'linear-gradient(90deg, #2D6A4F, #F5A623)', borderRadius: '4px' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)' }}>
-          {quest.reward_coins > 0 && `🪙 ${quest.reward_coins}`}{quest.reward_coins > 0 && quest.reward_gems > 0 && '  '}{quest.reward_gems > 0 && `💎 ${quest.reward_gems}`}
+        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          {quest.reward_coins > 0 && <><Icon name="coins" size={14} color="#F5A623" fill="rgba(245,166,35,0.25)" /> {quest.reward_coins}</>}
+          {quest.reward_coins > 0 && quest.reward_gems > 0 && '  '}
+          {quest.reward_gems > 0 && <><Icon name="gems" size={14} color="#60A5FA" fill="rgba(96,165,250,0.25)" /> {quest.reward_gems}</>}
         </span>
         {quest.claimed ? (
-          <span style={{ fontSize: '13px', fontWeight: 800, color: '#52B788' }}>✓ Claimed</span>
+          <span style={{ fontSize: '13px', fontWeight: 800, color: '#52B788', display: 'flex', alignItems: 'center', gap: '5px' }}><Icon name="check" size={14} color="#52B788" /> Claimed</span>
         ) : (
           <button
             onClick={() => onClaim(quest.quest_id)}
