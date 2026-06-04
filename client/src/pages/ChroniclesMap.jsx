@@ -191,7 +191,7 @@ function DistrictCard({
                         completed={done}
                         locked={locked}
                         isCurrent={isCurrent}
-                        onSelect={onSelectChapter}
+                        onSelect={(c) => onSelectChapter(c, district)}
                       />
                       {i < chapters.length - 1 && (
                         <div style={{
@@ -298,7 +298,7 @@ function PaywallModal({ chapter, onClose }) {
 
 export default function ChroniclesMap() {
   const { navigate, screenParams } = useApp();
-  const { gameId } = screenParams;
+  const { gameId, slug } = screenParams;
 
   const [game, setGame] = useState(null);
   const [districts, setDistricts] = useState([]);
@@ -319,12 +319,18 @@ export default function ChroniclesMap() {
       .finally(() => setLoading(false));
   }, [gameId]);
 
-  function handleSelectChapter(chapter) {
+  function handleSelectChapter(chapter, district) {
     if (chapter.locked) {
       setPaywallChapter(chapter);
       return;
     }
-    navigate('chronicles_battle', { chapterId: chapter.id, gameId, chapter });
+    navigate('chronicles_battle', {
+      chapterId: chapter.id,
+      gameId,
+      districtColor: district?.color_primary,
+      districtSecondary: district?.color_secondary,
+      districtName: district?.name,
+    });
   }
 
   if (loading) return (
@@ -425,6 +431,20 @@ export default function ChroniclesMap() {
             />
           </div>
         </motion.div>
+
+        {/* Prologue link */}
+        <div style={{ textAlign: 'center', marginBottom: '16px', marginTop: '-4px' }}>
+          <button
+            onClick={() => navigate('chronicles_prologue', { gameId, slug, prologue: game?.prologue })}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: '12px', color: 'rgba(200,169,110,0.6)', fontWeight: 600,
+              letterSpacing: '0.04em', textDecoration: 'underline', textDecorationColor: 'rgba(200,169,110,0.3)',
+            }}
+          >
+            📜 Re-read the Prologue
+          </button>
+        </div>
 
         {/* Districts */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

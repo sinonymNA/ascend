@@ -296,12 +296,12 @@ async function seedChronicles(db) {
   // 1. Upsert game record
   await db.query(`
     INSERT INTO em_games (id, slug, title, subtitle, tagline, subject, status, total_chapters, estimated_hours, free_chapters,
-      box_art_config, color_scheme)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+      box_art_config, color_scheme, prologue, epilogue)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
     ON CONFLICT (id) DO UPDATE SET
       title=$3, subtitle=$4, tagline=$5, subject=$6, status=$7,
       total_chapters=$8, estimated_hours=$9, free_chapters=$10,
-      box_art_config=$11, color_scheme=$12
+      box_art_config=$11, color_scheme=$12, prologue=$13, epilogue=$14
   `, [
     GAME_ID,
     'chronicles-of-the-keep',
@@ -313,6 +313,8 @@ async function seedChronicles(db) {
     22, 15, 1,
     JSON.stringify({ style: 'medieval_castle', description: 'Medieval castle at night with glowing windows. Torch-lit stone walls.' }),
     JSON.stringify({ primary: '#8B1A1A', secondary: '#C9922A', bg: '#1A0F08' }),
+    PROLOGUE,
+    GAME_COMPLETE,
   ]);
 
   // 2. Upsert districts

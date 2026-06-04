@@ -283,7 +283,14 @@ export default function SummitHome() {
                     game={game}
                     meta={meta}
                     playerProgress={game.player}
-                    onPlay={() => navigate('chronicles_map', { gameId: game.id, slug: game.slug })}
+                    onPlay={() => {
+                      const prog = game.player;
+                      if (!prog || prog.chapters_done === 0) {
+                        navigate('chronicles_prologue', { gameId: game.id, slug: game.slug, prologue: game.prologue });
+                      } else {
+                        navigate('chronicles_map', { gameId: game.id, slug: game.slug });
+                      }
+                    }}
                   />
                 </motion.div>
               );

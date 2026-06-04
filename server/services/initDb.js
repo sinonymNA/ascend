@@ -301,6 +301,10 @@ CREATE TABLE IF NOT EXISTS boost_activations (
 -- Idempotent coin grants
 ALTER TABLE user_subject_progress ADD COLUMN IF NOT EXISTS coins_awarded INTEGER DEFAULT 0;
 
+-- EduMissions narrative columns
+ALTER TABLE em_games ADD COLUMN IF NOT EXISTS prologue TEXT;
+ALTER TABLE em_games ADD COLUMN IF NOT EXISTS epilogue TEXT;
+
 -- ── EduMissions RPG tables ────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS em_games (
