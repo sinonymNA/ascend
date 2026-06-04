@@ -45,6 +45,9 @@ const SeasonPass           = React.lazy(() => import('./pages/SeasonPass.jsx'));
 const BlitzGame            = React.lazy(() => import('./pages/BlitzGame.jsx'));
 const BossClimb            = React.lazy(() => import('./pages/BossClimb.jsx'));
 const BlockBlast           = React.lazy(() => import('./pages/BlockBlast.jsx'));
+const SummitHome           = React.lazy(() => import('./pages/SummitHome.jsx'));
+const ChroniclesMap        = React.lazy(() => import('./pages/ChroniclesMap.jsx'));
+const ChroniclesBattle     = React.lazy(() => import('./pages/ChroniclesBattle.jsx'));
 
 const SCREEN_MAP = {
   landing:           LandingPage,
@@ -71,6 +74,9 @@ const SCREEN_MAP = {
   blitz_game:        BlitzGame,
   boss_game:         BossClimb,
   block_blast:       BlockBlast,
+  summit_home:       SummitHome,
+  chronicles_map:    ChroniclesMap,
+  chronicles_battle: ChroniclesBattle,
 };
 
 // ─── Page transition variants ─────────────────────────────────────────────────

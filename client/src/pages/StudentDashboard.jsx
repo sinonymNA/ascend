@@ -651,6 +651,51 @@ export default function StudentDashboard() {
           </div>
         )}
 
+        {/* EduMissions */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.35 }}
+          style={{ marginBottom: '24px' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '15px', fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '0.04em' }}>
+              ⚔ EduMissions
+            </h3>
+            <button onClick={() => navigate('summit_home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#C8A96E', fontWeight: 700, fontFamily: 'Nunito, sans-serif' }}>
+              All games →
+            </button>
+          </div>
+          <motion.button
+            whileHover={{ y: -3, boxShadow: '0 16px 40px rgba(0,0,0,0.6), 0 0 20px rgba(200,169,110,0.2)' }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('summit_home')}
+            style={{
+              width: '100%', background: 'linear-gradient(135deg, #1a1208, #2a1f0a)',
+              border: '1px solid rgba(200,169,110,0.3)',
+              borderRadius: '14px', padding: '18px 20px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '16px', textAlign: 'left',
+              fontFamily: 'Nunito, sans-serif',
+            }}
+          >
+            <div style={{
+              width: '52px', height: '52px', borderRadius: '12px', flexShrink: 0,
+              background: 'linear-gradient(135deg, #8B6914, #C8A96E)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '24px', boxShadow: '0 6px 16px rgba(139,105,20,0.5)',
+            }}>⚔</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: '15px', fontWeight: 700, color: '#C8A96E', marginBottom: '4px' }}>
+                Chronicles of the Keep
+              </div>
+              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>
+                Story-driven ACT English · 22 chapters · 445 encounters
+              </div>
+            </div>
+            <div style={{ fontSize: '18px', color: 'rgba(200,169,110,0.5)', flexShrink: 0 }}>→</div>
+          </motion.button>
+        </motion.div>
+
         {/* Game Modes */}
         <div style={{ marginBottom: '28px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
