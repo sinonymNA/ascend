@@ -6,232 +6,430 @@ import api from '../lib/api.js';
 import Icon from '../components/ui/Icon.jsx';
 import WalletPill from '../components/economy/WalletPill.jsx';
 
-// ── Chronicles of the Keep — World Map ────────────────────────────────────────
+// ── Per-district terrain themes ───────────────────────────────────────────────
 
-const DISTRICT_STYLE = {
-  1: { color: '#C8A96E', bg: '#1a1208', emoji: '📜', label: 'Punctuation' },
-  2: { color: '#C0392B', bg: '#1a0808', emoji: '⚔️', label: 'Grammar' },
-  3: { color: '#4A90D9', bg: '#080e1a', emoji: '🌀', label: 'Sentence Structure' },
-  4: { color: '#52B788', bg: '#081208', emoji: '🗺️', label: 'Rhetoric' },
-  5: { color: '#A78BFA', bg: '#0e081a', emoji: '✨', label: 'Style' },
+const TERRAIN = {
+  1: {
+    accent: '#C9922A',
+    dim: '#7A4A10',
+    terrainBg: 'linear-gradient(170deg, rgba(90,18,18,0.28) 0%, rgba(6,4,3,0.96) 70%)',
+    ambientPos: '20% 30%',
+    terrainLabel: 'Ruined City',
+    icon: '🏚',
+    pathGlow: 'rgba(201,146,42,0.55)',
+  },
+  2: {
+    accent: '#4A90D9',
+    dim: '#1A4A80',
+    terrainBg: 'linear-gradient(170deg, rgba(12,30,90,0.28) 0%, rgba(4,5,10,0.96) 70%)',
+    ambientPos: '80% 30%',
+    terrainLabel: 'Grand Guildhall',
+    icon: '🏛',
+    pathGlow: 'rgba(74,144,217,0.5)',
+  },
+  3: {
+    accent: '#52B788',
+    dim: '#1A5A38',
+    terrainBg: 'linear-gradient(170deg, rgba(12,70,28,0.28) 0%, rgba(4,8,5,0.96) 70%)',
+    ambientPos: '25% 50%',
+    terrainLabel: 'Murk Marshes',
+    icon: '🌿',
+    pathGlow: 'rgba(82,183,136,0.5)',
+  },
+  4: {
+    accent: '#A78BFA',
+    dim: '#4A2A90',
+    terrainBg: 'linear-gradient(170deg, rgba(38,18,80,0.28) 0%, rgba(5,4,9,0.96) 70%)',
+    ambientPos: '75% 25%',
+    terrainLabel: 'Ancient Ruins',
+    icon: '🗿',
+    pathGlow: 'rgba(167,139,250,0.5)',
+  },
+  5: {
+    accent: '#F5A623',
+    dim: '#7A4A08',
+    terrainBg: 'linear-gradient(170deg, rgba(80,50,12,0.3) 0%, rgba(8,6,4,0.96) 65%)',
+    ambientPos: '50% 10%',
+    terrainLabel: 'High Citadel',
+    icon: '⛰',
+    pathGlow: 'rgba(245,166,35,0.55)',
+  },
 };
 
-function ChapterNode({ chapter, completed, locked, isCurrent, onSelect }) {
-  const isBoss = chapter.is_boss_chapter;
+// ── Chapter map pin ───────────────────────────────────────────────────────────
+
+function ChapterPin({ chapter, done, isCurrent, locked, isBoss, terrain, onClick }) {
+  const pinSize = isBoss ? 62 : 52;
+
   return (
     <motion.button
-      whileHover={locked ? {} : { scale: 1.08 }}
-      whileTap={locked ? {} : { scale: 0.95 }}
-      onClick={() => !locked && onSelect(chapter)}
+      onClick={!locked ? onClick : undefined}
+      whileHover={!locked ? { scale: 1.12 } : {}}
+      whileTap={!locked ? { scale: 0.92 } : {}}
       style={{
-        background: locked
-          ? 'rgba(255,255,255,0.04)'
-          : completed
-            ? 'rgba(82,183,136,0.15)'
-            : isCurrent
-              ? 'rgba(200,169,110,0.2)'
-              : 'rgba(255,255,255,0.07)',
-        border: locked
-          ? '1px solid rgba(255,255,255,0.1)'
-          : completed
-            ? '1px solid rgba(82,183,136,0.5)'
-            : isCurrent
-              ? '1px solid rgba(200,169,110,0.6)'
-              : isBoss
-                ? '1px solid rgba(192,57,43,0.5)'
-                : '1px solid rgba(255,255,255,0.15)',
-        borderRadius: isBoss ? '12px' : '50%',
-        width: isBoss ? '44px' : '38px',
-        height: isBoss ? '44px' : '38px',
-        cursor: locked ? 'not-allowed' : 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-        position: 'relative',
-        transition: 'all 0.2s',
-        boxShadow: isCurrent ? '0 0 16px rgba(200,169,110,0.4)' : 'none',
+        background: 'none', border: 'none', padding: 0,
+        cursor: locked ? 'default' : 'pointer',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
+        width: 120,
       }}
-      title={locked ? 'Requires subscription' : chapter.title}
     >
-      {locked ? (
-        <Icon name="lock" size={14} color="rgba(255,255,255,0.3)" />
-      ) : completed ? (
-        <span style={{ fontSize: '16px' }}>✓</span>
-      ) : isBoss ? (
-        <span style={{ fontSize: '18px' }}>💀</span>
-      ) : (
-        <span style={{ fontSize: '13px', fontWeight: 800, color: 'rgba(255,255,255,0.8)' }}>
-          {chapter.chapter_number}
-        </span>
-      )}
+      {/* Pulse rings for current chapter */}
+      <div style={{ position: 'relative', width: pinSize, height: pinSize }}>
+        {isCurrent && (
+          <>
+            <motion.div
+              animate={{ scale: [1, 1.9], opacity: [0.55, 0] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
+              style={{
+                position: 'absolute', inset: -4,
+                borderRadius: isBoss ? '16px' : '50%',
+                border: `2px solid ${terrain.accent}`,
+                pointerEvents: 'none',
+              }}
+            />
+            <motion.div
+              animate={{ scale: [1, 2.6], opacity: [0.25, 0] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut', delay: 0.5 }}
+              style={{
+                position: 'absolute', inset: -4,
+                borderRadius: isBoss ? '16px' : '50%',
+                border: `2px solid ${terrain.accent}`,
+                pointerEvents: 'none',
+              }}
+            />
+          </>
+        )}
 
-      {/* Pulse ring for current chapter */}
-      {isCurrent && (
-        <motion.div
-          animate={{ scale: [1, 1.6], opacity: [0.5, 0] }}
-          transition={{ repeat: Infinity, duration: 1.5 }}
-          style={{
-            position: 'absolute', inset: '-4px',
-            borderRadius: isBoss ? '16px' : '50%',
-            border: '2px solid rgba(200,169,110,0.6)',
-            pointerEvents: 'none',
-          }}
-        />
-      )}
+        {/* Pin body */}
+        <div style={{
+          width: '100%', height: '100%',
+          borderRadius: isBoss ? '14px' : '50%',
+          background: done
+            ? `linear-gradient(135deg, ${terrain.dim}, ${terrain.accent})`
+            : isCurrent
+              ? `linear-gradient(135deg, ${terrain.dim}AA, ${terrain.accent}AA)`
+              : locked
+                ? 'rgba(255,255,255,0.04)'
+                : isBoss
+                  ? 'rgba(192,57,43,0.08)'
+                  : 'rgba(255,255,255,0.07)',
+          border: `2px solid ${
+            done ? terrain.accent :
+            isCurrent ? `${terrain.accent}90` :
+            locked ? 'rgba(255,255,255,0.08)' :
+            isBoss ? 'rgba(192,57,43,0.45)' :
+            'rgba(255,255,255,0.14)'
+          }`,
+          boxShadow: done
+            ? `0 0 18px ${terrain.pathGlow}, 0 2px 8px rgba(0,0,0,0.6)`
+            : isCurrent
+              ? `0 0 28px ${terrain.pathGlow}, 0 0 60px ${terrain.accent}22`
+              : 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: isBoss ? 26 : 20,
+          fontWeight: 800,
+          fontFamily: 'Cinzel, serif',
+          color: done ? '#fff' : locked ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)',
+          transition: 'all 0.25s',
+          position: 'relative',
+        }}>
+          {locked ? (
+            <Icon name="lock" size={18} color="rgba(255,255,255,0.22)" />
+          ) : done ? (
+            <span style={{ color: '#fff', fontSize: isBoss ? 26 : 20 }}>✓</span>
+          ) : isBoss ? (
+            '💀'
+          ) : (
+            chapter.chapter_number
+          )}
+        </div>
+      </div>
+
+      {/* Label */}
+      <div style={{
+        fontSize: 10, fontWeight: 700,
+        color: done
+          ? terrain.accent
+          : isCurrent
+            ? `${terrain.accent}DD`
+            : locked
+              ? 'rgba(255,255,255,0.18)'
+              : 'rgba(255,255,255,0.42)',
+        textAlign: 'center',
+        lineHeight: 1.35,
+        maxWidth: 112,
+        fontFamily: 'Nunito, sans-serif',
+      }}>
+        {isBoss && !locked ? '⚔ ' : ''}{chapter.title}
+        {isCurrent && (
+          <span style={{
+            display: 'block', marginTop: 2,
+            color: terrain.accent, fontSize: 9, fontStyle: 'italic',
+          }}>
+            ← enter
+          </span>
+        )}
+      </div>
     </motion.button>
   );
 }
 
-function DistrictCard({
-  district, chapters, completedChapterIds, currentChapterId,
-  isUnlocked, isComplete, nextChapterId, onSelectChapter,
-}) {
-  const [expanded, setExpanded] = useState(isUnlocked && !isComplete);
-  const style = DISTRICT_STYLE[district.order_index] || DISTRICT_STYLE[1];
-  const doneCount = chapters.filter((c) => completedChapterIds.has(c.id)).length;
+// ── Winding chapter path within a district ────────────────────────────────────
 
+function DistrictPath({ chapters, completedChapterIds, nextChapterId, terrain, onSelectChapter }) {
   return (
-    <div style={{
-      background: `linear-gradient(135deg, ${style.bg} 0%, rgba(20,20,25,0.95) 100%)`,
-      border: `1px solid ${isUnlocked ? `${style.color}40` : 'rgba(255,255,255,0.08)'}`,
-      borderRadius: '14px',
-      overflow: 'hidden',
-      opacity: isUnlocked ? 1 : 0.55,
-    }}>
-      {/* District header */}
-      <button
-        onClick={() => isUnlocked && setExpanded((e) => !e)}
-        style={{
-          width: '100%', background: 'none', border: 'none', cursor: isUnlocked ? 'pointer' : 'default',
-          padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '14px', textAlign: 'left',
-        }}
-      >
-        <div style={{
-          width: '48px', height: '48px', borderRadius: '12px', flexShrink: 0,
-          background: `${style.color}20`, border: `1px solid ${style.color}40`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px',
-        }}>
-          {style.emoji}
-        </div>
+    <div style={{ position: 'relative', width: '100%' }}>
+      {/* Vertical road down the center */}
+      <div style={{
+        position: 'absolute',
+        left: '50%', top: 0, bottom: 0,
+        width: 2,
+        background: `linear-gradient(180deg, ${terrain.accent}45 0%, ${terrain.accent}18 100%)`,
+        transform: 'translateX(-50%)',
+        borderRadius: 1,
+      }} />
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontFamily: 'Cinzel, serif', fontSize: '15px', fontWeight: 700,
-            color: style.color, marginBottom: '3px',
+      {chapters.map((ch, i) => {
+        const done = completedChapterIds.has(ch.id);
+        const prevDone = i > 0 && completedChapterIds.has(chapters[i - 1].id);
+        const isCurrent = ch.id === nextChapterId;
+        const locked = ch.locked;
+        const isBoss = ch.is_boss_chapter;
+        const isLeft = i % 2 === 0;
+        const connectorColor = done || prevDone
+          ? `${terrain.accent}55`
+          : 'rgba(255,255,255,0.07)';
+
+        return (
+          <div key={ch.id} style={{
+            display: 'flex', alignItems: 'center',
+            minHeight: 112,
+            width: '100%',
           }}>
-            District {district.order_index}: {district.name}
+            {isLeft ? (
+              <>
+                {/* Chapter on the left */}
+                <div style={{ width: 'calc(50% - 14px)', display: 'flex', justifyContent: 'flex-end', paddingRight: 6 }}>
+                  <ChapterPin
+                    chapter={ch}
+                    done={done}
+                    isCurrent={isCurrent}
+                    locked={locked}
+                    isBoss={isBoss}
+                    terrain={terrain}
+                    onClick={() => onSelectChapter(ch)}
+                  />
+                </div>
+                {/* Horizontal connector to road */}
+                <div style={{
+                  width: 28, height: 2,
+                  background: connectorColor,
+                  borderRadius: 1, flexShrink: 0,
+                }} />
+                {/* Right half spacer */}
+                <div style={{ flex: 1 }} />
+              </>
+            ) : (
+              <>
+                {/* Left half spacer */}
+                <div style={{ flex: 1 }} />
+                {/* Horizontal connector from road */}
+                <div style={{
+                  width: 28, height: 2,
+                  background: connectorColor,
+                  borderRadius: 1, flexShrink: 0,
+                }} />
+                {/* Chapter on the right */}
+                <div style={{ width: 'calc(50% - 14px)', display: 'flex', justifyContent: 'flex-start', paddingLeft: 6 }}>
+                  <ChapterPin
+                    chapter={ch}
+                    done={done}
+                    isCurrent={isCurrent}
+                    locked={locked}
+                    isBoss={isBoss}
+                    terrain={terrain}
+                    onClick={() => onSelectChapter(ch)}
+                  />
+                </div>
+              </>
+            )}
           </div>
-          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>
-            {style.label} · {doneCount}/{chapters.length} chapters
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-          {isComplete && (
-            <div style={{
-              background: 'rgba(82,183,136,0.15)', border: '1px solid rgba(82,183,136,0.4)',
-              borderRadius: '8px', padding: '3px 10px',
-              fontSize: '11px', color: '#52B788', fontWeight: 700,
-            }}>
-              SEALED ✓
-            </div>
-          )}
-          {!isUnlocked && (
-            <Icon name="lock" size={16} color="rgba(255,255,255,0.3)" />
-          )}
-          {isUnlocked && (
-            <motion.div animate={{ rotate: expanded ? 90 : 0 }} transition={{ duration: 0.2 }}>
-              <Icon name="chevron" size={18} color={style.color} />
-            </motion.div>
-          )}
-        </div>
-      </button>
-
-      {/* Chapter progress bar */}
-      {isUnlocked && (
-        <div style={{ padding: '0 20px 0', marginBottom: expanded ? 0 : '12px' }}>
-          <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${chapters.length ? (doneCount / chapters.length) * 100 : 0}%` }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-              style={{ height: '100%', background: `linear-gradient(90deg, ${style.color}80, ${style.color})`, borderRadius: '2px' }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Chapters expanded */}
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            style={{ overflow: 'hidden' }}
-          >
-            <div style={{ padding: '12px 20px 20px' }}>
-              {/* Chapter lore */}
-              {district.lore && (
-                <p style={{ margin: '0 0 16px', fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.55', fontStyle: 'italic' }}>
-                  "{district.lore}"
-                </p>
-              )}
-
-              {/* Chapter nodes */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
-                {chapters.map((ch, i) => {
-                  const done = completedChapterIds.has(ch.id);
-                  const locked = ch.locked;
-                  const isCurrent = ch.id === nextChapterId;
-                  return (
-                    <React.Fragment key={ch.id}>
-                      <ChapterNode
-                        chapter={ch}
-                        completed={done}
-                        locked={locked}
-                        isCurrent={isCurrent}
-                        onSelect={(c) => onSelectChapter(c, district)}
-                      />
-                      {i < chapters.length - 1 && (
-                        <div style={{
-                          width: '16px', height: '2px',
-                          background: done ? `${style.color}60` : 'rgba(255,255,255,0.1)',
-                          borderRadius: '1px',
-                        }} />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-
-              {/* Chapter legend */}
-              <div style={{ display: 'flex', gap: '16px', marginTop: '14px', flexWrap: 'wrap' }}>
-                {chapters.map((ch) => {
-                  const done = completedChapterIds.has(ch.id);
-                  const locked = ch.locked;
-                  const isCurrent = ch.id === nextChapterId;
-                  if (!isCurrent && done) return null;
-                  return (
-                    <div key={ch.id} style={{
-                      fontSize: '11px', color: locked ? 'rgba(255,255,255,0.25)' : isCurrent ? style.color : 'rgba(255,255,255,0.5)',
-                      fontWeight: 600,
-                    }}>
-                      {ch.is_boss_chapter ? '💀' : ch.chapter_number} {ch.title}
-                      {isCurrent && !done && <span style={{ color: style.color }}> ← next</span>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        );
+      })}
     </div>
   );
 }
 
-// Paywall upsell modal
+// ── District map zone ─────────────────────────────────────────────────────────
+
+function DistrictMapZone({ district, chapters, completedChapterIds, nextChapterId, isUnlocked, isComplete, onSelectChapter, animDelay }) {
+  const order = district.order_index;
+  const terrain = TERRAIN[order] || TERRAIN[1];
+  const doneCount = chapters.filter((c) => completedChapterIds.has(c.id)).length;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: animDelay, duration: 0.4 }}
+      style={{
+        position: 'relative',
+        background: terrain.terrainBg,
+        borderRadius: 18,
+        overflow: 'hidden',
+        border: `1px solid ${isUnlocked ? `${terrain.accent}20` : 'rgba(255,255,255,0.06)'}`,
+      }}
+    >
+      {/* Ambient corner glow */}
+      <div style={{
+        position: 'absolute',
+        top: -50, left: terrain.ambientPos.startsWith('2') || terrain.ambientPos.startsWith('1') ? -30 : undefined,
+        right: terrain.ambientPos.startsWith('7') || terrain.ambientPos.startsWith('8') ? -30 : undefined,
+        width: 220, height: 220, pointerEvents: 'none',
+        background: `radial-gradient(circle, ${terrain.accent}0F 0%, transparent 70%)`,
+      }} />
+
+      {/* Fog of war for locked districts */}
+      {!isUnlocked && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'rgba(4,3,2,0.82)',
+          backdropFilter: 'blur(5px)',
+          zIndex: 10,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
+        }}>
+          <div style={{ fontSize: 30, opacity: 0.4 }}>🌫</div>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em' }}>
+            {district.name}
+          </div>
+          <div style={{
+            fontSize: 9.5, color: 'rgba(255,255,255,0.22)', fontWeight: 700,
+            letterSpacing: '0.14em', textTransform: 'uppercase',
+          }}>
+            Complete District {order - 1} to reveal
+          </div>
+        </div>
+      )}
+
+      {/* District header */}
+      <div style={{ padding: '22px 22px 10px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontSize: 9.5, fontWeight: 800, letterSpacing: '0.22em',
+              color: terrain.accent, opacity: 0.65,
+              textTransform: 'uppercase', marginBottom: 5,
+              fontFamily: 'Nunito, sans-serif',
+            }}>
+              District {order} · {terrain.terrainLabel}
+            </div>
+            <div style={{
+              fontFamily: 'Cinzel, serif', fontSize: 17, fontWeight: 700,
+              color: terrain.accent, lineHeight: 1.15, letterSpacing: '0.04em',
+            }}>
+              {district.name}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, gap: 6 }}>
+            {isComplete ? (
+              <div style={{
+                background: `${terrain.accent}15`,
+                border: `1px solid ${terrain.accent}45`,
+                borderRadius: 8, padding: '4px 10px',
+                fontSize: 9.5, color: terrain.accent, fontWeight: 800,
+                letterSpacing: '0.1em',
+              }}>
+                ✓ SEALED
+              </div>
+            ) : isUnlocked ? (
+              <div style={{
+                fontFamily: 'Cinzel, serif', fontSize: 13,
+                color: terrain.accent, fontWeight: 700, opacity: 0.75,
+              }}>
+                {doneCount}/{chapters.length}
+              </div>
+            ) : null}
+
+            <div style={{ fontSize: 22 }}>{terrain.icon}</div>
+          </div>
+        </div>
+
+        {/* District lore */}
+        {district.lore && isUnlocked && (
+          <p style={{
+            fontFamily: 'Georgia, serif',
+            fontSize: 11.5, fontStyle: 'italic',
+            color: 'rgba(255,255,255,0.35)',
+            lineHeight: 1.65, margin: '12px 0 0',
+          }}>
+            "{district.lore}"
+          </p>
+        )}
+
+        {/* District progress bar */}
+        {isUnlocked && chapters.length > 0 && (
+          <div style={{ height: 2, background: 'rgba(255,255,255,0.06)', borderRadius: 1, overflow: 'hidden', marginTop: 14 }}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${(doneCount / chapters.length) * 100}%` }}
+              transition={{ delay: animDelay + 0.2, duration: 0.9, ease: 'easeOut' }}
+              style={{
+                height: '100%',
+                background: `linear-gradient(90deg, ${terrain.dim}, ${terrain.accent})`,
+                borderRadius: 1,
+                boxShadow: `0 0 6px ${terrain.pathGlow}`,
+              }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Chapter map path */}
+      <div style={{ padding: '6px 22px 28px' }}>
+        <DistrictPath
+          chapters={chapters}
+          completedChapterIds={completedChapterIds}
+          nextChapterId={nextChapterId}
+          terrain={terrain}
+          onSelectChapter={onSelectChapter}
+        />
+      </div>
+    </motion.div>
+  );
+}
+
+// ── Between-district path connector ──────────────────────────────────────────
+
+function PathConnector({ fromAccent, toAccent, done }) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      height: 36, position: 'relative',
+    }}>
+      <div style={{
+        width: 2, height: 36,
+        background: done
+          ? `linear-gradient(180deg, ${fromAccent}55, ${toAccent}55)`
+          : 'rgba(255,255,255,0.07)',
+        borderRadius: 1,
+      }} />
+      <div style={{
+        position: 'absolute', width: 18, height: 18,
+        background: 'rgba(8,6,4,0.95)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: '50%',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 9, color: 'rgba(255,255,255,0.25)',
+      }}>
+        ↓
+      </div>
+    </div>
+  );
+}
+
+// ── Paywall modal ─────────────────────────────────────────────────────────────
+
 function PaywallModal({ chapter, onClose }) {
   return (
     <motion.div
@@ -296,6 +494,8 @@ function PaywallModal({ chapter, onClose }) {
   );
 }
 
+// ── Main ──────────────────────────────────────────────────────────────────────
+
 export default function ChroniclesMap() {
   const { navigate, screenParams } = useApp();
   const { gameId, slug } = screenParams;
@@ -334,8 +534,8 @@ export default function ChroniclesMap() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontFamily: 'Nunito, sans-serif' }}>
-      Loading the map…
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(200,169,110,0.5)', fontFamily: 'Nunito, sans-serif', fontSize: 14 }}>
+      Charting the map…
     </div>
   );
   if (error) return (
@@ -347,7 +547,6 @@ export default function ChroniclesMap() {
   const completedChapterIds = new Set(progress?.chapters_completed || []);
   const completedDistrictIds = new Set(progress?.districts_completed || []);
 
-  // Find first incomplete non-locked chapter as "current"
   let nextChapterId = null;
   for (const d of districts) {
     for (const ch of (d.chapters || [])) {
@@ -364,110 +563,138 @@ export default function ChroniclesMap() {
   const pct = totalChapters ? Math.round((doneCount / totalChapters) * 100) : 0;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: 'Nunito, sans-serif' }}>
-      {/* Navbar */}
+    <div style={{
+      minHeight: '100vh',
+      fontFamily: 'Nunito, sans-serif',
+      background: 'radial-gradient(ellipse at 50% 0%, rgba(18,10,4,0.98) 0%, rgba(5,4,3,1) 55%)',
+    }}>
+      {/* ── Sticky navbar ── */}
       <nav style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 24px',
-        background: 'var(--bg-elevated)',
-        borderBottom: '1px solid var(--border)',
         position: 'sticky', top: 0, zIndex: 100,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 20px',
+        background: 'rgba(6,5,3,0.9)',
+        backdropFilter: 'blur(14px)',
+        borderBottom: '1px solid rgba(200,169,110,0.1)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={() => navigate('student_dashboard')} style={{
+        <button
+          onClick={() => navigate('student_dashboard')}
+          style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--text-muted)', padding: '4px 8px', fontSize: '13px', fontWeight: 600,
-          }}>
-            ← Games
-          </button>
-          <div style={{ width: '1px', height: '20px', background: 'var(--border)' }} />
-          <span style={{
-            fontFamily: 'Cinzel, serif', fontSize: '16px', fontWeight: 700,
-            color: '#C8A96E', letterSpacing: '0.04em',
-          }}>
-            ⚔ {game?.title || 'Chronicles of the Keep'}
-          </span>
-        </div>
+            color: 'rgba(255,255,255,0.45)', padding: '4px 8px',
+            fontSize: 13, fontWeight: 700,
+            display: 'flex', alignItems: 'center', gap: 4,
+          }}
+        >
+          ← Games
+        </button>
+        <span style={{
+          fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700,
+          color: '#C8A96E', letterSpacing: '0.06em',
+        }}>
+          ⚔ {game?.title || 'Chronicles of the Keep'}
+        </span>
         <WalletPill onClick={() => navigate('shop')} />
       </nav>
 
-      <main style={{ maxWidth: '700px', margin: '0 auto', padding: '24px 16px 80px' }}>
-        {/* Overall progress bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{
-            background: 'linear-gradient(135deg, #1a1208, #2a1f0a)',
-            border: '1px solid rgba(200,169,110,0.3)',
-            borderRadius: '14px',
-            padding: '20px 24px',
-            marginBottom: '20px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+      {/* ── Journey progress strip ── */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+          maxWidth: 700, margin: '0 auto',
+          padding: '16px 20px 0',
+        }}
+      >
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(28,18,6,0.9), rgba(20,12,4,0.85))',
+          border: '1px solid rgba(200,169,110,0.18)',
+          borderRadius: 14,
+          padding: '14px 18px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <div>
-              <div style={{ fontFamily: 'Cinzel, serif', fontSize: '14px', color: '#C8A96E', fontWeight: 700 }}>
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: '#C8A96E', fontWeight: 700, letterSpacing: '0.04em' }}>
                 Your Journey
               </div>
-              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
-                {doneCount} of {totalChapters} chapters completed
+              <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.38)', marginTop: 2, fontWeight: 600 }}>
+                {doneCount} of {totalChapters} chapters explored
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontFamily: 'Cinzel, serif', fontSize: '24px', color: '#C8A96E', fontWeight: 700 }}>{pct}%</div>
-              {progress?.total_xp_earned > 0 && (
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
-                  {progress.total_xp_earned.toLocaleString()} XP earned
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 22, color: '#C8A96E', fontWeight: 700, lineHeight: 1 }}>
+                {pct}%
+              </div>
+              {(progress?.total_xp_earned || 0) > 0 && (
+                <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.3)', fontWeight: 600, marginTop: 2 }}>
+                  {progress.total_xp_earned.toLocaleString()} XP
                 </div>
               )}
             </div>
           </div>
-          <div style={{ height: '6px', background: 'rgba(255,255,255,0.07)', borderRadius: '3px', overflow: 'hidden' }}>
+
+          {/* Overall progress bar */}
+          <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${pct}%` }}
-              transition={{ delay: 0.3, duration: 0.8, ease: 'easeOut' }}
-              style={{ height: '100%', background: 'linear-gradient(90deg, #8B6914, #C8A96E)', borderRadius: '3px' }}
+              transition={{ delay: 0.3, duration: 0.9, ease: 'easeOut' }}
+              style={{
+                height: '100%',
+                background: 'linear-gradient(90deg, #6B4A10, #C8A96E)',
+                borderRadius: 2,
+                boxShadow: '0 0 8px rgba(200,169,110,0.4)',
+              }}
             />
           </div>
-        </motion.div>
 
-        {/* Prologue link */}
-        <div style={{ textAlign: 'center', marginBottom: '16px', marginTop: '-4px' }}>
-          <button
-            onClick={() => navigate('chronicles_prologue', { gameId, slug, prologue: game?.prologue })}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: '12px', color: 'rgba(200,169,110,0.6)', fontWeight: 600,
-              letterSpacing: '0.04em', textDecoration: 'underline', textDecorationColor: 'rgba(200,169,110,0.3)',
-            }}
-          >
-            📜 Re-read the Prologue
-          </button>
-        </div>
-
-        {/* Districts */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {districts.map((d, i) => (
-            <motion.div
-              key={d.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08, duration: 0.3 }}
+          {/* Prologue link */}
+          <div style={{ marginTop: 10, textAlign: 'right' }}>
+            <button
+              onClick={() => navigate('chronicles_prologue', { gameId, slug, prologue: game?.prologue })}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 11, color: 'rgba(200,169,110,0.45)', fontWeight: 600,
+                fontFamily: 'Nunito, sans-serif',
+                textDecoration: 'underline',
+                textDecorationColor: 'rgba(200,169,110,0.2)',
+              }}
             >
-              <DistrictCard
+              📜 Re-read the Prologue
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── Map: districts ── */}
+      <main style={{ maxWidth: 700, margin: '0 auto', padding: '16px 12px 80px' }}>
+        {districts.map((d, i) => {
+          const terrain = TERRAIN[d.order_index] || TERRAIN[1];
+          const prevDistrict = i > 0 ? districts[i - 1] : null;
+          const prevTerrain = prevDistrict ? (TERRAIN[prevDistrict.order_index] || TERRAIN[1]) : null;
+
+          return (
+            <React.Fragment key={d.id}>
+              {i > 0 && (
+                <PathConnector
+                  fromAccent={prevTerrain?.accent || '#C8A96E'}
+                  toAccent={terrain.accent}
+                  done={completedDistrictIds.has(prevDistrict.id)}
+                />
+              )}
+              <DistrictMapZone
                 district={d}
                 chapters={d.chapters || []}
                 completedChapterIds={completedChapterIds}
-                currentChapterId={progress?.current_chapter_id}
+                nextChapterId={nextChapterId}
                 isUnlocked={d.unlocked !== false}
                 isComplete={completedDistrictIds.has(d.id)}
-                nextChapterId={nextChapterId}
-                onSelectChapter={handleSelectChapter}
+                onSelectChapter={(ch) => handleSelectChapter(ch, d)}
+                animDelay={i * 0.1}
               />
-            </motion.div>
-          ))}
-        </div>
+            </React.Fragment>
+          );
+        })}
 
         {/* Game complete banner */}
         {progress?.completed_at && (
@@ -475,17 +702,18 @@ export default function ChroniclesMap() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             style={{
-              marginTop: '20px',
-              background: 'linear-gradient(135deg, rgba(82,183,136,0.1), rgba(82,183,136,0.2))',
-              border: '1px solid rgba(82,183,136,0.5)',
-              borderRadius: '14px', padding: '20px 24px', textAlign: 'center',
+              marginTop: 16,
+              background: 'linear-gradient(135deg, rgba(82,183,136,0.12), rgba(82,183,136,0.2))',
+              border: '1px solid rgba(82,183,136,0.45)',
+              borderRadius: 16, padding: '24px',
+              textAlign: 'center',
             }}
           >
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}>🏆</div>
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: '17px', color: '#52B788', fontWeight: 700 }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🏆</div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 17, color: '#52B788', fontWeight: 700 }}>
               Chronicles Complete!
             </div>
-            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginTop: '6px' }}>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 6 }}>
               You have defeated all five Wardens and restored the Keep.
             </div>
           </motion.div>
