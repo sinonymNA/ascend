@@ -318,7 +318,7 @@ export default function ChroniclesBattle() {
   const ambientBg = `radial-gradient(ellipse at 50% 0%, ${districtColor}50 0%, #060402 55%)`;
 
   useEffect(() => {
-    if (!chapterId) { navigate('summit_home'); return; }
+    if (!chapterId) { navigate('student_dashboard'); return; }
     api.get(`/api/edumissions/chapters/${chapterId}`)
       .then((data) => {
         setChapter(data.chapter);

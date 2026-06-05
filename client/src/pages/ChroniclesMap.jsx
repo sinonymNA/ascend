@@ -308,7 +308,7 @@ export default function ChroniclesMap() {
   const [paywallChapter, setPaywallChapter] = useState(null);
 
   useEffect(() => {
-    if (!gameId) { navigate('summit_home'); return; }
+    if (!gameId) { navigate('student_dashboard'); return; }
     api.get(`/api/edumissions/games/${gameId}`)
       .then((data) => {
         setGame(data.game);
@@ -374,11 +374,11 @@ export default function ChroniclesMap() {
         position: 'sticky', top: 0, zIndex: 100,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={() => navigate('summit_home')} style={{
+          <button onClick={() => navigate('student_dashboard')} style={{
             background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--text-muted)', padding: '4px 8px', fontSize: '13px', fontWeight: 600,
           }}>
-            ← Shelf
+            ← Games
           </button>
           <div style={{ width: '1px', height: '20px', background: 'var(--border)' }} />
           <span style={{

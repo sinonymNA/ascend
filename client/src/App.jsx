@@ -49,6 +49,7 @@ const SummitHome           = React.lazy(() => import('./pages/SummitHome.jsx'));
 const ChroniclesMap        = React.lazy(() => import('./pages/ChroniclesMap.jsx'));
 const ChroniclesBattle     = React.lazy(() => import('./pages/ChroniclesBattle.jsx'));
 const ChroniclesPrologue   = React.lazy(() => import('./pages/ChroniclesPrologue.jsx'));
+const CharacterProfile     = React.lazy(() => import('./pages/CharacterProfile.jsx'));
 
 const SCREEN_MAP = {
   landing:           LandingPage,
@@ -79,6 +80,7 @@ const SCREEN_MAP = {
   chronicles_map:      ChroniclesMap,
   chronicles_battle:   ChroniclesBattle,
   chronicles_prologue: ChroniclesPrologue,
+  character_profile:   CharacterProfile,
 };
 
 // ─── Page transition variants ─────────────────────────────────────────────────

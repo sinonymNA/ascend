@@ -358,7 +358,7 @@ export default function ChroniclesPrologue() {
                 Enter the Keep →
               </motion.button>
               <button
-                onClick={() => navigate('summit_home')}
+                onClick={() => navigate('student_dashboard')}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   color: 'rgba(200,169,110,0.35)', fontSize: '12px',
