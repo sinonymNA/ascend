@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
 import { RUBRICS, calculateUnitGrade } from '../lib/rubrics.js';
+import { Vignette, goldText } from '../components/write/fx.jsx';
 
 // ── Summit Write — teacher workspace: builder · inbox · gradebook ─────────────
 
@@ -582,33 +583,47 @@ export default function WriteTeacher() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: 'Nunito, sans-serif' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: 'radial-gradient(ellipse at 50% -10%, #1A2940 0%, #0F1720 55%, #0A1018 100%)',
+      fontFamily: 'Nunito, sans-serif', position: 'relative',
+    }}>
+      <Vignette strength={0.45} />
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '12px 20px',
-        background: 'rgba(15,23,32,0.92)', backdropFilter: 'blur(14px)',
-        borderBottom: `1px solid ${C.border}`,
+        background: 'linear-gradient(180deg, rgba(10,16,24,0.95), rgba(15,23,32,0.88))', backdropFilter: 'blur(14px)',
+        borderBottom: '1px solid rgba(245,166,35,0.18)',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
       }}>
         <button onClick={() => navigate('teacher_dashboard')} style={{
           background: 'none', border: 'none', cursor: 'pointer', color: C.muted, fontSize: 13, fontWeight: 700,
         }}>← Dashboard</button>
-        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 15, fontWeight: 700, color: C.gold, letterSpacing: '0.06em' }}>
-          🏔 Summit Write
+        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 'clamp(11px, 3.2vw, 15px)', fontWeight: 800, letterSpacing: '0.12em', textAlign: 'center', ...goldText }}>
+          🏔 SUMMIT WRITE · EXPEDITION COMMAND
         </span>
         <div style={{ width: 70 }} />
       </nav>
 
-      <main style={{ maxWidth: 760, margin: '0 auto', padding: '22px 16px 80px' }}>
+      <main style={{ maxWidth: 760, margin: '0 auto', padding: '22px 16px 80px', position: 'relative', zIndex: 3 }}>
         {/* tabs */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
           {TABS.map((t) => (
-            <button key={t.key} onClick={() => { setTab(t.key); setBuilding(false); }} style={{
-              flex: 1, padding: '11px 8px', borderRadius: 10, cursor: 'pointer',
-              background: tab === t.key ? `${C.gold}14` : 'transparent',
-              border: `1px solid ${tab === t.key ? C.gold + '45' : C.border}`,
-              color: tab === t.key ? C.gold : C.muted, fontWeight: 800, fontSize: 12.5,
-            }}>{t.label}</button>
+            <motion.button key={t.key} onClick={() => { setTab(t.key); setBuilding(false); }}
+              whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }}
+              style={{
+                flex: 1, padding: '12px 8px', borderRadius: 10, cursor: 'pointer',
+                background: tab === t.key
+                  ? `linear-gradient(165deg, ${C.gold}22, rgba(22,33,48,0.9))`
+                  : 'linear-gradient(165deg, rgba(36,53,72,0.5), rgba(22,33,48,0.7))',
+                border: `1px solid ${tab === t.key ? C.gold + '60' : C.border}`,
+                color: tab === t.key ? C.gold : C.muted, fontWeight: 800, fontSize: 12.5,
+                boxShadow: tab === t.key
+                  ? `0 0 18px ${C.gold}25, inset 0 1px 0 rgba(255,255,255,0.08)`
+                  : 'inset 0 1px 0 rgba(255,255,255,0.04)',
+                textShadow: tab === t.key ? `0 0 12px ${C.gold}50` : 'none',
+              }}>{t.label}</motion.button>
           ))}
         </div>
 
@@ -623,25 +638,35 @@ export default function WriteTeacher() {
             </div>
           ) : (
             <div>
-              <button onClick={() => setBuilding(true)} style={{
-                width: '100%', padding: '15px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                background: `linear-gradient(135deg, #8B6914, ${C.gold})`, color: '#1C1208',
-                fontWeight: 800, fontSize: 14.5, marginBottom: 18,
-              }}>+ New Assignment</button>
+              <motion.button onClick={() => setBuilding(true)}
+                whileHover={{ scale: 1.015, boxShadow: `0 0 30px ${C.gold}50, 0 10px 26px rgba(0,0,0,0.5)` }}
+                whileTap={{ scale: 0.985 }}
+                style={{
+                  width: '100%', padding: '16px', borderRadius: 12, cursor: 'pointer',
+                  background: `linear-gradient(180deg, #FFD75E 0%, ${C.gold} 45%, #C8851A 100%)`,
+                  border: '1px solid rgba(255,233,184,0.55)', color: '#1C1208',
+                  fontWeight: 900, fontSize: 14.5, marginBottom: 18, letterSpacing: '0.05em', textTransform: 'uppercase',
+                  boxShadow: `0 6px 22px ${C.gold}40, inset 0 1px 0 rgba(255,255,255,0.5)`,
+                }}>⚒ Forge New Assignment</motion.button>
               {assignments.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px 0', color: C.muted, fontSize: 13 }}>
                   No assignments yet. Create your first one — it takes about 2 minutes.
                 </div>
               ) : assignments.map((a) => (
                 <div key={a.id} style={{
-                  background: C.card, border: `1px solid ${C.border}`, borderRadius: 12,
+                  background: 'linear-gradient(165deg, rgba(36,53,72,0.85), rgba(22,33,48,0.95))',
+                  border: `1px solid ${C.border}`, borderRadius: 12,
                   padding: '14px 16px', marginBottom: 10,
                   display: 'flex', alignItems: 'center', gap: 12,
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 8px 22px rgba(0,0,0,0.35)',
                 }}>
                   <span style={{
-                    fontFamily: 'Cinzel, serif', fontSize: 11.5, fontWeight: 700, color: C.gold,
-                    background: `${C.gold}12`, border: `1px solid ${C.gold}35`,
-                    borderRadius: 8, padding: '5px 9px', flexShrink: 0,
+                    fontFamily: 'Cinzel, serif', fontSize: 11.5, fontWeight: 800, color: C.gold,
+                    background: `radial-gradient(circle at 35% 30%, ${C.gold}30, rgba(10,16,24,0.85) 80%)`,
+                    border: `1px solid ${C.gold}55`,
+                    borderRadius: 8, padding: '6px 10px', flexShrink: 0,
+                    textShadow: `0 0 10px ${C.gold}70`,
+                    boxShadow: `0 0 12px ${C.gold}20`,
                   }}>{a.type}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 800, color: C.text }}>{a.title}</div>

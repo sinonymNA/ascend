@@ -4,6 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
 import { RUBRICS } from '../lib/rubrics.js';
+import {
+  Vignette, ParticleField, OrnateCard, SectionTitle, RankStamp, RayBurst,
+  rankFor, goldText,
+} from '../components/write/fx.jsx';
 
 // ── Summit Write — grading results, annotations, revision ────────────────────
 
@@ -17,7 +21,7 @@ function scoreColor(pct) {
   return pct >= 0.8 ? C.gold : pct >= 0.5 ? C.pine : C.sunset;
 }
 
-// ── Animated count-up score ───────────────────────────────────────────────────
+// ── Animated count-up score with medallion ring ───────────────────────────────
 function ScoreReveal({ score, max }) {
   const [shown, setShown] = useState(0);
   useEffect(() => {
@@ -29,11 +33,97 @@ function ScoreReveal({ score, max }) {
     }, 280);
     return () => clearInterval(t);
   }, [score]);
-  const color = scoreColor(max ? score / max : 0);
+  const pct = max ? score / max : 0;
+  const color = scoreColor(pct);
+  const R = 84, CIRC = 2 * Math.PI * R;
   return (
-    <span style={{ fontFamily: 'Cinzel, serif', fontSize: 'clamp(40px, 11vw, 64px)', fontWeight: 700, color, textShadow: `0 0 36px ${color}50` }}>
-      {shown}<span style={{ fontSize: '0.5em', color: C.muted }}>/{max}</span>
-    </span>
+    <div style={{ position: 'relative', width: 200, height: 200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="200" height="200" viewBox="0 0 200 200" style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)' }}>
+        <circle cx="100" cy="100" r={R} fill="none" stroke="rgba(240,237,230,0.08)" strokeWidth="7" />
+        <motion.circle cx="100" cy="100" r={R} fill="none" stroke={color} strokeWidth="7" strokeLinecap="round"
+          strokeDasharray={CIRC}
+          initial={{ strokeDashoffset: CIRC }}
+          animate={{ strokeDashoffset: CIRC * (1 - pct) }}
+          transition={{ duration: 1.6, ease: 'easeOut', delay: 0.3 }}
+          style={{ filter: `drop-shadow(0 0 8px ${color})` }} />
+      </svg>
+      <div style={{ textAlign: 'center' }}>
+        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 56, fontWeight: 900, color, textShadow: `0 0 36px ${color}60`, lineHeight: 1 }}>
+          {shown}<span style={{ fontSize: '0.45em', color: C.muted }}>/{max}</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── Cinematic full-screen rank reveal (shown right after grading) ────────────
+function RankReveal({ score, max, onDone }) {
+  const pct = max ? score / max : 0;
+  const rank = rankFor(pct);
+  const [stage, setStage] = useState(0); // 0 fade-in, 1 stamp, 2 dismissable
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setStage(1), 700);
+    const t2 = setTimeout(() => setStage(2), 1600);
+    const t3 = setTimeout(onDone, 4600);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+
+  useEffect(() => {
+    if (stage === 1 && pct >= 0.65) {
+      import('canvas-confetti').then(({ default: confetti }) => {
+        confetti({ particleCount: 160, spread: 100, origin: { y: 0.45 }, colors: ['#F5A623', '#FFE9B8', '#52B788', '#F0EDE6'] });
+      }).catch(() => {});
+    }
+  }, [stage]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.5 } }}
+      onClick={() => stage >= 2 && onDone()}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 2000,
+        background: 'radial-gradient(ellipse at 50% 45%, #1A2940 0%, #060A12 75%)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        cursor: stage >= 2 ? 'pointer' : 'default', overflow: 'hidden',
+      }}>
+      <div style={{ position: 'relative', width: 0, height: 0 }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: stage >= 1 ? 1 : 0 }} transition={{ duration: 0.8 }}>
+          <RayBurst color={rank.color} size={620} opacity={0.7} />
+        </motion.div>
+      </div>
+      <AnimatePresence>
+        {stage >= 1 && (
+          <motion.div
+            initial={{ scale: 3.2, opacity: 0, rotate: -14 }}
+            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+            transition={{ type: 'spring', damping: 15, stiffness: 220 }}
+            style={{ position: 'relative', zIndex: 2 }}>
+            <RankStamp pct={pct} size={150} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {stage >= 1 && (
+        <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+          style={{ textAlign: 'center', marginTop: 26, zIndex: 2 }}>
+          <div style={{
+            fontFamily: 'Cinzel, serif', fontSize: 'clamp(20px, 6vw, 30px)', fontWeight: 900,
+            letterSpacing: '0.14em', textTransform: 'uppercase', ...goldText,
+            filter: 'drop-shadow(0 2px 12px rgba(0,0,0,0.8))',
+          }}>{rank.label}</div>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 22, fontWeight: 800, color: rank.color, marginTop: 10, textShadow: `0 0 24px ${rank.color}70` }}>
+            {score} / {max}
+          </div>
+        </motion.div>
+      )}
+      {stage >= 2 && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: [0.3, 0.8, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          style={{ position: 'absolute', bottom: 44, fontSize: 12, fontWeight: 800, letterSpacing: '0.26em', color: 'rgba(240,237,230,0.6)', textTransform: 'uppercase' }}>
+          Tap to continue
+        </motion.div>
+      )}
+    </motion.div>
   );
 }
 
@@ -235,6 +325,7 @@ export default function WriteResults() {
   const [expanded, setExpanded] = useState(null);
   const [selectedAnn, setSelectedAnn] = useState(null);
   const [revising, setRevising] = useState(null);
+  const [reveal, setReveal] = useState(!!justGraded);
 
   const load = () => api.get(`/api/write/submissions/${submissionId}`)
     .then((d) => setSubmission(d.submission))
@@ -246,17 +337,6 @@ export default function WriteResults() {
     load();
   }, [submissionId]);
 
-  // celebrate good scores
-  useEffect(() => {
-    if (!justGraded || !submission) return;
-    const g = submission.grading_json;
-    if (g && g.maxScore && g.score / g.maxScore >= 0.7) {
-      import('canvas-confetti').then(({ default: confetti }) => {
-        confetti({ particleCount: 120, spread: 75, origin: { y: 0.5 }, colors: ['#F5A623', '#52B788', '#F0EDE6'] });
-      }).catch(() => {});
-    }
-  }, [justGraded, submission?.id]);
-
   if (loading || !submission) return (
     <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted, fontFamily: 'Nunito, sans-serif', fontSize: 14 }}>
       {loading ? 'Reading your essay…' : 'Submission not found.'}
@@ -267,54 +347,70 @@ export default function WriteResults() {
   const score = submission.teacher_score ?? g.score ?? 0;
   const max = g.maxScore || submission.max_score || 7;
   const rubric = RUBRICS[submission.assignment_type] || RUBRICS.LEQ;
+  const rank = rankFor(max ? score / max : 0);
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: 'Nunito, sans-serif' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: 'radial-gradient(ellipse at 50% -10%, #1A2940 0%, #0F1720 55%, #0A1018 100%)',
+      fontFamily: 'Nunito, sans-serif', position: 'relative',
+    }}>
+      <ParticleField count={8} type="dust" color="#C8D8E8" zIndex={1} />
+      <Vignette strength={0.55} />
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '12px 20px',
-        background: 'rgba(15,23,32,0.92)', backdropFilter: 'blur(14px)',
-        borderBottom: '1px solid rgba(240,237,230,0.08)',
+        background: 'linear-gradient(180deg, rgba(10,16,24,0.95), rgba(15,23,32,0.88))', backdropFilter: 'blur(14px)',
+        borderBottom: '1px solid rgba(245,166,35,0.18)',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
       }}>
         <button onClick={() => navigate('write_home')} style={{
           background: 'none', border: 'none', cursor: 'pointer',
           color: C.muted, fontSize: 13, fontWeight: 700,
         }}>← Summit Write</button>
-        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13.5, fontWeight: 700, color: C.gold }}>
+        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13.5, fontWeight: 800, letterSpacing: '0.06em', ...goldText }}>
           {submission.assignment_title}
         </span>
         <div style={{ width: 60 }} />
       </nav>
 
-      <main style={{ maxWidth: 680, margin: '0 auto', padding: '26px 16px 80px' }}>
+      <main style={{ maxWidth: 680, margin: '0 auto', padding: '26px 16px 90px', position: 'relative', zIndex: 3 }}>
         {/* Score card */}
-        <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
-          style={{
-            background: `linear-gradient(160deg, ${C.elevated}, ${C.card})`,
-            border: '1px solid rgba(240,237,230,0.1)', borderRadius: 18,
-            padding: '34px 24px 26px', textAlign: 'center', marginBottom: 18,
-          }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.2em', color: C.muted, textTransform: 'uppercase', marginBottom: 8 }}>
-            {submission.assignment_type} · Attempt {submission.attempt_number}
-          </div>
-          <ScoreReveal score={score} max={max} />
-          {award?.xpGain > 0 && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1 }}
-              style={{ color: C.gold, fontWeight: 800, fontSize: 14, marginTop: 6 }}>
-              +{award.xpGain} XP {award.streak > 1 ? ` · 🔥 ${award.streak}-day streak` : ''}
-            </motion.div>
-          )}
-          {g.overallFeedback && (
-            <p style={{ fontSize: 14, color: C.mid, lineHeight: 1.7, maxWidth: 480, margin: '14px auto 0' }}>
-              {g.overallFeedback}
-            </p>
-          )}
-          {submission.teacher_note && (
-            <p style={{ fontSize: 13.5, color: C.gold, lineHeight: 1.65, maxWidth: 480, margin: '10px auto 0', fontStyle: 'italic' }}>
-              Teacher: "{submission.teacher_note}"
-            </p>
-          )}
+        <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}>
+          <OrnateCard glow accent={rank.color} style={{ padding: '34px 24px 28px', textAlign: 'center', marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.24em', color: C.muted, textTransform: 'uppercase', marginBottom: 14, fontFamily: 'Cinzel, serif' }}>
+              {submission.assignment_type} · Attempt {submission.attempt_number}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(16px, 5vw, 40px)', flexWrap: 'wrap' }}>
+              <ScoreReveal score={score} max={max} />
+              <motion.div initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: reveal ? 0 : 0.9, type: 'spring', damping: 13 }}>
+                <RankStamp pct={max ? score / max : 0} size={96} />
+              </motion.div>
+            </div>
+            <div style={{
+              fontFamily: 'Cinzel, serif', fontSize: 15, fontWeight: 800, color: rank.color,
+              letterSpacing: '0.16em', textTransform: 'uppercase', marginTop: 14,
+              textShadow: `0 0 18px ${rank.color}50`,
+            }}>{rank.label}</div>
+            {award?.xpGain > 0 && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1 }}
+                style={{ fontWeight: 900, fontSize: 15, marginTop: 8, fontFamily: 'Cinzel, serif', ...goldText }}>
+                +{award.xpGain} XP {award.streak > 1 ? ` · 🔥 ${award.streak}-day streak` : ''}
+              </motion.div>
+            )}
+            {g.overallFeedback && (
+              <p style={{ fontSize: 14, color: C.mid, lineHeight: 1.7, maxWidth: 480, margin: '16px auto 0' }}>
+                {g.overallFeedback}
+              </p>
+            )}
+            {submission.teacher_note && (
+              <p style={{ fontSize: 13.5, color: C.gold, lineHeight: 1.65, maxWidth: 480, margin: '10px auto 0', fontStyle: 'italic' }}>
+                Teacher: "{submission.teacher_note}"
+              </p>
+            )}
+          </OrnateCard>
         </motion.div>
 
         {/* Strength + growth */}
@@ -336,8 +432,15 @@ export default function WriteResults() {
         )}
 
         {/* Breakdown */}
-        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          style={{ background: C.card, border: '1px solid rgba(240,237,230,0.08)', borderRadius: 14, overflow: 'hidden', marginBottom: 22 }}>
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <SectionTitle style={{ marginTop: 24 }}>RUBRIC BREAKDOWN</SectionTitle>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
+          style={{
+            background: 'linear-gradient(165deg, rgba(36,53,72,0.92), rgba(22,33,48,0.96))',
+            border: '1px solid rgba(245,166,35,0.22)', borderRadius: 14, overflow: 'hidden', marginBottom: 22,
+            boxShadow: '0 16px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
+          }}>
           {Object.entries(g.breakdown || {}).map(([key, b], i, arr) => {
             const def = rubric.criteria[key];
             const open = expanded === key;
@@ -384,9 +487,7 @@ export default function WriteResults() {
 
         {/* Annotated essay */}
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
-          <h2 style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: C.gold, letterSpacing: '0.14em', margin: '0 0 6px', fontWeight: 700 }}>
-            YOUR ESSAY{g.annotations?.length ? ' — TAP A HIGHLIGHT FOR COACHING' : ''}
-          </h2>
+          <SectionTitle>{g.annotations?.length ? 'YOUR ESSAY — TAP A HIGHLIGHT' : 'YOUR ESSAY'}</SectionTitle>
           {g.annotations?.length > 0 && (
             <div style={{ display: 'flex', gap: 14, fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 10 }}>
               <span><span style={{ color: C.pine }}>—</span> strong</span>
@@ -413,6 +514,12 @@ export default function WriteResults() {
             onClose={() => setRevising(null)}
             onImproved={() => load()}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {reveal && (
+          <RankReveal score={score} max={max} onDone={() => setReveal(false)} />
         )}
       </AnimatePresence>
     </div>

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
 import { RUBRICS } from '../lib/rubrics.js';
+import { Vignette, ParticleField } from '../components/write/fx.jsx';
 
 // ── The Writing Room — warm, cozy, candlelit essay editor ─────────────────────
 
@@ -76,28 +77,77 @@ function useAmbient() {
   return { mode, cycle };
 }
 
-// ── Candle glow ───────────────────────────────────────────────────────────────
+// ── Candle glow + animated candle flames ─────────────────────────────────────
+function Candle({ side }) {
+  const pos = side === 'left' ? { left: 18 } : { right: 18 };
+  return (
+    <div aria-hidden style={{ position: 'fixed', bottom: 86, ...pos, zIndex: 2, pointerEvents: 'none', opacity: 0.92 }}>
+      <svg width="44" height="92" viewBox="0 0 44 92">
+        <defs>
+          <radialGradient id={`wr-flameglow-${side}`} cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0%" stopColor="#FFB54A" stopOpacity="0.7" />
+            <stop offset="100%" stopColor="#FFB54A" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <motion.circle cx="22" cy="18" r="17"
+          fill={`url(#wr-flameglow-${side})`}
+          animate={{ opacity: [0.6, 1, 0.55, 0.9, 0.6], r: [15, 18, 14, 17, 15] }}
+          transition={{ duration: 2.4, repeat: Infinity, delay: side === 'left' ? 0 : 0.9 }} />
+        <motion.path d="M22 10 C18.5 16 19.5 21 22 25 C24.5 21 25.5 16 22 10 Z" fill="#FFB54A"
+          animate={{ scaleY: [1, 1.25, 0.88, 1.15, 1], scaleX: [1, 0.88, 1.1, 0.94, 1], rotate: [0, 2.5, -2, 1.5, 0] }}
+          transition={{ duration: 1.3, repeat: Infinity, delay: side === 'left' ? 0 : 0.5 }}
+          style={{ transformBox: 'fill-box', originX: 0.5, originY: 1 }} />
+        <motion.path d="M22 16 C20.6 19 21 21.5 22 23.6 C23 21.5 23.4 19 22 16 Z" fill="#FFF2D8"
+          animate={{ scaleY: [1, 1.4, 0.85, 1.2, 1] }}
+          transition={{ duration: 0.9, repeat: Infinity }}
+          style={{ transformBox: 'fill-box', originX: 0.5, originY: 1 }} />
+        <rect x="20.8" y="24" width="2.4" height="5" fill="#3D2A14" rx="1" />
+        <path d="M15 29 Q15 27 17 27 L27 27 Q29 27 29 29 L30 78 Q30 82 26 82 L18 82 Q14 82 14 78 Z" fill="#E8D5A8" />
+        <path d="M15 29 Q15 27 17 27 L20 27 L21 82 L18 82 Q14 82 14 78 Z" fill="#F2E4BE" opacity="0.7" />
+        <ellipse cx="22" cy="84" rx="16" ry="4" fill="#2A1A0A" />
+        <ellipse cx="22" cy="83" rx="16" ry="4" fill="#3D2A14" />
+      </svg>
+    </div>
+  );
+}
+
 function CandleGlow() {
   return (
     <>
       <motion.div
-        animate={{ opacity: [0.35, 0.5, 0.32, 0.45, 0.35] }}
+        animate={{ opacity: [0.4, 0.58, 0.36, 0.52, 0.4] }}
         transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
         style={{
-          position: 'fixed', left: -160, top: '20%', width: 460, height: 560,
-          background: `radial-gradient(ellipse, ${WR.ember}30 0%, transparent 65%)`,
+          position: 'fixed', left: -160, top: '16%', width: 520, height: 640,
+          background: `radial-gradient(ellipse, ${WR.ember}38 0%, transparent 65%)`,
           pointerEvents: 'none', zIndex: 1,
         }}
       />
       <motion.div
-        animate={{ opacity: [0.18, 0.3, 0.16, 0.26, 0.18] }}
+        animate={{ opacity: [0.2, 0.34, 0.18, 0.3, 0.2] }}
         transition={{ duration: 3.1, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
         style={{
-          position: 'fixed', right: -120, bottom: '5%', width: 340, height: 420,
-          background: `radial-gradient(ellipse, ${WR.ember}22 0%, transparent 65%)`,
+          position: 'fixed', right: -120, bottom: '2%', width: 400, height: 480,
+          background: `radial-gradient(ellipse, ${WR.ember}2C 0%, transparent 65%)`,
           pointerEvents: 'none', zIndex: 1,
         }}
       />
+      {/* warm pool over the desk */}
+      <motion.div
+        animate={{ opacity: [0.14, 0.22, 0.12, 0.2, 0.14] }}
+        transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut', delay: 1.6 }}
+        style={{
+          position: 'fixed', left: '50%', top: '30%', width: 700, height: 500, marginLeft: -350,
+          background: `radial-gradient(ellipse, #FFB54A22 0%, transparent 60%)`,
+          pointerEvents: 'none', zIndex: 1,
+        }}
+      />
+      {typeof window !== 'undefined' && window.innerWidth >= 900 && (
+        <>
+          <Candle side="left" />
+          <Candle side="right" />
+        </>
+      )}
     </>
   );
 }
@@ -399,14 +449,28 @@ export default function WritingRoom() {
   const ambientIcon = { off: '○', fire: '🔥', rain: '🌧️', library: '📚' }[ambient];
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: WR.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: WR.cream, fontFamily: 'Nunito, sans-serif', fontSize: 14 }}>
+    <div style={{
+      minHeight: '100vh', background: `radial-gradient(ellipse at 50% 110%, #2E1C0C 0%, ${WR.bg} 55%, #120B04 100%)`,
+      display: 'flex', flexDirection: 'column', gap: 18, alignItems: 'center', justifyContent: 'center',
+      color: WR.cream, fontFamily: 'Cinzel, serif', fontSize: 15, letterSpacing: '0.12em',
+    }}>
+      <motion.div
+        animate={{ opacity: [0.4, 1, 0.4], scale: [0.94, 1.06, 0.94] }}
+        transition={{ duration: 1.8, repeat: Infinity }}
+        style={{ fontSize: 34, filter: 'drop-shadow(0 0 18px #FFB54A)' }}>🕯️</motion.div>
       Lighting the candles…
     </div>
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: WR.bg, fontFamily: 'Nunito, sans-serif', position: 'relative' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: `radial-gradient(ellipse at 50% 115%, #2E1C0C 0%, ${WR.bg} 50%, #120B04 100%)`,
+      fontFamily: 'Nunito, sans-serif', position: 'relative',
+    }}>
       <CandleGlow />
+      <ParticleField count={9} color="#FFB54A" type="ember" zIndex={1} />
+      <Vignette strength={0.7} />
 
       {/* header */}
       <header style={{
@@ -443,29 +507,54 @@ export default function WritingRoom() {
       {/* parchment workspace */}
       <main style={{ maxWidth: 760, margin: '0 auto', padding: '26px 16px 130px', position: 'relative', zIndex: 2 }}>
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, ease: 'easeOut' }}
+          initial={{ opacity: 0, y: 26, rotateX: 6 }}
+          animate={{ opacity: 1, y: 0, rotateX: 0 }}
+          transition={{ duration: 0.7, ease: 'easeOut' }}
           style={{
             background: `linear-gradient(178deg, ${WR.parchment}, #EEDCB6)`,
             borderRadius: 6,
             padding: 'clamp(24px, 5vw, 44px)',
-            boxShadow: '0 24px 70px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.5)',
+            boxShadow: `0 34px 90px rgba(0,0,0,0.65), 0 0 60px ${WR.ember}18, inset 0 1px 0 rgba(255,255,255,0.5), inset 0 0 80px rgba(140,100,40,0.12)`,
             position: 'relative',
+            border: '1px solid rgba(140,100,40,0.3)',
           }}>
           {/* paper grain */}
           <div style={{
             position: 'absolute', inset: 0, borderRadius: 6, pointerEvents: 'none', opacity: 0.5,
-            background: 'repeating-linear-gradient(2deg, transparent, transparent 3px, rgba(120,90,40,0.025) 3px, rgba(120,90,40,0.025) 5px), radial-gradient(ellipse at 20% 10%, rgba(140,100,40,0.05), transparent 60%)',
+            background: 'repeating-linear-gradient(2deg, transparent, transparent 3px, rgba(120,90,40,0.025) 3px, rgba(120,90,40,0.025) 5px), radial-gradient(ellipse at 20% 10%, rgba(140,100,40,0.05), transparent 60%), radial-gradient(ellipse at 85% 95%, rgba(140,100,40,0.06), transparent 50%)',
           }} />
+          {/* burnt/aged edges */}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 6, pointerEvents: 'none',
+            boxShadow: 'inset 0 0 26px rgba(90,60,20,0.25)',
+          }} />
+          {/* inner gilt rule frame */}
+          <div style={{
+            position: 'absolute', inset: 10, borderRadius: 4, pointerEvents: 'none',
+            border: '1px solid rgba(140,100,40,0.28)',
+          }} />
+          {/* wax seal */}
+          <div aria-hidden style={{
+            position: 'absolute', top: -16, right: 26, width: 52, height: 52, borderRadius: '50%',
+            background: 'radial-gradient(circle at 36% 30%, #C0432E, #7A1E10 70%)',
+            boxShadow: '0 6px 16px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.25), inset 0 -3px 6px rgba(40,5,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: '1px solid rgba(60,10,4,0.6)', zIndex: 3,
+          }}>
+            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 900, color: '#E8B88A', opacity: 0.85 }}>S</span>
+          </div>
 
           {/* prompt */}
           <div style={{ position: 'relative', marginBottom: 8 }}>
-            <div style={{
-              fontSize: 10, fontWeight: 800, letterSpacing: '0.2em', color: '#8A6E42',
-              textTransform: 'uppercase', marginBottom: 8,
-            }}>
-              {assignment?.type} · {RUBRICS[assignment?.type]?.maxScore ?? '—'} points
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, rgba(140,100,40,0.5))' }} />
+              <div style={{
+                fontSize: 10, fontWeight: 800, letterSpacing: '0.22em', color: '#8A6E42',
+                textTransform: 'uppercase', fontFamily: 'Cinzel, serif', whiteSpace: 'nowrap',
+              }}>
+                ✦ {assignment?.type} · {RUBRICS[assignment?.type]?.maxScore ?? '—'} points ✦
+              </div>
+              <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(140,100,40,0.5), transparent)' }} />
             </div>
             <p style={{
               fontFamily: 'Georgia, serif', fontSize: 15.5, fontWeight: 700, lineHeight: 1.65,
@@ -522,18 +611,21 @@ export default function WritingRoom() {
           }}>{ambientIcon}</button>
         </div>
         <motion.button
-          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+          whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+          animate={words >= 10 ? { boxShadow: [`0 6px 24px ${WR.ember}40`, `0 6px 34px ${WR.ember}75`, `0 6px 24px ${WR.ember}40`] } : {}}
+          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
           onClick={() => runPrecheck(true)}
           disabled={checking || submitting || words < 10}
           style={{
-            background: `linear-gradient(135deg, #9A5318, ${WR.ember})`,
-            border: 'none', borderRadius: 12, padding: '13px 26px',
-            color: '#FFF6E8', fontWeight: 800, fontSize: 14, fontFamily: 'Nunito, sans-serif',
+            background: `linear-gradient(180deg, #FFA04E 0%, ${WR.ember} 50%, #B05A1A 100%)`,
+            border: '1px solid rgba(255,210,150,0.5)', borderRadius: 12, padding: '13px 28px',
+            color: '#2A1404', fontWeight: 900, fontSize: 14, fontFamily: 'Nunito, sans-serif',
+            letterSpacing: '0.05em', textTransform: 'uppercase',
             cursor: words < 10 ? 'not-allowed' : 'pointer',
             opacity: words < 10 ? 0.5 : 1,
-            boxShadow: `0 6px 24px ${WR.ember}40`,
+            boxShadow: `0 6px 24px ${WR.ember}40, inset 0 1px 0 rgba(255,255,255,0.45)`,
           }}>
-          {checking ? 'Scanning…' : 'Submit for Grading →'}
+          {checking ? 'Scanning…' : '🔥 Submit for Grading'}
         </motion.button>
       </footer>
 
