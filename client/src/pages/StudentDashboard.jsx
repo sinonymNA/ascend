@@ -48,14 +48,15 @@ const CARTRIDGES = [
   {
     id: 'ap-world',
     name: 'AP World History',
-    gameName: 'Echoes of Empires',
-    tagline: 'Civilizations · Conflicts · Culture',
+    gameName: 'Summit Write',
+    tagline: 'Write · Climb · Master',
     icon: '🌍',
     subject: 'AP',
     bodyColor: '#150726',
     labelGradient: 'linear-gradient(155deg, #100520 0%, #1A0A30 55%, #140826 100%)',
     accent: '#A78BFA',
-    live: false,
+    live: true,
+    module: 'write',
   },
   {
     id: 'ap-chemistry',
@@ -343,6 +344,10 @@ export default function StudentDashboard() {
   for (const g of games) gamesBySlug[g.slug] = g;
 
   function handleCartridgeClick(cart) {
+    if (cart.module === 'write') {
+      navigate('write_home');
+      return;
+    }
     const gameData = gamesBySlug[cart.slug];
     if (!gameData) return;
     const prog = gameData.player;

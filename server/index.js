@@ -24,6 +24,7 @@ const seasonRoutes      = require('./routes/season');
 const minigameRoutes    = require('./routes/minigame');
 const devRoutes         = require('./routes/dev');
 const edumissionsRoutes = require('./routes/edumissions');
+const summitwriteRoutes = require('./routes/summitwrite');
 const initGameSocket    = require('./socket/gameSocket');
 const initDb            = require('./services/initDb');
 
@@ -56,7 +57,7 @@ app.use(
 // ── Body parsers ───────────────────────────────────────────────────────────────
 // Raw body needed for Stripe webhooks — mount BEFORE express.json()
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
-app.use(express.json());
+app.use(express.json({ limit: '8mb' }));
 
 // ── Health check ───────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
@@ -81,6 +82,7 @@ app.use('/api/season',      seasonRoutes);
 app.use('/api/minigame',    minigameRoutes);
 app.use('/api/dev',         devRoutes);
 app.use('/api/edumissions', edumissionsRoutes);
+app.use('/api/write',       summitwriteRoutes);
 
 // ── Serve client build ────────────────────────────────────────────────────────
 // Always serve if dist exists (Railway doesn't set NODE_ENV=production by default)

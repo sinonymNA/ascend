@@ -50,6 +50,10 @@ const ChroniclesMap        = React.lazy(() => import('./pages/ChroniclesMap.jsx'
 const ChroniclesBattle     = React.lazy(() => import('./pages/ChroniclesBattle.jsx'));
 const ChroniclesPrologue   = React.lazy(() => import('./pages/ChroniclesPrologue.jsx'));
 const CharacterProfile     = React.lazy(() => import('./pages/CharacterProfile.jsx'));
+const WriteHome            = React.lazy(() => import('./pages/WriteHome.jsx'));
+const WritingRoom          = React.lazy(() => import('./pages/WritingRoom.jsx'));
+const WriteResults         = React.lazy(() => import('./pages/WriteResults.jsx'));
+const WriteTeacher         = React.lazy(() => import('./pages/WriteTeacher.jsx'));
 
 const SCREEN_MAP = {
   landing:           LandingPage,
@@ -81,6 +85,10 @@ const SCREEN_MAP = {
   chronicles_battle:   ChroniclesBattle,
   chronicles_prologue: ChroniclesPrologue,
   character_profile:   CharacterProfile,
+  write_home:          WriteHome,
+  writing_room:        WritingRoom,
+  write_results:       WriteResults,
+  write_teacher:       WriteTeacher,
 };
 
 // ─── Page transition variants ─────────────────────────────────────────────────

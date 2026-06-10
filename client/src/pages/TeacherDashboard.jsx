@@ -612,6 +612,12 @@ export default function TeacherDashboard() {
               description="Build custom question sets"
               onClick={() => navigate('question_builder')}
             />
+            <QuickActionCard
+              icon="edit"
+              label="Summit Write"
+              description="AP essays — AI grading & gradebook"
+              onClick={() => navigate('write_teacher')}
+            />
           </motion.div>
         </motion.div>
 

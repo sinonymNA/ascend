@@ -454,6 +454,82 @@ CREATE INDEX IF NOT EXISTS em_enc_chapter ON em_encounters(chapter_id, order_ind
 CREATE INDEX IF NOT EXISTS em_prog_user   ON em_player_progress(user_id);
 CREATE INDEX IF NOT EXISTS em_attempts_user ON em_encounter_attempts(user_id, encounter_id);
 
+-- ── Summit Write (AP essay writing & grading) ─────────────────────────────────
+CREATE TABLE IF NOT EXISTS sw_assignments (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id      UUID REFERENCES classes(id),
+  teacher_id    UUID REFERENCES users(id),
+  title         TEXT NOT NULL,
+  type          TEXT CHECK (type IN ('SAQ','LEQ','DBQ')) NOT NULL,
+  prompt        TEXT NOT NULL,
+  context       TEXT,
+  due_date      TIMESTAMPTZ,
+  is_unit_test  BOOLEAN DEFAULT false,
+  dbq_weight    DECIMAL DEFAULT 0.6,
+  published     BOOLEAN DEFAULT false,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sw_documents (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  assignment_id UUID REFERENCES sw_assignments(id) ON DELETE CASCADE,
+  doc_number    INTEGER NOT NULL,
+  title         TEXT,
+  body          TEXT,
+  image_url     TEXT,
+  source        TEXT,
+  year          INTEGER,
+  happ_hint     TEXT,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sw_submissions (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  assignment_id  UUID REFERENCES sw_assignments(id),
+  student_id     UUID REFERENCES users(id),
+  essay_text     TEXT NOT NULL,
+  attempt_number INTEGER DEFAULT 1,
+  ai_score       INTEGER,
+  max_score      INTEGER,
+  teacher_score  INTEGER,
+  teacher_note   TEXT,
+  grading_json   JSONB,
+  submitted_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sw_drafts (
+  user_id       UUID REFERENCES users(id),
+  assignment_id UUID REFERENCES sw_assignments(id) ON DELETE CASCADE,
+  essay_text    TEXT DEFAULT '',
+  updated_at    TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (user_id, assignment_id)
+);
+
+CREATE TABLE IF NOT EXISTS sw_mcq_scores (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  assignment_id UUID REFERENCES sw_assignments(id) ON DELETE CASCADE,
+  student_id    UUID REFERENCES users(id),
+  score         DECIMAL NOT NULL,
+  entered_by    UUID REFERENCES users(id),
+  entered_at    TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (assignment_id, student_id)
+);
+
+CREATE TABLE IF NOT EXISTS sw_student_progress (
+  student_id           UUID PRIMARY KEY REFERENCES users(id),
+  xp                   INTEGER DEFAULT 0,
+  level                INTEGER DEFAULT 1,
+  streak_days          INTEGER DEFAULT 0,
+  last_submission_date DATE,
+  skills               JSONB DEFAULT '{}',
+  badges               JSONB DEFAULT '[]',
+  updated_at           TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS sw_sub_assignment ON sw_submissions(assignment_id, submitted_at);
+CREATE INDEX IF NOT EXISTS sw_sub_student    ON sw_submissions(student_id, submitted_at);
+CREATE INDEX IF NOT EXISTS sw_docs_assign    ON sw_documents(assignment_id, doc_number);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS uqm_user_set ON user_question_mastery(user_id, set_id);
 CREATE INDEX IF NOT EXISTS uqm_due      ON user_question_mastery(user_id, next_review_at);
