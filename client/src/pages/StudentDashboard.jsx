@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
@@ -217,7 +217,7 @@ function NESCartridge({ cart, gameData, playerProgress, onClick, animDelay = 0 }
 
           {/* Publisher strip */}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-            <span style={{ fontSize: 7.5, fontWeight: 900, letterSpacing: '0.22em', color: cart.accent, opacity: 0.75, fontFamily: 'Nunito, sans-serif', textTransform: 'uppercase' }}>ASCEND</span>
+            <span style={{ fontSize: 7.5, fontWeight: 900, letterSpacing: '0.22em', color: cart.accent, opacity: 0.75, fontFamily: 'Nunito, sans-serif', textTransform: 'uppercase' }}>SUMMIT</span>
             <span style={{ fontSize: 7.5, fontWeight: 900, letterSpacing: '0.15em', color: cart.accent, opacity: 0.65, fontFamily: 'Nunito, sans-serif', textTransform: 'uppercase' }}>{cart.subject}</span>
           </div>
 
@@ -325,10 +325,16 @@ function QuickPill({ icon, label, value, accent = '#C8A96E', onClick }) {
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 
 export default function StudentDashboard() {
-  const { navigate, user } = useApp();
+  const { navigate, user, setToken, setUser } = useApp();
   const [games, setGames] = useState([]);
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  const handleLogout = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    navigate('landing');
+  }, [navigate, setToken, setUser]);
 
   useEffect(() => {
     Promise.all([
@@ -402,10 +408,27 @@ export default function StudentDashboard() {
         </motion.button>
 
         <span style={{ fontFamily: 'Cinzel, serif', fontSize: 15, fontWeight: 700, color: '#C8A96E', letterSpacing: '0.08em', opacity: 0.9 }}>
-          ⚔ ASCEND
+          ⚔ SUMMIT
         </span>
 
-        <WalletPill onClick={() => navigate('shop')} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <WalletPill onClick={() => navigate('shop')} />
+          <motion.button
+            onClick={handleLogout}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            title="Log out"
+            style={{
+              background: 'rgba(200,169,110,0.1)',
+              border: '1px solid rgba(200,169,110,0.28)',
+              borderRadius: 12, padding: '8px 12px',
+              color: '#C8A96E', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em',
+              cursor: 'pointer', fontFamily: 'Nunito, sans-serif',
+            }}
+          >
+            Log Out
+          </motion.button>
+        </div>
       </nav>
 
       {/* ── Hero heading ── */}
