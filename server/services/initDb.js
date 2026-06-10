@@ -301,10 +301,6 @@ CREATE TABLE IF NOT EXISTS boost_activations (
 -- Idempotent coin grants
 ALTER TABLE user_subject_progress ADD COLUMN IF NOT EXISTS coins_awarded INTEGER DEFAULT 0;
 
--- EduMissions narrative columns
-ALTER TABLE em_games ADD COLUMN IF NOT EXISTS prologue TEXT;
-ALTER TABLE em_games ADD COLUMN IF NOT EXISTS epilogue TEXT;
-
 -- ── EduMissions RPG tables ────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS em_games (
@@ -323,6 +319,10 @@ CREATE TABLE IF NOT EXISTS em_games (
   free_chapters     INTEGER DEFAULT 1,
   created_at        TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- EduMissions narrative columns
+ALTER TABLE em_games ADD COLUMN IF NOT EXISTS prologue TEXT;
+ALTER TABLE em_games ADD COLUMN IF NOT EXISTS epilogue TEXT;
 
 CREATE TABLE IF NOT EXISTS em_districts (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -598,6 +598,7 @@ async function initDb() {
     await db.query(QUESTION_SETS);
     await seedCatalogs();
     await seedEduMissions();
+    await seedSummitWriteContent();
     console.log('✓ Database schema ready');
   } catch (err) {
     console.error('✗ Database init error:', err.message);
@@ -612,6 +613,16 @@ async function seedEduMissions() {
     console.log('✓ EduMissions Chronicles seeded');
   } catch (err) {
     console.warn('EduMissions seed skipped:', err.message);
+  }
+}
+
+async function seedSummitWriteContent() {
+  try {
+    const { seedSummitWrite } = require('./summitwrite-seed');
+    await seedSummitWrite(db);
+    console.log('✓ Summit Write sample assignments seeded');
+  } catch (err) {
+    console.warn('Summit Write seed skipped:', err.message);
   }
 }
 

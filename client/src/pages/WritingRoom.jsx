@@ -370,7 +370,7 @@ function PrecheckModal({ checks, onSubmit, onBack, submitting }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function WritingRoom() {
   const { navigate, screenParams } = useApp();
-  const { assignmentId } = screenParams;
+  const { assignmentId, previewMode } = screenParams;
 
   const [assignment, setAssignment] = useState(null);
   const [documents, setDocuments] = useState([]);
@@ -404,10 +404,11 @@ export default function WritingRoom() {
       .finally(() => setLoading(false));
   }, [assignmentId]);
 
-  // autosave every 3s when dirty
+  // autosave every 3s when dirty (skipped in teacher preview mode)
   const onChange = (val) => {
     setEssay(val);
     essayRef.current = val;
+    if (previewMode) return;
     localStorage.setItem(`wr_draft_${assignmentId}`, val);
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
@@ -480,7 +481,7 @@ export default function WritingRoom() {
         background: 'rgba(28,18,8,0.94)', backdropFilter: 'blur(12px)',
         borderBottom: `1px solid ${WR.ember}22`,
       }}>
-        <button onClick={() => navigate('write_home')} style={{
+        <button onClick={() => navigate(previewMode ? 'write_teacher' : 'write_home')} style={{
           background: 'none', border: 'none', cursor: 'pointer',
           color: 'rgba(236,217,176,0.55)', fontSize: 13, fontWeight: 700, flexShrink: 0,
         }}>← Back</button>
@@ -488,7 +489,7 @@ export default function WritingRoom() {
           fontFamily: 'Cinzel, serif', fontSize: 13.5, fontWeight: 700, color: WR.cream,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
-          {assignment?.title}
+          {previewMode ? '👁 Preview · ' : ''}{assignment?.title}
         </span>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           <button onClick={() => setRubricOpen(true)} style={{
@@ -610,23 +611,30 @@ export default function WritingRoom() {
             fontSize: 14, padding: '4px 9px', cursor: 'pointer', color: WR.cream,
           }}>{ambientIcon}</button>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-          animate={words >= 10 ? { boxShadow: [`0 6px 24px ${WR.ember}40`, `0 6px 34px ${WR.ember}75`, `0 6px 24px ${WR.ember}40`] } : {}}
-          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-          onClick={() => runPrecheck(true)}
-          disabled={checking || submitting || words < 10}
-          style={{
-            background: `linear-gradient(180deg, #FFA04E 0%, ${WR.ember} 50%, #B05A1A 100%)`,
-            border: '1px solid rgba(255,210,150,0.5)', borderRadius: 12, padding: '13px 28px',
-            color: '#2A1404', fontWeight: 900, fontSize: 14, fontFamily: 'Nunito, sans-serif',
-            letterSpacing: '0.05em', textTransform: 'uppercase',
-            cursor: words < 10 ? 'not-allowed' : 'pointer',
-            opacity: words < 10 ? 0.5 : 1,
-            boxShadow: `0 6px 24px ${WR.ember}40, inset 0 1px 0 rgba(255,255,255,0.45)`,
-          }}>
-          {checking ? 'Scanning…' : '🔥 Submit for Grading'}
-        </motion.button>
+        {previewMode ? (
+          <span style={{
+            fontFamily: 'Cinzel, serif', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.14em',
+            color: WR.ember, textTransform: 'uppercase',
+          }}>👁 Teacher preview — submissions disabled</span>
+        ) : (
+          <motion.button
+            whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+            animate={words >= 10 ? { boxShadow: [`0 6px 24px ${WR.ember}40`, `0 6px 34px ${WR.ember}75`, `0 6px 24px ${WR.ember}40`] } : {}}
+            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+            onClick={() => runPrecheck(true)}
+            disabled={checking || submitting || words < 10}
+            style={{
+              background: `linear-gradient(180deg, #FFA04E 0%, ${WR.ember} 50%, #B05A1A 100%)`,
+              border: '1px solid rgba(255,210,150,0.5)', borderRadius: 12, padding: '13px 28px',
+              color: '#2A1404', fontWeight: 900, fontSize: 14, fontFamily: 'Nunito, sans-serif',
+              letterSpacing: '0.05em', textTransform: 'uppercase',
+              cursor: words < 10 ? 'not-allowed' : 'pointer',
+              opacity: words < 10 ? 0.5 : 1,
+              boxShadow: `0 6px 24px ${WR.ember}40, inset 0 1px 0 rgba(255,255,255,0.45)`,
+            }}>
+            {checking ? 'Scanning…' : '🔥 Submit for Grading'}
+          </motion.button>
+        )}
       </footer>
 
       <DocsPanel documents={documents} open={docsOpen} onClose={() => setDocsOpen(false)} isMobile={isMobile} />

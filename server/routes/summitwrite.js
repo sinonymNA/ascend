@@ -161,15 +161,49 @@ router.post('/assignments', requireAuth, async (req, res) => {
 router.patch('/assignments/:id', requireAuth, async (req, res) => {
   const user = req.dbUser;
   if (!user || user.role !== 'teacher') return res.status(403).json({ error: 'Teachers only' });
-  const { published } = req.body;
+  const { published, title, prompt, context, dueDate, isUnitTest, dbqWeight } = req.body;
   try {
     await db.query(
-      'UPDATE sw_assignments SET published=COALESCE($3, published) WHERE id=$1 AND teacher_id=$2',
-      [req.params.id, user.id, typeof published === 'boolean' ? published : null]
+      `UPDATE sw_assignments SET
+         published    = COALESCE($3, published),
+         title        = COALESCE($4, title),
+         prompt       = COALESCE($5, prompt),
+         context      = COALESCE($6, context),
+         due_date     = COALESCE($7, due_date),
+         is_unit_test = COALESCE($8, is_unit_test),
+         dbq_weight   = COALESCE($9, dbq_weight)
+       WHERE id=$1 AND teacher_id=$2`,
+      [req.params.id, user.id,
+       typeof published === 'boolean' ? published : null,
+       title || null, prompt || null, context || null,
+       dueDate || null, typeof isUnitTest === 'boolean' ? isUnitTest : null,
+       dbqWeight ?? null]
     );
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: 'Failed to update assignment' });
+  }
+});
+
+// ── DELETE /api/write/assignments/:id — remove an unpublished/empty assignment
+router.delete('/assignments/:id', requireAuth, async (req, res) => {
+  const user = req.dbUser;
+  if (!user || user.role !== 'teacher') return res.status(403).json({ error: 'Teachers only' });
+  try {
+    const { rows: subCount } = await db.query(
+      'SELECT COUNT(*)::int AS n FROM sw_submissions WHERE assignment_id=$1', [req.params.id]
+    );
+    if (subCount[0].n > 0) {
+      return res.status(409).json({ error: 'Cannot delete an assignment with student submissions. Unpublish it instead.' });
+    }
+    const { rows } = await db.query(
+      'DELETE FROM sw_assignments WHERE id=$1 AND teacher_id=$2 RETURNING id',
+      [req.params.id, user.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Not found' });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete assignment' });
   }
 });
 

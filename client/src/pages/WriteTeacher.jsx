@@ -22,6 +22,11 @@ const input = {
 };
 const label = { fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', color: C.muted, textTransform: 'uppercase', display: 'block', marginBottom: 6 };
 
+const pillBtn = (color) => ({
+  background: `${color}14`, border: `1px solid ${color}45`, borderRadius: 8,
+  color, fontSize: 11.5, fontWeight: 800, padding: '6px 12px', cursor: 'pointer', flexShrink: 0,
+});
+
 // ── Document card editor (with drag-drop image upload → data URL) ────────────
 function DocEditor({ doc, index, onChange, onRemove }) {
   const fileRef = useRef(null);
@@ -403,6 +408,92 @@ function SubmissionDetail({ id, onClose, onSaved }) {
   );
 }
 
+// ── Edit assignment modal (teacher) ───────────────────────────────────────────
+function EditAssignmentModal({ assignment, onClose, onSaved }) {
+  const [title, setTitle] = useState(assignment.title || '');
+  const [prompt, setPrompt] = useState(assignment.prompt || '');
+  const [context, setContext] = useState(assignment.context || '');
+  const [dueDate, setDueDate] = useState(assignment.due_date ? assignment.due_date.slice(0, 10) : '');
+  const [isUnitTest, setIsUnitTest] = useState(!!assignment.is_unit_test);
+  const [dbqWeight, setDbqWeight] = useState(assignment.dbq_weight != null ? parseFloat(assignment.dbq_weight) : 0.6);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    try {
+      await api.patch(`/api/write/assignments/${assignment.id}`, {
+        title, prompt, context, dueDate: dueDate || null, isUnitTest, dbqWeight,
+      });
+      onSaved();
+      onClose();
+    } catch (_) {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(6,8,12,0.85)', backdropFilter: 'blur(5px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+      }}>
+      <motion.div initial={{ scale: 0.94, y: 16 }} animate={{ scale: 1, y: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: C.card, border: `1px solid ${C.border}`, borderRadius: 18,
+          width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto', padding: '24px 24px',
+          display: 'flex', flexDirection: 'column', gap: 14,
+        }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 16, fontWeight: 700, color: C.gold }}>Edit Assignment</span>
+          <button onClick={onClose} style={{
+            background: 'rgba(240,237,230,0.07)', border: 'none', borderRadius: 8, cursor: 'pointer',
+            color: C.mid, fontSize: 13, fontWeight: 800, padding: '5px 12px',
+          }}>✕</button>
+        </div>
+
+        <div>
+          <span style={label}>Title</span>
+          <input style={input} value={title} onChange={(e) => setTitle(e.target.value)} />
+        </div>
+        <div>
+          <span style={label}>Prompt (shown to students)</span>
+          <textarea style={{ ...input, resize: 'vertical' }} rows={5} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+        </div>
+        <div>
+          <span style={label}>Background context (optional)</span>
+          <textarea style={{ ...input, resize: 'vertical' }} rows={3} value={context} onChange={(e) => setContext(e.target.value)} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div>
+            <span style={label}>Due date</span>
+            <input style={input} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </div>
+        </div>
+        <div style={{ background: C.elevated, borderRadius: 12, padding: '14px 16px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+            <input type="checkbox" checked={isUnitTest} onChange={(e) => setIsUnitTest(e.target.checked)} />
+            <span style={{ fontSize: 13.5, fontWeight: 800, color: C.text }}>Count toward unit grade</span>
+          </label>
+          {isUnitTest && (
+            <div style={{ marginTop: 12 }}>
+              <span style={{ ...label, marginBottom: 8 }}>Essay weight: {Math.round(dbqWeight * 100)}% · MCQ weight: {Math.round((1 - dbqWeight) * 100)}%</span>
+              <input type="range" min="0.1" max="0.9" step="0.05" value={dbqWeight}
+                onChange={(e) => setDbqWeight(parseFloat(e.target.value))} style={{ width: '100%' }} />
+            </div>
+          )}
+        </div>
+        <button onClick={save} disabled={saving || !title.trim() || !prompt.trim()} style={{
+          width: '100%', padding: '12px', borderRadius: 10, border: 'none', cursor: 'pointer',
+          background: `linear-gradient(135deg, #8B6914, ${C.gold})`, color: '#1C1208', fontWeight: 800, fontSize: 14,
+          opacity: saving || !title.trim() || !prompt.trim() ? 0.6 : 1,
+        }}>{saving ? 'Saving…' : 'Save changes'}</button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ── Gradebook tab ─────────────────────────────────────────────────────────────
 function Gradebook({ assignments }) {
   const [selected, setSelected] = useState('');
@@ -410,7 +501,7 @@ function Gradebook({ assignments }) {
   const [analytics, setAnalytics] = useState(null);
   const [mcqEdit, setMcqEdit] = useState({});
 
-  const unitTests = assignments;
+  const gradableAssignments = assignments.slice().sort((a, b) => (b.is_unit_test ? 1 : 0) - (a.is_unit_test ? 1 : 0));
 
   function load(id) {
     setSelected(id);
@@ -457,7 +548,7 @@ function Gradebook({ assignments }) {
     <div>
       <select style={{ ...input, marginBottom: 16 }} value={selected} onChange={(e) => load(e.target.value)}>
         <option value="">Select an assignment…</option>
-        {unitTests.map((a) => <option key={a.id} value={a.id}>{a.title} ({a.type}{a.is_unit_test ? ' · unit test' : ''})</option>)}
+        {gradableAssignments.map((a) => <option key={a.id} value={a.id}>{a.title} ({a.type}{a.is_unit_test ? ' · unit test' : ''})</option>)}
       </select>
 
       {data && (
@@ -568,6 +659,8 @@ export default function WriteTeacher() {
   const [classes, setClasses] = useState([]);
   const [building, setBuilding] = useState(false);
   const [detail, setDetail] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const load = () => {
     api.get('/api/write/assignments').then((d) => setAssignments(d.assignments || [])).catch(() => {});
@@ -657,7 +750,7 @@ export default function WriteTeacher() {
                   background: 'linear-gradient(165deg, rgba(36,53,72,0.85), rgba(22,33,48,0.95))',
                   border: `1px solid ${C.border}`, borderRadius: 12,
                   padding: '14px 16px', marginBottom: 10,
-                  display: 'flex', alignItems: 'center', gap: 12,
+                  display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
                   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 8px 22px rgba(0,0,0,0.35)',
                 }}>
                   <span style={{
@@ -668,22 +761,39 @@ export default function WriteTeacher() {
                     textShadow: `0 0 10px ${C.gold}70`,
                     boxShadow: `0 0 12px ${C.gold}20`,
                   }}>{a.type}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: 120 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 800, color: C.text }}>{a.title}</div>
                     <div style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>
                       {a.class_name || 'All students'} · {a.submission_count} submissions
                       {a.is_unit_test && ' · unit test'}
                     </div>
                   </div>
-                  {!a.published ? (
-                    <button onClick={async () => { await api.patch(`/api/write/assignments/${a.id}`, { published: true }); load(); }}
-                      style={{
-                        background: `${C.pine}14`, border: `1px solid ${C.pine}45`, borderRadius: 8,
-                        color: C.pine, fontSize: 11.5, fontWeight: 800, padding: '6px 12px', cursor: 'pointer', flexShrink: 0,
-                      }}>Publish</button>
-                  ) : (
-                    <span style={{ fontSize: 11, color: C.pine, fontWeight: 800, flexShrink: 0 }}>● Live</span>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', marginLeft: 'auto' }}>
+                    {!a.published ? (
+                      <button onClick={async () => { await api.patch(`/api/write/assignments/${a.id}`, { published: true }); load(); }}
+                        style={pillBtn(C.pine)}>Publish</button>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: 11, color: C.pine, fontWeight: 800, flexShrink: 0 }}>● Live</span>
+                        <button onClick={async () => { await api.patch(`/api/write/assignments/${a.id}`, { published: false }); load(); }}
+                          style={pillBtn(C.muted)}>Unpublish</button>
+                      </>
+                    )}
+                    <button onClick={() => setEditing(a)} style={pillBtn(C.gold)}>Edit</button>
+                    <button onClick={() => navigate('writing_room', { assignmentId: a.id, previewMode: true })}
+                      style={pillBtn(C.mid)}>Preview</button>
+                    {a.submission_count === 0 && (
+                      confirmDelete === a.id ? (
+                        <>
+                          <button onClick={async () => { await api.delete(`/api/write/assignments/${a.id}`); setConfirmDelete(null); load(); }}
+                            style={pillBtn(C.sunset)}>Confirm?</button>
+                          <button onClick={() => setConfirmDelete(null)} style={pillBtn(C.muted)}>Cancel</button>
+                        </>
+                      ) : (
+                        <button onClick={() => setConfirmDelete(a.id)} style={pillBtn(C.sunset)}>Delete</button>
+                      )
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -729,6 +839,7 @@ export default function WriteTeacher() {
 
       <AnimatePresence>
         {detail && <SubmissionDetail id={detail} onClose={() => setDetail(null)} onSaved={load} />}
+        {editing && <EditAssignmentModal assignment={editing} onClose={() => setEditing(null)} onSaved={load} />}
       </AnimatePresence>
     </div>
   );

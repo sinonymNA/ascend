@@ -4,7 +4,7 @@
 
 const Anthropic = require('@anthropic-ai/sdk');
 
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-sonnet-4-6';
 const hasKey = !!process.env.ANTHROPIC_API_KEY;
 const client = hasKey ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) : null;
 
@@ -41,6 +41,8 @@ const RUBRICS = {
 
 const GRADER_SYSTEM = `You are an AP World History exam grader trained on the College Board's 2025 AP World History: Modern rubric. Grade essays with precision, consistency, and genuine pedagogical care.
 
+This course covers world history from c. 1200 CE to the present, organized into Units 1-9 (the Global Tapestry, Networks of Exchange, Land-Based Empires, Transoceanic Connections, Revolutions, Consequences of Industrialization, Global Conflict, Cold War & Decolonization, Globalization). Apply the historical thinking skills the College Board emphasizes: contextualization (situating an argument in broader developments before/during/after the period), comparison, causation, and continuity and change over time (CCOT). Evaluate evidence for specificity (named individuals, states, empires, treaties, events, movements, and approximate dates) rather than generic statements. For DBQ responses, apply HAPP analysis (Historical context, Audience, Purpose, Point of view) when checking whether a student has explained a document's sourcing — a student does not need the exact word "HAPP," but must connect a document's origin or perspective to their argument, not just summarize its content.
+
 For each essay, return ONLY valid JSON in this exact structure:
 
 {
@@ -71,12 +73,43 @@ DBQ rubric criteria keys: contextualization (1pt), thesis (1pt), evidence_docume
 LEQ rubric criteria keys: contextualization (1pt), thesis (1pt), evidence (up to 2pts), reasoning (1pt), complexity (1pt)
 SAQ rubric criteria keys: part_a (1pt), part_b (1pt), part_c (1pt)
 
-Be exact. Do not inflate scores. If a criterion is not clearly earned, mark it not earned. Students grow more from honest grading than from generous grading.`;
+Be exact. Do not inflate scores. If a criterion is not clearly earned, mark it not earned. Students grow more from honest grading than from generous grading.
+
+Common scoring pitfalls to watch for: (1) a thesis that merely restates the prompt without a defensible line of reasoning does not earn the thesis point; (2) contextualization must describe a broader historical situation/process relevant to the prompt — a single date or term is not enough; (3) for DBQ evidence_documents, the first point requires accurate use of content from at least three documents, the second requires using documents as evidence to support an argument (not just listing them), and the third (sourcing/HAPP) requires explanation of point of view, purpose, historical situation, or audience for at least three documents tied to the argument; (4) complexity is not earned by a single transition phrase — it requires sustained nuance (e.g., explaining exceptions, corroborating with an additional perspective, or explaining both continuity and change) integrated into the argument as a whole.`;
 
 function extractJson(text) {
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) return null;
   try { return JSON.parse(match[0]); } catch (_) { return null; }
+}
+
+// Validate a single criterion object against its rubric definition.
+function validateCriterion(def, c) {
+  if (!c || typeof c !== 'object') return false;
+  if (typeof c.points !== 'number' || c.points < 0 || c.points > def.points) return false;
+  if (typeof c.maxPoints !== 'number' || c.maxPoints !== def.points) return false;
+  if (typeof c.earned !== 'boolean') return false;
+  if (typeof c.feedback !== 'string' || !c.feedback.trim()) return false;
+  return true;
+}
+
+// Validate that parsed.breakdown has a well-formed entry for every rubric criterion.
+function validateBreakdown(essayType, parsed) {
+  const rubric = RUBRICS[essayType] || RUBRICS.LEQ;
+  const breakdown = parsed?.breakdown;
+  if (!breakdown || typeof breakdown !== 'object') return false;
+  for (const [key, def] of Object.entries(rubric.criteria)) {
+    if (!validateCriterion(def, breakdown[key])) return false;
+  }
+  return true;
+}
+
+// Recompute score/maxScore from the (validated) breakdown so totals can never drift.
+function normalizeScore(essayType, parsed) {
+  const rubric = RUBRICS[essayType] || RUBRICS.LEQ;
+  parsed.score = Object.values(parsed.breakdown).reduce((sum, c) => sum + (c.points || 0), 0);
+  parsed.maxScore = rubric.maxScore;
+  return parsed;
 }
 
 // ── Heuristic fallback grader (no API key) ────────────────────────────────────
@@ -197,11 +230,17 @@ async function gradeEssay({ essayType, prompt, essayText, documents = [], attemp
       }],
     });
     const parsed = extractJson(response.content[0].text);
-    if (!parsed || typeof parsed.score !== 'number') return heuristicGrade(essayType, essayText, documents);
+    if (!parsed || typeof parsed.score !== 'number' || !validateBreakdown(essayType, parsed)) {
+      console.error('write-grader.gradeEssay: malformed AI response, falling back to heuristic', {
+        essayType, hasParsed: !!parsed, hasBreakdown: !!parsed?.breakdown,
+      });
+      return heuristicGrade(essayType, essayText, documents);
+    }
+    normalizeScore(essayType, parsed);
     parsed.grader = 'claude';
     return parsed;
   } catch (err) {
-    console.error('write-grader.gradeEssay error:', err.message);
+    console.error(`write-grader.gradeEssay error (essayType=${essayType}):`, err.message);
     return heuristicGrade(essayType, essayText, documents);
   }
 }
@@ -228,9 +267,27 @@ async function precheck({ essayType, prompt, essayText }) {
       }],
     });
     const match = response.content[0].text.match(/\[[\s\S]*\]/);
-    return match ? JSON.parse(match[0]) : [];
+    if (!match) throw new Error('precheck: no JSON array found in response');
+    let arr;
+    try {
+      arr = JSON.parse(match[0]);
+    } catch (parseErr) {
+      throw new Error(`precheck: JSON.parse failed — ${parseErr.message}`);
+    }
+    if (!Array.isArray(arr)) throw new Error('precheck: response is not an array');
+
+    const validKeys = new Set(Object.keys((RUBRICS[essayType] || RUBRICS.LEQ).criteria));
+    const validStatuses = new Set(['ok', 'warn', 'missing']);
+    const filtered = arr.filter((item) =>
+      item && typeof item === 'object' &&
+      validKeys.has(item.criterion) &&
+      validStatuses.has(item.status) &&
+      typeof item.note === 'string'
+    );
+    if (!filtered.length) throw new Error('precheck: no valid criterion entries in response');
+    return filtered;
   } catch (err) {
-    console.error('write-grader.precheck error:', err.message);
+    console.error(`write-grader.precheck error (essayType=${essayType}):`, err.message);
     const g = heuristicGrade(essayType, essayText, []);
     return Object.entries(g.breakdown).map(([k, v]) => ({
       criterion: k,
@@ -295,9 +352,14 @@ async function regradeCriterion({ essayType, prompt, originalEssay, criterion, r
         content: `A student is revising ONE criterion of their ${essayType}: "${criterion}" (worth ${def.points}pt).\n\nPROMPT: ${prompt}\n\nORIGINAL ESSAY (for context):\n${originalEssay}\n\nYOUR PREVIOUS FEEDBACK ON THIS CRITERION:\n${previousFeedback || 'n/a'}\n\nREVISED PASSAGE:\n${revisedPassage}\n\nReturn ONLY JSON: {"earned": <bool>, "points": <int>, "maxPoints": ${def.points}, "feedback": "<2 sentences on the revision>"}`,
       }],
     });
-    return extractJson(response.content[0].text);
+    const parsed = extractJson(response.content[0].text);
+    if (!validateCriterion(def, parsed)) {
+      console.error(`write-grader.regradeCriterion: malformed AI response (essayType=${essayType}, criterion=${criterion})`);
+      return null;
+    }
+    return parsed;
   } catch (err) {
-    console.error('write-grader.regradeCriterion error:', err.message);
+    console.error(`write-grader.regradeCriterion error (essayType=${essayType}, criterion=${criterion}):`, err.message);
     return null;
   }
 }
