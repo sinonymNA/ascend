@@ -11,18 +11,21 @@ function parseSaqPrompt(prompt) {
   if (!prompt?.includes('**Part A') && !prompt?.includes('**Part B')) return null;
 
   const parts = {};
-  const partRegex = /\*\*Part\s+([A-C])\s*—\s*([^*]+)\*\*\s*\n+([\s\S]*?)(?=\n---\n\*\*Part|---\n##|$)/g;
+  // Split by "---" separators, then parse each section
+  const sections = prompt.split('\n---\n');
 
-  let match;
-  while ((match = partRegex.exec(prompt)) !== null) {
-    const letter = match[1]; // A, B, or C
-    const title = match[2].trim();
-    const text = match[3].trim();
-    parts[letter] = { title, text };
+  for (const section of sections) {
+    const match = section.match(/\*\*Part\s+([A-C])\s*[—-]\s*([^\*]+)\*\*\s*\n\n([\s\S]*)/);
+    if (match) {
+      const letter = match[1];
+      const title = match[2].trim();
+      const text = match[3].trim();
+      parts[letter] = { title, text };
+    }
   }
 
   // Extract context section
-  const contextMatch = prompt.match(/---\n## Historical Context\n([\s\S]+?)$/);
+  const contextMatch = prompt.match(/## Historical Context\s*\n\n?([\s\S]+?)$/);
   const context = contextMatch ? contextMatch[1].trim() : null;
 
   // If we parsed all 3 parts, return structured data
