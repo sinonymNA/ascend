@@ -14,15 +14,33 @@ const ASSIGNMENTS = [
     is_unit_test: false,
     dbq_weight: 0.6,
     context: `Between 1450 and 1750, expanding maritime technology and the arrival of European powers in the Indian Ocean and Atlantic transformed long-distance trade. Existing networks — the Indian Ocean trade world, the trans-Saharan caravan routes, and the Silk Roads — did not disappear, but they were reshaped by new players, new commodities, and new forms of state-sponsored commercial competition.`,
-    prompt: `Use the image below and your knowledge of world history to answer parts a, b, and c.
+    prompt: `Use the image below and your knowledge of world history to answer all three parts using complete sentences. An outline or bulleted list alone is not acceptable.
 
 **[STIMULUS: A 17th-century Dutch engraving depicting a fortified VOC (Dutch East India Company) trading post on the coast of Java, with Dutch ships at anchor in the harbor, local Javanese merchants and porters loading cargo on the docks, and the company's warehouse complex flying the VOC flag in the background.]**
 
-a) Describe ONE way that the image illustrates European commercial activity in maritime Asia in the period 1450–1750.
+---
 
-b) Explain ONE way in which a specific Asian state or society responded to European commercial activity in the period 1450–1750.
+**Part A — European Commercial Activity**
 
-c) Explain ONE way in which the arrival of European trading companies changed long-distance trade networks in the period 1450–1750, in comparison to trade networks before 1450.`,
+Briefly describe **one specific way** that the image illustrates European commercial activity in maritime Asia in the period 1450–1750.
+
+---
+
+**Part B — Asian State Response**
+
+Briefly explain **one specific way** in which a specific Asian state or society responded to European commercial activity in the period 1450–1750.
+
+---
+
+**Part C — Trade Network Change**
+
+Briefly explain **one specific way** in which the arrival of European trading companies changed long-distance trade networks in the period 1450–1750, in comparison to trade networks before 1450.
+
+---
+
+## Historical Context
+
+Consider the role of the Dutch East India Company (VOC), Portuguese maritime expansion, and responses from established Asian trading networks (Indian Ocean trade routes, Gujarati merchants, Southeast Asian sultanates, Ming China). Your answer must identify a specific historical example and explain how it supports your response.`,
     documents: [],
   },
   {

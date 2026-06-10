@@ -6,6 +6,32 @@ import api from '../lib/api.js';
 import { RUBRICS } from '../lib/rubrics.js';
 import { Vignette, ParticleField } from '../components/write/fx.jsx';
 
+// Parse SAQ prompt into structured parts (A, B, C) and optional context section
+function parseSaqPrompt(prompt) {
+  if (!prompt?.includes('**Part A') && !prompt?.includes('**Part B')) return null;
+
+  const parts = {};
+  const partRegex = /\*\*Part\s+([A-C])\s*—\s*([^*]+)\*\*\s*\n+([\s\S]*?)(?=\n---\n\*\*Part|---\n##|$)/g;
+
+  let match;
+  while ((match = partRegex.exec(prompt)) !== null) {
+    const letter = match[1]; // A, B, or C
+    const title = match[2].trim();
+    const text = match[3].trim();
+    parts[letter] = { title, text };
+  }
+
+  // Extract context section
+  const contextMatch = prompt.match(/---\n## Historical Context\n([\s\S]+?)$/);
+  const context = contextMatch ? contextMatch[1].trim() : null;
+
+  // If we parsed all 3 parts, return structured data
+  if (parts.A && parts.B && parts.C) {
+    return { parts, context };
+  }
+  return null;
+}
+
 // ── The Writing Room — warm, cozy, candlelit essay editor ─────────────────────
 
 const WR = {
@@ -13,6 +39,109 @@ const WR = {
   ember: '#E8853A', emberSoft: '#3D1F0A', cream: '#ECD9B0', oak: '#4A2E12',
   success: '#2D6A4F', warning: '#B8860B', error: '#8B1A1A',
 };
+
+// SAQ answer box component
+function SaqPartBox({ letter, title, text, answerText, onChange }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{
+        fontFamily: 'Cinzel, serif',
+        fontSize: 14,
+        fontWeight: 700,
+        color: WR.ink,
+        marginBottom: 8,
+      }}>
+        <span style={{ color: '#8A6E42' }}>Part {letter}</span> — {title}
+      </div>
+      <p style={{
+        fontSize: 13.5,
+        lineHeight: 1.7,
+        color: WR.ink,
+        margin: '0 0 12px',
+        fontFamily: 'Georgia, serif',
+      }}>
+        {text}
+      </p>
+      <textarea
+        value={answerText}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={`Your response for Part ${letter}…`}
+        spellCheck
+        style={{
+          width: '100%',
+          minHeight: 120,
+          boxSizing: 'border-box',
+          background: 'rgba(255, 255, 255, 0.4)',
+          border: `1px solid ${WR.ink}22`,
+          borderRadius: 4,
+          padding: 12,
+          fontFamily: 'Nunito, sans-serif',
+          fontSize: 16,
+          lineHeight: 1.7,
+          color: WR.ink,
+          resize: 'vertical',
+        }}
+      />
+      <div style={{ height: 1, background: 'rgba(26,15,8,0.12)', margin: '16px 0' }} />
+    </div>
+  );
+}
+
+// SAQ prompt renderer with separated parts
+function SaqPromptRenderer({ saqStructure, answers, onAnswerChange }) {
+  const [contextExpanded, setContextExpanded] = useState(false);
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, rgba(140,100,40,0.5))' }} />
+        <div style={{
+          fontSize: 10, fontWeight: 800, letterSpacing: '0.22em', color: '#8A6E42',
+          textTransform: 'uppercase', fontFamily: 'Cinzel, serif', whiteSpace: 'nowrap',
+        }}>
+          ✦ SAQ · 3 points ✦
+        </div>
+        <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(140,100,40,0.5), transparent)' }} />
+      </div>
+
+      {/* Parts */}
+      {['A', 'B', 'C'].map((letter) => (
+        <SaqPartBox
+          key={letter}
+          letter={letter}
+          title={saqStructure.parts[letter].title}
+          text={saqStructure.parts[letter].text}
+          answerText={answers[letter] || ''}
+          onChange={(val) => onAnswerChange(letter, val)}
+        />
+      ))}
+
+      {/* Context section (expandable) */}
+      {saqStructure.context && (
+        <div style={{ marginTop: 14 }}>
+          <button
+            onClick={() => setContextExpanded(!contextExpanded)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 12, fontWeight: 800, color: WR.ember,
+              padding: '6px 0', display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+            {contextExpanded ? '▼' : '▶'} Historical Context
+          </button>
+          {contextExpanded && (
+            <div style={{
+              fontSize: 13, lineHeight: 1.7, color: '#5A4326', fontStyle: 'italic',
+              margin: '10px 0 0', padding: '12px 14px',
+              background: 'rgba(232,133,58,0.06)', borderLeft: `2px solid ${WR.ember}40`,
+            }}>
+              {saqStructure.context}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
 
 // ── Ambient audio (WebAudio noise — no audio files needed) ───────────────────
 function useAmbient() {
@@ -375,6 +504,8 @@ export default function WritingRoom() {
   const [assignment, setAssignment] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [essay, setEssay] = useState('');
+  const [saqAnswers, setSaqAnswers] = useState({ A: '', B: '', C: '' });
+  const [saqStructure, setSaqStructure] = useState(null);
   const [loading, setLoading] = useState(true);
   const [savedAt, setSavedAt] = useState(null);
   const [docsOpen, setDocsOpen] = useState(false);
@@ -396,9 +527,28 @@ export default function WritingRoom() {
       .then((data) => {
         setAssignment(data.assignment);
         setDocuments(data.documents || []);
+
+        // Check if this is a structured SAQ
+        const parsed = parseSaqPrompt(data.assignment.prompt);
+        setSaqStructure(parsed);
+
         const draft = data.draft?.essay_text || localStorage.getItem(`wr_draft_${assignmentId}`) || '';
-        setEssay(draft);
-        essayRef.current = draft;
+
+        if (parsed && draft) {
+          // Parse draft as a|b|c format and restore answers
+          const parts = draft.split('\n\n');
+          const ans = { A: '', B: '', C: '' };
+          for (const part of parts) {
+            const match = part.match(/^[a-c]\)\s*(.*)$/is);
+            if (match) {
+              ans[match[0][0].toUpperCase()] = match[1];
+            }
+          }
+          setSaqAnswers(ans);
+        } else {
+          setEssay(draft);
+          essayRef.current = draft;
+        }
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -418,11 +568,32 @@ export default function WritingRoom() {
     }, 3000);
   };
 
+  // SAQ answer change handler
+  const onSaqAnswerChange = (letter, val) => {
+    const updated = { ...saqAnswers, [letter]: val };
+    setSaqAnswers(updated);
+
+    if (previewMode) return;
+
+    // Combine answers for storage: "a) ...\n\nb) ...\n\nc) ..."
+    const combined = `a) ${updated.A}\n\nb) ${updated.B}\n\nc) ${updated.C}`;
+    essayRef.current = combined;
+    localStorage.setItem(`wr_draft_${assignmentId}`, combined);
+
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      api.put(`/api/write/drafts/${assignmentId}`, { essayText: essayRef.current })
+        .then(() => setSavedAt(Date.now()))
+        .catch(() => {});
+    }, 3000);
+  };
+
   async function runPrecheck(openModal = false) {
-    if (checking || essay.trim().length < 20) return;
+    const text = saqStructure ? essayRef.current : essay;
+    if (checking || text.trim().length < 20) return;
     setChecking(true);
     try {
-      const { checks } = await api.post('/api/write/precheck', { assignmentId, essayText: essay });
+      const { checks } = await api.post('/api/write/precheck', { assignmentId, essayText: text });
       setPrechecks(checks);
       if (openModal) setShowChecklist(true);
     } catch (e) {
@@ -436,7 +607,8 @@ export default function WritingRoom() {
     if (submitting) return;
     setSubmitting(true);
     try {
-      const result = await api.post('/api/write/grade', { assignmentId, essayText: essay });
+      const essayText = saqStructure ? essayRef.current : essay;
+      const result = await api.post('/api/write/grade', { assignmentId, essayText });
       localStorage.removeItem(`wr_draft_${assignmentId}`);
       navigate('write_results', { submissionId: result.submissionId, justGraded: true, award: result.award });
     } catch (e) {
@@ -446,7 +618,8 @@ export default function WritingRoom() {
     }
   }
 
-  const words = essay.trim() ? essay.trim().split(/\s+/).length : 0;
+  const textForWordCount = saqStructure ? essayRef.current : essay;
+  const words = textForWordCount.trim() ? textForWordCount.trim().split(/\s+/).length : 0;
   const ambientIcon = { off: '○', fire: '🔥', rain: '🌧️', library: '📚' }[ambient];
 
   if (loading) return (
@@ -545,46 +718,56 @@ export default function WritingRoom() {
             <span style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 900, color: '#E8B88A', opacity: 0.85 }}>S</span>
           </div>
 
-          {/* prompt */}
-          <div style={{ position: 'relative', marginBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-              <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, rgba(140,100,40,0.5))' }} />
-              <div style={{
-                fontSize: 10, fontWeight: 800, letterSpacing: '0.22em', color: '#8A6E42',
-                textTransform: 'uppercase', fontFamily: 'Cinzel, serif', whiteSpace: 'nowrap',
-              }}>
-                ✦ {assignment?.type} · {RUBRICS[assignment?.type]?.maxScore ?? '—'} points ✦
-              </div>
-              <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(140,100,40,0.5), transparent)' }} />
-            </div>
-            <p style={{
-              fontFamily: 'Georgia, serif', fontSize: 15.5, fontWeight: 700, lineHeight: 1.65,
-              color: WR.ink, margin: 0,
-            }}>
-              {assignment?.prompt}
-            </p>
-            {assignment?.context && (
-              <p style={{ fontSize: 13, lineHeight: 1.7, color: '#5A4326', fontStyle: 'italic', margin: '10px 0 0' }}>
-                {assignment.context}
-              </p>
+          {/* prompt or SAQ renderer */}
+          <div style={{ position: 'relative', marginBottom: saqStructure ? 0 : 8 }}>
+            {saqStructure ? (
+              <SaqPromptRenderer
+                saqStructure={saqStructure}
+                answers={saqAnswers}
+                onAnswerChange={onSaqAnswerChange}
+              />
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, rgba(140,100,40,0.5))' }} />
+                  <div style={{
+                    fontSize: 10, fontWeight: 800, letterSpacing: '0.22em', color: '#8A6E42',
+                    textTransform: 'uppercase', fontFamily: 'Cinzel, serif', whiteSpace: 'nowrap',
+                  }}>
+                    ✦ {assignment?.type} · {RUBRICS[assignment?.type]?.maxScore ?? '—'} points ✦
+                  </div>
+                  <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(140,100,40,0.5), transparent)' }} />
+                </div>
+                <p style={{
+                  fontFamily: 'Georgia, serif', fontSize: 15.5, fontWeight: 700, lineHeight: 1.65,
+                  color: WR.ink, margin: 0,
+                }}>
+                  {assignment?.prompt}
+                </p>
+                {assignment?.context && (
+                  <p style={{ fontSize: 13, lineHeight: 1.7, color: '#5A4326', fontStyle: 'italic', margin: '10px 0 0' }}>
+                    {assignment.context}
+                  </p>
+                )}
+
+                <div style={{ height: 1, background: 'rgba(26,15,8,0.18)', margin: '18px 0' }} />
+
+                {/* essay area */}
+                <textarea
+                  value={essay}
+                  onChange={(e) => onChange(e.target.value)}
+                  placeholder="Dip your quill and begin…"
+                  spellCheck
+                  style={{
+                    width: '100%', minHeight: 500, boxSizing: 'border-box',
+                    background: 'transparent', border: 'none', outline: 'none', resize: 'vertical',
+                    fontFamily: 'Nunito, sans-serif', fontSize: 18, lineHeight: 1.85, color: WR.ink,
+                    position: 'relative',
+                  }}
+                />
+              </>
             )}
           </div>
-
-          <div style={{ height: 1, background: 'rgba(26,15,8,0.18)', margin: '18px 0' }} />
-
-          {/* essay area */}
-          <textarea
-            value={essay}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="Dip your quill and begin…"
-            spellCheck
-            style={{
-              width: '100%', minHeight: 500, boxSizing: 'border-box',
-              background: 'transparent', border: 'none', outline: 'none', resize: 'vertical',
-              fontFamily: 'Nunito, sans-serif', fontSize: 18, lineHeight: 1.85, color: WR.ink,
-              position: 'relative',
-            }}
-          />
         </motion.div>
 
         {error && (
