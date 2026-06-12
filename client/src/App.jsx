@@ -54,6 +54,7 @@ const WriteHome            = React.lazy(() => import('./pages/WriteHome.jsx'));
 const WritingRoom          = React.lazy(() => import('./pages/WritingRoom.jsx'));
 const WriteResults         = React.lazy(() => import('./pages/WriteResults.jsx'));
 const WriteTeacher         = React.lazy(() => import('./pages/WriteTeacher.jsx'));
+const GuidedWalkSAQ        = React.lazy(() => import('./pages/GuidedWalkSAQ.jsx'));
 
 const SCREEN_MAP = {
   landing:           LandingPage,
@@ -89,6 +90,7 @@ const SCREEN_MAP = {
   writing_room:        WritingRoom,
   write_results:       WriteResults,
   write_teacher:       WriteTeacher,
+  guided_walk_saq:     GuidedWalkSAQ,
 };
 
 // ─── Page transition variants ─────────────────────────────────────────────────

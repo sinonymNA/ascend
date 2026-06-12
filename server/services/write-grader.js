@@ -410,4 +410,243 @@ async function gradeDrill({ criterion, drillPrompt, answer }) {
   }
 }
 
-module.exports = { RUBRICS, gradeEssay, precheck, generateAssignmentPrompt, regradeCriterion, generateDrill, gradeDrill, hasKey };
+// ── Guided Walk: Phase 2 "Prompt Decode" — highlightable elements + comprehension check ──
+
+const REGION_KEYWORDS = [
+  'Indian Ocean', 'Atlantic World', 'Atlantic', 'Pacific', 'Mediterranean',
+  'trans-Saharan', 'Trans-Saharan', 'Silk Roads', 'Silk Road',
+  'East Asia', 'Southeast Asia', 'South Asia', 'Central Asia', 'West Africa', 'East Africa', 'North Africa',
+  'Sub-Saharan Africa', 'Latin America', 'the Americas', 'Western Europe', 'Eastern Europe', 'the Caribbean',
+  'China', 'Japan', 'India', 'Africa', 'Asia', 'Europe', 'the Middle East', 'Ottoman', 'Ming', 'Qing',
+];
+
+const SKILL_VERBS = ['Describe', 'Explain', 'Identify', 'Compare', 'Analyze', 'Evaluate', 'Develop'];
+
+const VERB_DEFINITIONS = {
+  describe: 'Give specific details about what something was like — no need to explain why it happened or what it led to.',
+  explain: 'Give the reasons, causes, or process behind something — show how or why it happened or mattered.',
+  identify: 'Name a specific, correct example.',
+  compare: 'Discuss similarities and/or differences between two or more things.',
+  analyze: 'Break something down to show how its parts work or relate to each other.',
+  evaluate: 'Make a supported judgment about the extent, significance, or success of something.',
+  develop: 'Build an argument supported by evidence.',
+};
+
+function findFirst(text, candidates) {
+  for (const c of candidates) {
+    if (text.includes(c)) return c;
+  }
+  return null;
+}
+
+function heuristicDecodeElements(context, title, partAText) {
+  const combined = `${context || ''}\n\n${partAText || ''}`;
+  const dateMatch = combined.match(/\b(1[0-9]\d{2}|20\d{2})\s*(?:–|—|-|to|and)\s*(1[0-9]\d{2}|20\d{2})\b/);
+  const timePeriod = dateMatch ? dateMatch[0] : null;
+  const geographicScope = findFirst(combined, REGION_KEYWORDS);
+  const verbMatch = (partAText || '').match(new RegExp(`\\b(${SKILL_VERBS.join('|')})\\b`, 'i'));
+  const skill = verbMatch ? verbMatch[0] : null;
+  let topic = (title || '').replace(/^(SAQ|LEQ|DBQ)\s*:\s*/i, '').replace(/,?\s*\d{3,4}\s*(–|—|-).*$/, '').trim();
+  if (topic && !combined.includes(topic)) {
+    const firstClause = topic.split(',')[0].trim();
+    topic = combined.includes(firstClause) ? firstClause : topic;
+  }
+  return { timePeriod, geographicScope, skill, topic: topic || null };
+}
+
+function heuristicDecodeMCQ(elements) {
+  const verb = (elements.skill || 'explain').toLowerCase();
+  const correctDef = VERB_DEFINITIONS[verb] || VERB_DEFINITIONS.explain;
+  const distractors = Object.entries(VERB_DEFINITIONS)
+    .filter(([k]) => k !== verb)
+    .map(([, v]) => v)
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 3);
+  const choices = [{ text: correctDef, correct: true }, ...distractors.map((d) => ({ text: d, correct: false }))]
+    .sort(() => Math.random() - 0.5);
+  return {
+    question: `This prompt asks you to "${elements.skill || 'respond to'}" something. What does that mean you need to do?`,
+    choices,
+    explanation: `The word "${elements.skill || 'the task verb'}" tells you what kind of thinking this response needs — figuring that out is the first step, before you start writing.`,
+  };
+}
+
+async function generateDecodeBundle({ context, title, partAText }) {
+  const heuristicElements = heuristicDecodeElements(context, title, partAText);
+  const heuristicMcq = heuristicDecodeMCQ(heuristicElements);
+  if (!hasKey) return { elements: heuristicElements, mcq: heuristicMcq };
+
+  const combined = `${context || ''}\n\n${partAText || ''}`;
+  try {
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 700,
+      system: 'You help students decode AP World History prompts. Return ONLY valid JSON.',
+      messages: [{
+        role: 'user',
+        content: `Title: ${title}\n\nText to decode (historical context plus the first task of an SAQ):\n"""\n${combined}\n"""\n\nReturn JSON with these EXACT fields. Each of timePeriod, geographicScope, skill, and topic MUST be a short substring copied VERBATIM (character-for-character) from the text above — do not paraphrase:\n{\n  "timePeriod": "<verbatim substring naming the date range>",\n  "geographicScope": "<verbatim substring naming the region(s)>",\n  "skill": "<verbatim substring — the historical thinking VERB the task uses, e.g. Describe/Explain/Compare>",\n  "topic": "<verbatim substring — the subject/theme>",\n  "mcq": {\n    "question": "<one sentence asking what the task verb requires the student to do>",\n    "choices": [ {"text": "<plain-English description of a task type>", "correct": true|false}, ... exactly 4 choices, exactly one correct ],\n    "explanation": "<one sentence tying the correct choice back to the verb>"\n  }\n}`,
+      }],
+    });
+    const parsed = extractJson(response.content[0].text);
+    if (!parsed) throw new Error('no JSON in response');
+    const elements = {
+      timePeriod: typeof parsed.timePeriod === 'string' && combined.includes(parsed.timePeriod) ? parsed.timePeriod : heuristicElements.timePeriod,
+      geographicScope: typeof parsed.geographicScope === 'string' && combined.includes(parsed.geographicScope) ? parsed.geographicScope : heuristicElements.geographicScope,
+      skill: typeof parsed.skill === 'string' && combined.includes(parsed.skill) ? parsed.skill : heuristicElements.skill,
+      topic: typeof parsed.topic === 'string' && combined.includes(parsed.topic) ? parsed.topic : heuristicElements.topic,
+    };
+    const mcq = parsed.mcq && Array.isArray(parsed.mcq.choices) && parsed.mcq.choices.length >= 2 &&
+      parsed.mcq.choices.filter((c) => c && c.correct).length === 1 &&
+      typeof parsed.mcq.question === 'string'
+      ? parsed.mcq
+      : heuristicMcq;
+    return { elements, mcq };
+  } catch (err) {
+    console.error('write-grader.generateDecodeBundle error:', err.message);
+    return { elements: heuristicElements, mcq: heuristicMcq };
+  }
+}
+
+// ── Guided Walk: Phase 3 "Socratic Writing Loop" — Clio's questions + evaluation ─────
+
+const CLIO_QUESTION_SYSTEM = `You are Clio, a warm and encouraging AP World History writing tutor who teaches through questions, never by giving answers. You are helping a student write one part of an SAQ (Short Answer Question).
+
+Rules:
+- Ask EXACTLY ONE question.
+- Keep it to 40 words or fewer.
+- Never state or imply the answer, and never name the specific historical example the student should use.
+- Calibrate to the student's level: level 1 students need concrete, narrowing questions (e.g. "Can you name ONE specific empire or trade route from this period?"); level 2 students can handle a "why" or "how" question; level 3 students can handle an open prompt that asks them to connect evidence to reasoning.
+- If the student has weak skills listed, gently nudge toward that skill (e.g. if "specificity" is weak, ask for a name, date, or place).
+- Use warm, "we" framing ("Let's think about...", "What if we...").
+- Return ONLY valid JSON: {"question": "<your single question>"}`;
+
+const CLIO_EVAL_SYSTEM = `You are Clio, a warm AP World History writing tutor, evaluating a student's response to ONE part of an SAQ against the AP rubric. The part earns 1 point if the response is historically accurate AND specific enough to directly address the task.
+
+Classify the response as one of:
+- "thin": too short, vague, or generic — no specific historical content.
+- "evidence_without_reasoning": includes a specific historical reference but does not yet connect it to what the prompt is asking.
+- "strong": specific AND directly addresses the task — earns the point.
+
+Return ONLY valid JSON:
+{
+  "meets_rubric": <boolean>,
+  "rubric_feedback": "<one sentence, specific to what they wrote>",
+  "clio_response": "<Clio's warm, in-character reply, 40 words or fewer. If not advancing, end with exactly ONE follow-up question. If advancing, celebrate something specific from their response.>",
+  "advance": <boolean — true only if meets_rubric is true, or the student has clearly tried their best after multiple attempts>
+}`;
+
+function heuristicClioQuestion(partLabel, partText, studentLevel, history) {
+  const verbMatch = (partText || '').match(/\b(describe|explain|identify|compare|analyze|evaluate|develop)\b/i);
+  const verb = verbMatch ? verbMatch[0].toLowerCase() : 'explain';
+  const bank = {
+    describe: [
+      "Let's start small — what's one specific detail from this period that fits here? A name, place, or date works.",
+      "Picture the scene this question is asking about. What's one concrete detail you'd point to?",
+    ],
+    explain: [
+      "Let's think about why. What's one specific cause or example you could connect to this?",
+      "What's a specific historical example that helps explain this — and how does it connect?",
+    ],
+    identify: ["What's one specific example — a person, place, treaty, or event — that fits here?"],
+    compare: ["Let's find a contrast. What's one thing that was different (or similar) here, with a specific example?"],
+  };
+  const options = bank[verb] || bank.explain;
+  const followUps = [
+    "Good start — can we add one more specific detail, like a name, date, or place?",
+    "Let's build on that. How does that example connect back to what the prompt is asking?",
+  ];
+  const pool = history && history.length > 0 ? followUps : options;
+  return { question: pool[Math.floor(Math.random() * pool.length)] };
+}
+
+function heuristicClioEvaluation(partText, studentText, history) {
+  const text = (studentText || '').trim();
+  const words = text.split(/\s+/).filter(Boolean).length;
+  const hasSpecific = /\b(\d{3,4}|century|empire|dynasty|trade|treaty|war|revolution|company|state|kingdom|society|movement|reform)\b/i.test(text);
+  const attempts = (history || []).filter((h) => h.role === 'student').length + 1;
+
+  if (words < 8) {
+    return {
+      meets_rubric: false,
+      rubric_feedback: 'This response is too brief to address the task yet.',
+      clio_response: "We're off to a start! Can we add a bit more — what specific detail comes to mind?",
+      advance: attempts >= 4,
+    };
+  }
+  if (!hasSpecific && attempts < 4) {
+    return {
+      meets_rubric: false,
+      rubric_feedback: 'This response is on the right track but needs a specific historical example — a name, date, place, or event.',
+      clio_response: "We're close! Can you name one specific person, place, or event to anchor this?",
+      advance: false,
+    };
+  }
+  return {
+    meets_rubric: hasSpecific || attempts >= 4,
+    rubric_feedback: hasSpecific
+      ? 'This response includes specific historical evidence that addresses the task.'
+      : 'This response addresses the task, though more specific evidence would strengthen it.',
+    clio_response: hasSpecific
+      ? "That's exactly the kind of specific detail the rubric is looking for. Nicely done!"
+      : "Thanks for sticking with it — let's lock this in and keep moving.",
+    advance: true,
+  };
+}
+
+async function generateClioQuestion({ assignmentTitle, partLabel, partText, studentLevel = 1, weakSkills = [], history = [] }) {
+  if (!hasKey) return heuristicClioQuestion(partLabel, partText, studentLevel, history);
+  try {
+    const historyBlock = (history || [])
+      .map((h) => `${h.role === 'clio' ? 'Clio' : 'Student'}: ${h.text}`)
+      .join('\n');
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 200,
+      system: CLIO_QUESTION_SYSTEM,
+      messages: [{
+        role: 'user',
+        content: `Assignment: ${assignmentTitle}\nSAQ Part ${partLabel} task: ${partText}\nStudent level: ${studentLevel} (1=needs heavy scaffolding, 3=ready for independence)\nStudent's weak skills: ${weakSkills.join(', ') || 'none recorded'}\n\nConversation so far:\n${historyBlock || '(nothing yet — this is the opening question)'}\n\nAsk your next question.`,
+      }],
+    });
+    const parsed = extractJson(response.content[0].text);
+    if (!parsed || typeof parsed.question !== 'string' || !parsed.question.trim()) {
+      throw new Error('malformed response');
+    }
+    return { question: parsed.question.trim() };
+  } catch (err) {
+    console.error(`write-grader.generateClioQuestion error (part=${partLabel}):`, err.message);
+    return heuristicClioQuestion(partLabel, partText, studentLevel, history);
+  }
+}
+
+async function evaluateClioResponse({ assignmentTitle, partLabel, partText, studentLevel = 1, studentText, history = [] }) {
+  if (!hasKey) return heuristicClioEvaluation(partText, studentText, history);
+  try {
+    const historyBlock = (history || [])
+      .map((h) => `${h.role === 'clio' ? 'Clio' : 'Student'}: ${h.text}`)
+      .join('\n');
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 400,
+      system: CLIO_EVAL_SYSTEM,
+      messages: [{
+        role: 'user',
+        content: `Assignment: ${assignmentTitle}\nSAQ Part ${partLabel} task: ${partText}\nStudent level: ${studentLevel}\n\nConversation so far:\n${historyBlock}\n\nStudent's latest response:\n${studentText}\n\nEvaluate this response.`,
+      }],
+    });
+    const parsed = extractJson(response.content[0].text);
+    if (!parsed || typeof parsed.meets_rubric !== 'boolean' || typeof parsed.clio_response !== 'string'
+      || typeof parsed.rubric_feedback !== 'string' || typeof parsed.advance !== 'boolean') {
+      throw new Error('malformed response');
+    }
+    return parsed;
+  } catch (err) {
+    console.error(`write-grader.evaluateClioResponse error (part=${partLabel}):`, err.message);
+    return heuristicClioEvaluation(partText, studentText, history);
+  }
+}
+
+module.exports = {
+  RUBRICS, gradeEssay, precheck, generateAssignmentPrompt, regradeCriterion, generateDrill, gradeDrill, hasKey,
+  generateDecodeBundle, generateClioQuestion, evaluateClioResponse,
+};

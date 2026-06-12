@@ -5,35 +5,7 @@ import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
 import { RUBRICS } from '../lib/rubrics.js';
 import { Vignette, ParticleField } from '../components/write/fx.jsx';
-
-// Parse SAQ prompt into structured parts (A, B, C) and optional context section
-function parseSaqPrompt(prompt) {
-  if (!prompt?.includes('**Part A') && !prompt?.includes('**Part B')) return null;
-
-  const parts = {};
-  // Split by "---" separators, then parse each section
-  const sections = prompt.split('\n---\n');
-
-  for (const section of sections) {
-    const match = section.match(/\*\*Part\s+([A-C])\s*[—-]\s*([^\*]+)\*\*\s*\n\n([\s\S]*)/);
-    if (match) {
-      const letter = match[1];
-      const title = match[2].trim();
-      const text = match[3].trim();
-      parts[letter] = { title, text };
-    }
-  }
-
-  // Extract context section
-  const contextMatch = prompt.match(/## Historical Context\s*\n\n?([\s\S]+?)$/);
-  const context = contextMatch ? contextMatch[1].trim() : null;
-
-  // If we parsed all 3 parts, return structured data
-  if (parts.A && parts.B && parts.C) {
-    return { parts, context };
-  }
-  return null;
-}
+import { parseSaqPrompt } from '../lib/saqPrompt.js';
 
 // ── The Writing Room — warm, cozy, candlelit essay editor ─────────────────────
 

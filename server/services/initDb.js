@@ -470,6 +470,8 @@ CREATE TABLE IF NOT EXISTS sw_assignments (
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE sw_assignments ADD COLUMN IF NOT EXISTS guided_walk_enabled BOOLEAN DEFAULT true;
+
 CREATE TABLE IF NOT EXISTS sw_documents (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   assignment_id UUID REFERENCES sw_assignments(id) ON DELETE CASCADE,
@@ -526,9 +528,39 @@ CREATE TABLE IF NOT EXISTS sw_student_progress (
   updated_at           TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Adaptive scaffolding profile for the Guided Walk system
+CREATE TABLE IF NOT EXISTS sw_writing_profiles (
+  student_id             UUID PRIMARY KEY REFERENCES users(id),
+  saq_level              INTEGER DEFAULT 1,
+  leq_level              INTEGER DEFAULT 1,
+  dbq_level              INTEGER DEFAULT 1,
+  weak_skills            TEXT[] DEFAULT '{}',
+  strong_skills          TEXT[] DEFAULT '{}',
+  guided_walks_completed INTEGER DEFAULT 0,
+  last_rubric_scores     JSONB DEFAULT '{}',
+  updated_at             TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Guided Walk session state (one in-progress/completed walk per student per assignment)
+CREATE TABLE IF NOT EXISTS sw_guided_walk_sessions (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id     UUID REFERENCES users(id),
+  assignment_id  UUID REFERENCES sw_assignments(id) ON DELETE CASCADE,
+  phase          TEXT DEFAULT 'opener',
+  decode_data    JSONB,
+  part_responses JSONB DEFAULT '{}',
+  reflection     TEXT,
+  rubric_result  JSONB,
+  completed_at   TIMESTAMPTZ,
+  created_at     TIMESTAMPTZ DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (student_id, assignment_id)
+);
+
 CREATE INDEX IF NOT EXISTS sw_sub_assignment ON sw_submissions(assignment_id, submitted_at);
 CREATE INDEX IF NOT EXISTS sw_sub_student    ON sw_submissions(student_id, submitted_at);
 CREATE INDEX IF NOT EXISTS sw_docs_assign    ON sw_documents(assignment_id, doc_number);
+CREATE INDEX IF NOT EXISTS sw_gw_student     ON sw_guided_walk_sessions(student_id, assignment_id);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS uqm_user_set ON user_question_mastery(user_id, set_id);

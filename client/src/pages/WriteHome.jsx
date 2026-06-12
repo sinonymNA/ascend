@@ -8,6 +8,8 @@ import {
   Vignette, ParticleField, OrnateCard, SectionTitle, ShineTitle,
   GlossButton, useParallax, goldText, GOLD,
 } from '../components/write/fx.jsx';
+import { parseSaqPrompt } from '../lib/saqPrompt.js';
+import { GW } from '../lib/guidedWalkTheme.js';
 
 // ── Summit Write — student home: cinematic basecamp ──────────────────────────
 
@@ -538,12 +540,15 @@ export default function WriteHome() {
                 const trail = TRAILS.find((t) => t.type === a.type) || TRAILS[0];
                 const due = a.due_date ? new Date(a.due_date) : null;
                 const overdue = due && due < new Date();
+                const guidedWalkAvailable = a.type === 'SAQ' && a.guided_walk_enabled !== false && !!parseSaqPrompt(a.prompt);
                 return (
-                  <motion.button key={a.id}
+                  <motion.div key={a.id}
+                    role="button" tabIndex={0}
                     initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + idx * 0.07 }}
                     whileHover={{ x: 6, boxShadow: `0 0 26px ${trail.color}30, 0 14px 34px rgba(0,0,0,0.5)` }}
                     whileTap={{ scale: 0.99 }}
                     onClick={() => navigate('writing_room', { assignmentId: a.id })}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('writing_room', { assignmentId: a.id }); }}
                     style={{
                       background: `linear-gradient(120deg, ${trail.color}14 0%, rgba(30,45,64,0.92) 28%, rgba(22,33,48,0.95) 100%)`,
                       border: `1px solid ${trail.color}40`,
@@ -570,10 +575,23 @@ export default function WriteHome() {
                         {a.type === 'DBQ' && a.doc_count > 0 && ` · ${a.doc_count} documents`}
                       </div>
                     </div>
+                    {guidedWalkAvailable && (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }}
+                        onClick={(e) => { e.stopPropagation(); navigate('guided_walk_saq', { assignmentId: a.id }); }}
+                        style={{
+                          flexShrink: 0, border: `1px solid ${GW.amber}80`, background: `${GW.amber}22`,
+                          color: GW.gold, borderRadius: 999, padding: '7px 14px', cursor: 'pointer',
+                          fontFamily: 'Cinzel, serif', fontWeight: 800, fontSize: 11, letterSpacing: '0.06em',
+                          textTransform: 'uppercase', whiteSpace: 'nowrap',
+                        }}>
+                        🦉 Guided Walk
+                      </motion.button>
+                    )}
                     <motion.span
                       animate={{ x: [0, 4, 0] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
                       style={{ color: trail.color, fontSize: 18, flexShrink: 0, textShadow: `0 0 12px ${trail.color}` }}>➤</motion.span>
-                  </motion.button>
+                  </motion.div>
                 );
               })}
             </div>

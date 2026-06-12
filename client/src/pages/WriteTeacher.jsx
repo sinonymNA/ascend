@@ -5,6 +5,7 @@ import { useApp } from '../App.jsx';
 import api from '../lib/api.js';
 import { RUBRICS, calculateUnitGrade } from '../lib/rubrics.js';
 import { Vignette, goldText } from '../components/write/fx.jsx';
+import { parseSaqPrompt } from '../lib/saqPrompt.js';
 
 // ── Summit Write — teacher workspace: builder · inbox · gradebook ─────────────
 
@@ -416,13 +417,14 @@ function EditAssignmentModal({ assignment, onClose, onSaved }) {
   const [dueDate, setDueDate] = useState(assignment.due_date ? assignment.due_date.slice(0, 10) : '');
   const [isUnitTest, setIsUnitTest] = useState(!!assignment.is_unit_test);
   const [dbqWeight, setDbqWeight] = useState(assignment.dbq_weight != null ? parseFloat(assignment.dbq_weight) : 0.6);
+  const [guidedWalkEnabled, setGuidedWalkEnabled] = useState(assignment.guided_walk_enabled !== false);
   const [saving, setSaving] = useState(false);
 
   async function save() {
     setSaving(true);
     try {
       await api.patch(`/api/write/assignments/${assignment.id}`, {
-        title, prompt, context, dueDate: dueDate || null, isUnitTest, dbqWeight,
+        title, prompt, context, dueDate: dueDate || null, isUnitTest, dbqWeight, guidedWalkEnabled,
       });
       onSaved();
       onClose();
@@ -484,6 +486,17 @@ function EditAssignmentModal({ assignment, onClose, onSaved }) {
             </div>
           )}
         </div>
+        {assignment.type === 'SAQ' && (
+          <div style={{ background: C.elevated, borderRadius: 12, padding: '14px 16px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+              <input type="checkbox" checked={guidedWalkEnabled} onChange={(e) => setGuidedWalkEnabled(e.target.checked)} />
+              <span style={{ fontSize: 13.5, fontWeight: 800, color: C.text }}>🦉 Enable Guided Walk ("The Art of Three")</span>
+            </label>
+            <div style={{ fontSize: 12, color: C.mid, marginTop: 6, marginLeft: 28 }}>
+              Lets students work through this SAQ step-by-step with Clio. Requires the Part A / B / C prompt format.
+            </div>
+          </div>
+        )}
         <button onClick={save} disabled={saving || !title.trim() || !prompt.trim()} style={{
           width: '100%', padding: '12px', borderRadius: 10, border: 'none', cursor: 'pointer',
           background: `linear-gradient(135deg, #8B6914, ${C.gold})`, color: '#1C1208', fontWeight: 800, fontSize: 14,
@@ -782,6 +795,10 @@ export default function WriteTeacher() {
                     <button onClick={() => setEditing(a)} style={pillBtn(C.gold)}>Edit</button>
                     <button onClick={() => navigate('writing_room', { assignmentId: a.id, previewMode: true })}
                       style={pillBtn(C.mid)}>Preview</button>
+                    {a.type === 'SAQ' && a.guided_walk_enabled !== false && !!parseSaqPrompt(a.prompt) && (
+                      <button onClick={() => navigate('guided_walk_saq', { assignmentId: a.id, previewMode: true })}
+                        style={pillBtn(C.gold)}>🦉 Walk Preview</button>
+                    )}
                     {a.submission_count === 0 && (
                       confirmDelete === a.id ? (
                         <>
