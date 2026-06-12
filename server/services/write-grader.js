@@ -507,6 +507,81 @@ async function generateDecodeBundle({ context, title, partAText }) {
   }
 }
 
+// ── LEQ Guided Walk "The Long Game": Phase 2 decode adds a historical-skill layer ──
+
+const HISTORICAL_SKILL_DEFINITIONS = {
+  causation: 'Identify the causes and/or effects of a historical development, and explain the relationship between them.',
+  comparison: 'Identify similarities and/or differences between two or more historical developments, and explain their significance.',
+  ccot: 'Identify what changed and what stayed the same across a time period, and explain why.',
+};
+
+const HISTORICAL_SKILL_LABELS = {
+  causation: 'Causation',
+  comparison: 'Comparison',
+  ccot: 'Continuity and Change Over Time',
+};
+
+function detectLeqHistoricalSkill(promptText) {
+  const text = (promptText || '').toLowerCase();
+  if (/\b(compare|comparison|similarit|differ)/.test(text)) return 'comparison';
+  if (/\b(continuity and change|change over time|developed over time|extent to which.*(changed|remained|continuity))/.test(text)) return 'ccot';
+  return 'causation';
+}
+
+function heuristicLeqSkillMcq(historicalSkill) {
+  const skill = HISTORICAL_SKILL_DEFINITIONS[historicalSkill] ? historicalSkill : 'causation';
+  const correct = HISTORICAL_SKILL_DEFINITIONS[skill];
+  const distractors = Object.entries(HISTORICAL_SKILL_DEFINITIONS)
+    .filter(([k]) => k !== skill)
+    .map(([, v]) => v);
+  const choices = [{ text: correct, correct: true }, ...distractors.map((d) => ({ text: d, correct: false }))]
+    .sort(() => Math.random() - 0.5);
+  const label = HISTORICAL_SKILL_LABELS[skill];
+  return {
+    question: `This prompt is built around ${label}. What does that mean you need to do?`,
+    choices,
+    explanation: `Recognizing that this is a ${label} prompt tells you what your thesis, evidence, and complexity all need to focus on.`,
+  };
+}
+
+async function generateLeqDecodeBundle({ context, title, promptText }) {
+  const heuristicElements = heuristicDecodeElements(context, title, promptText);
+  const detectedSkill = detectLeqHistoricalSkill(promptText);
+  const heuristicMcq = heuristicLeqSkillMcq(detectedSkill);
+  if (!hasKey) return { elements: heuristicElements, mcq: heuristicMcq, historicalSkill: detectedSkill };
+
+  const combined = `${context || ''}\n\n${promptText || ''}`;
+  try {
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 700,
+      system: 'You help students decode AP World History LEQ prompts. Return ONLY valid JSON.',
+      messages: [{
+        role: 'user',
+        content: `Title: ${title}\n\nText to decode (historical context plus the LEQ prompt):\n"""\n${combined}\n"""\n\nReturn JSON with these EXACT fields. timePeriod, geographicScope, skill, and topic MUST be short substrings copied VERBATIM (character-for-character) from the text above — do not paraphrase:\n{\n  "timePeriod": "<verbatim substring naming the date range>",\n  "geographicScope": "<verbatim substring naming the region(s)>",\n  "skill": "<verbatim substring — the task verb, e.g. Evaluate/Explain/Compare>",\n  "topic": "<verbatim substring — the subject/theme>",\n  "historicalSkill": "causation" | "comparison" | "ccot",\n  "mcq": {\n    "question": "<one sentence asking what the historical reasoning skill (causation/comparison/continuity and change over time) requires the student to do for THIS prompt>",\n    "choices": [ {"text": "<plain-English description of a historical reasoning skill>", "correct": true|false}, ... exactly 4 choices, exactly one correct ],\n    "explanation": "<one sentence tying the correct choice back to the prompt>"\n  }\n}`,
+      }],
+    });
+    const parsed = extractJson(response.content[0].text);
+    if (!parsed) throw new Error('no JSON in response');
+    const elements = {
+      timePeriod: typeof parsed.timePeriod === 'string' && combined.includes(parsed.timePeriod) ? parsed.timePeriod : heuristicElements.timePeriod,
+      geographicScope: typeof parsed.geographicScope === 'string' && combined.includes(parsed.geographicScope) ? parsed.geographicScope : heuristicElements.geographicScope,
+      skill: typeof parsed.skill === 'string' && combined.includes(parsed.skill) ? parsed.skill : heuristicElements.skill,
+      topic: typeof parsed.topic === 'string' && combined.includes(parsed.topic) ? parsed.topic : heuristicElements.topic,
+    };
+    const historicalSkill = HISTORICAL_SKILL_DEFINITIONS[parsed.historicalSkill] ? parsed.historicalSkill : detectedSkill;
+    const mcq = parsed.mcq && Array.isArray(parsed.mcq.choices) && parsed.mcq.choices.length >= 2 &&
+      parsed.mcq.choices.filter((c) => c && c.correct).length === 1 &&
+      typeof parsed.mcq.question === 'string'
+      ? parsed.mcq
+      : heuristicLeqSkillMcq(historicalSkill);
+    return { elements, mcq, historicalSkill };
+  } catch (err) {
+    console.error('write-grader.generateLeqDecodeBundle error:', err.message);
+    return { elements: heuristicElements, mcq: heuristicMcq, historicalSkill: detectedSkill };
+  }
+}
+
 // ── Guided Walk: Phase 3 "Socratic Writing Loop" — Clio's questions + evaluation ─────
 
 const CLIO_QUESTION_SYSTEM = `You are Clio, a warm and encouraging AP World History writing tutor who teaches through questions, never by giving answers. You are helping a student write one part of an SAQ (Short Answer Question).
@@ -646,7 +721,307 @@ async function evaluateClioResponse({ assignmentTitle, partLabel, partText, stud
   }
 }
 
+// ── Guided Walk: LEQ "The Long Game" ───────────────────────────────────────────
+
+const LEQ_COMPLEXITY_PATHWAYS = {
+  corroboration: { label: 'Corroboration', blurb: 'Your argument connects to another time period or region.' },
+  qualification: { label: 'Qualification', blurb: 'Your argument has a limit or exception worth naming.' },
+  tension: { label: 'Tension', blurb: "There's a counterargument or contradiction in the historical record." },
+  scale_shift: { label: 'Scale Shift', blurb: 'Zoom in or out — how does this look at the local vs. global level?' },
+};
+
+// ── Phase 3: Thesis Builder ─────────────────────────────────────────────────
+
+const LEQ_THESIS_SYSTEM = `You are Clio, a warm AP World History writing tutor helping a student build the thesis for an LEQ (Long Essay Question). A strong thesis has two parts: a CLAIM (a defensible, arguable position that responds to the prompt) and REASONING (the "because" — why the claim is true, naming the driving factor or mechanism).
+
+Evaluate the student's claim and reasoning:
+- The claim must take a position on the prompt that a reasonable historian could disagree with — not a restatement of the prompt, not a simple fact, not just a topic.
+- The reasoning must explain WHY the claim is true — it cannot just restate the claim or say something like "because it was important."
+- Both must be specific enough to guide the rest of the essay.
+
+Return ONLY valid JSON:
+{
+  "claimOk": <boolean>,
+  "reasoningOk": <boolean>,
+  "claimFeedback": "<1-2 sentences, specific to what they wrote>",
+  "reasoningFeedback": "<1-2 sentences, specific to what they wrote>",
+  "clio_response": "<Clio's warm, in-character reply, 40 words or fewer>",
+  "approved": <boolean — true only if both claimOk and reasoningOk>
+}`;
+
+function heuristicEvaluateLeqThesis(claim, reasoning, attemptNumber) {
+  const c = (claim || '').trim();
+  const r = (reasoning || '').trim();
+  const claimWords = c.split(/\s+/).filter(Boolean).length;
+  const reasoningWords = r.split(/\s+/).filter(Boolean).length;
+  const claimOk = claimWords >= 6 && !/^(the|this)\s+(prompt|question)\s+(asks|is about)/i.test(c);
+  const reasoningOk = reasoningWords >= 5 && !/^(it (was|is) important|because it (was|is) important)/i.test(r);
+  const approved = (claimOk && reasoningOk) || attemptNumber >= 3;
+  return {
+    claimOk, reasoningOk,
+    claimFeedback: claimOk
+      ? 'Your claim takes a position — good. Make sure it directly responds to the prompt.'
+      : 'Your claim needs to take a clear position someone could disagree with, not just describe or restate the topic.',
+    reasoningFeedback: reasoningOk
+      ? 'Your reasoning gives a "why" — good. Make sure it names a specific driving factor.'
+      : 'Your reasoning needs to explain WHY your claim is true — name the mechanism or factor that drives it, not just "because it was important."',
+    clio_response: approved
+      ? "That's your thesis. Everything else you write tonight has one job — support that claim."
+      : "We're getting closer — let's sharpen this a bit more. (Offline check — AI grading unavailable.)",
+    approved,
+  };
+}
+
+async function evaluateLeqThesis({ assignmentTitle, prompt, claim, reasoning, attemptNumber = 1 }) {
+  if (!hasKey) return heuristicEvaluateLeqThesis(claim, reasoning, attemptNumber);
+  try {
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 400,
+      system: LEQ_THESIS_SYSTEM,
+      messages: [{
+        role: 'user',
+        content: `Assignment: ${assignmentTitle}\nPROMPT: ${prompt}\nAttempt number: ${attemptNumber} of 3\n\nStudent's CLAIM: ${claim}\nStudent's REASONING: ${reasoning}\n\nEvaluate this thesis.`,
+      }],
+    });
+    const parsed = extractJson(response.content[0].text);
+    if (!parsed || typeof parsed.approved !== 'boolean' || typeof parsed.clio_response !== 'string'
+      || typeof parsed.claimFeedback !== 'string' || typeof parsed.reasoningFeedback !== 'string'
+      || typeof parsed.claimOk !== 'boolean' || typeof parsed.reasoningOk !== 'boolean') {
+      throw new Error('malformed response');
+    }
+    if (attemptNumber >= 3) parsed.approved = true;
+    return parsed;
+  } catch (err) {
+    console.error('write-grader.evaluateLeqThesis error:', err.message);
+    return heuristicEvaluateLeqThesis(claim, reasoning, attemptNumber);
+  }
+}
+
+// ── Phases 4-6: Contextualization / Evidence+Analysis / Complexity Socratic loops ──
+
+const LEQ_CONTEXT_QUESTION_SYSTEM = `You are Clio, a warm AP World History writing tutor. The student is building the CONTEXTUALIZATION for their LEQ — NOT background information, but a description of a broader historical development or process relevant to the prompt, AND a connection from that broader context to their own argument.
+
+Ask EXACTLY ONE question, 40 words or fewer. Build on the conversation so far:
+- If this is the first question, ask what was happening in the world before or around their topic that connects to their argument.
+- If the student has described a broader context but not yet connected it to their thesis, ask how that context shapes or sets up their specific argument.
+- Never state or imply the answer, and never name the specific historical example.
+- Use warm, "we" framing.
+
+Return ONLY valid JSON: {"question": "<your single question>"}`;
+
+const LEQ_CONTEXT_EVAL_SYSTEM = `You are Clio, a warm AP World History writing tutor, evaluating a student's CONTEXTUALIZATION for an LEQ against the AP rubric. The contextualization point is earned if the response BOTH (a) describes a broader historical event, development, or process relevant to the prompt — not just a date or single term — AND (b) connects that broader context to the student's specific argument/thesis.
+
+Classify the response as one of:
+- "thin": too brief or generic, no real historical content.
+- "context_only": describes a broader context but does not connect it to the argument — this is the single most common LEQ mistake.
+- "strong": describes broader context AND connects it to the argument — earns the point.
+
+Return ONLY valid JSON:
+{
+  "meets_rubric": <boolean>,
+  "rubric_feedback": "<one sentence, specific to what they wrote>",
+  "clio_response": "<Clio's warm, in-character reply, 40 words or fewer. If not advancing, end with exactly ONE follow-up question. If advancing, celebrate something specific from their response.>",
+  "advance": <boolean — true only if meets_rubric is true, or the student has clearly tried their best after multiple attempts>
+}`;
+
+const LEQ_EVIDENCE_QUESTION_SYSTEM = `You are Clio, a warm AP World History writing tutor. The student is naming ONE PIECE OF SPECIFIC EVIDENCE to support their LEQ thesis.
+
+Ask EXACTLY ONE question, 40 words or fewer, asking the student for one specific piece of evidence — a name, place, date, treaty, event, or development a historian could verify — that is relevant to their thesis. Never name the example yourself. If the student already gave evidence that was too vague (a general trend, not a verifiable specific), gently push for more specificity.
+
+Return ONLY valid JSON: {"question": "<your single question>"}`;
+
+const LEQ_EVIDENCE_EVAL_SYSTEM = `You are Clio, evaluating whether a student's response names SPECIFIC EVIDENCE relevant to their LEQ thesis. Specific means a historian could verify it — a named person, place, polity, treaty, event, or approximate date. A general trend ("trade increased") is NOT specific evidence.
+
+Classify the response as one of:
+- "thin": no real historical content.
+- "vague": a general trend or category, not a verifiable specific.
+- "strong": names something specific AND plausibly relevant to the thesis — earns this step.
+
+Return ONLY valid JSON:
+{
+  "meets_rubric": <boolean>,
+  "rubric_feedback": "<one sentence>",
+  "clio_response": "<Clio's warm reply, 40 words or fewer. If not advancing, push for a specific name/date/place with exactly ONE follow-up question. If advancing, acknowledge the evidence specifically.>",
+  "advance": <boolean — true only if meets_rubric is true (vague evidence does not meet the rubric), or the student has tried their best after multiple attempts>
+}`;
+
+const LEQ_ANALYSIS_QUESTION_SYSTEM = `You are Clio, a warm AP World History writing tutor. The student has just named a piece of evidence for their LEQ; now they must CONNECT it to their thesis.
+
+Ask EXACTLY ONE question, 40 words or fewer, asking the student to explain HOW the evidence they just gave supports their thesis claim. Reference their evidence and thesis in your question where helpful. Never state the connection yourself.
+
+Return ONLY valid JSON: {"question": "<your single question>"}`;
+
+const LEQ_ANALYSIS_EVAL_SYSTEM = `You are Clio, evaluating whether a student's ANALYSIS connects their evidence to their LEQ thesis. It earns credit if the response references the evidence AND explains how it supports the thesis's line of reasoning — not just restating the evidence or the thesis alone.
+
+Classify the response as one of:
+- "thin": too brief, no real connection.
+- "evidence_only": restates or describes the evidence without linking it to the thesis.
+- "strong": explicitly links the evidence to the thesis's line of reasoning — earns this step.
+
+Return ONLY valid JSON:
+{
+  "meets_rubric": <boolean>,
+  "rubric_feedback": "<one sentence>",
+  "clio_response": "<Clio's warm reply, 40 words or fewer. If not advancing, ask exactly ONE follow-up question pushing toward the connection. If advancing, affirm the connection specifically.>",
+  "advance": <boolean — true only if meets_rubric is true, or the student has tried their best after multiple attempts>
+}`;
+
+const LEQ_COMPLEXITY_QUESTION_SYSTEM = `You are Clio, a warm AP World History writing tutor. The student is working on the COMPLEXITY point for their LEQ — the hardest point, earned through sustained nuance integrated into the argument as a whole (not a single transition phrase).
+
+The student has chosen a complexity pathway (named in the user message, with a description of what it asks for). Ask EXACTLY ONE question, 40 words or fewer, that helps the student develop THIS pathway in connection to their specific thesis and evidence:
+- If this is the first question for this pathway, introduce the pathway's core move (e.g. for corroboration, ask about a connection to another time/region; for qualification, ask about a limit or exception; for tension, ask about a counterargument; for scale shift, ask about a different level of analysis).
+- If the student has already answered once, ask a follow-up that pushes them to tie this new dimension explicitly back to their thesis.
+
+Never state the answer yourself. Use warm, "we" framing.
+
+Return ONLY valid JSON: {"question": "<your single question>"}`;
+
+const LEQ_COMPLEXITY_EVAL_SYSTEM = `You are Clio, evaluating a student's COMPLEXITY response for an LEQ. The complexity point requires sustained nuance integrated into the argument — not a single transition phrase. The student is working through a specific complexity pathway (named in the user message).
+
+Decide whether the conversation so far demonstrates complexity: does it add a genuine additional dimension appropriate to the chosen pathway (another time period/region for corroboration; a limit/exception for qualification; a counterargument/tension for tension; a different scale of analysis for scale shift) AND tie it back to the thesis?
+
+Classify the response as one of:
+- "thin": no real additional dimension yet.
+- "developing": an additional dimension is named but not yet tied to the thesis.
+- "strong": an additional dimension is clearly tied to the thesis — earns the point.
+
+Return ONLY valid JSON:
+{
+  "meets_rubric": <boolean>,
+  "rubric_feedback": "<one sentence>",
+  "clio_response": "<Clio's warm reply, 40 words or fewer. If not advancing, ask exactly ONE follow-up question. If advancing, celebrate specifically.>",
+  "advance": <boolean — true only if meets_rubric is true and the student has addressed both the pathway's core move and its connection to the thesis, or the student has tried their best after multiple attempts>
+}`;
+
+const LEQ_STAGE_SYSTEMS = {
+  contextualization: { question: LEQ_CONTEXT_QUESTION_SYSTEM, eval: LEQ_CONTEXT_EVAL_SYSTEM },
+  evidence: { question: LEQ_EVIDENCE_QUESTION_SYSTEM, eval: LEQ_EVIDENCE_EVAL_SYSTEM },
+  analysis: { question: LEQ_ANALYSIS_QUESTION_SYSTEM, eval: LEQ_ANALYSIS_EVAL_SYSTEM },
+  complexity: { question: LEQ_COMPLEXITY_QUESTION_SYSTEM, eval: LEQ_COMPLEXITY_EVAL_SYSTEM },
+};
+
+function heuristicLeqStageQuestion(stage, history) {
+  const banks = {
+    contextualization: [
+      "What was happening in the world before or around your topic that connects to your argument?",
+      "How does that broader context shape or set up the specific argument you're making?",
+    ],
+    evidence: [
+      "What's one specific piece of evidence — a name, place, date, or event — that supports your thesis?",
+      "Can we get more specific? Name a particular person, place, treaty, or event.",
+    ],
+    analysis: [
+      "How does the evidence you just gave support your thesis? Walk me through the connection.",
+      "Let's tie it back to your claim — why does that evidence matter for your argument?",
+    ],
+    complexity: [
+      "Let's build out this pathway — what's the additional dimension you're adding to your argument?",
+      "Now connect that back to your thesis — how does it strengthen or complicate your overall argument?",
+    ],
+  };
+  const pool = banks[stage] || banks.contextualization;
+  const idx = Math.min((history || []).filter((h) => h.role === 'student').length, pool.length - 1);
+  return { question: pool[idx] };
+}
+
+function heuristicLeqStageEvaluation(stage, studentText, history) {
+  const text = (studentText || '').trim();
+  const words = text.split(/\s+/).filter(Boolean).length;
+  const attempts = (history || []).filter((h) => h.role === 'student').length + 1;
+  const hasSpecific = /\b(\d{3,4}|century|empire|dynasty|trade|treaty|war|revolution|company|state|kingdom|society|movement|reform)\b/i.test(text);
+  const hasConnective = /\b(because|this shows|this means|therefore|as a result|which|so that|in order to|demonstrates|supports|connects|since)\b/i.test(text);
+
+  if (words < 6) {
+    return {
+      meets_rubric: false,
+      rubric_feedback: 'This response is too brief to evaluate yet.',
+      clio_response: "Let's add a bit more — can you say more about that?",
+      advance: attempts >= 4,
+    };
+  }
+
+  let strong;
+  if (stage === 'evidence') strong = hasSpecific;
+  else if (stage === 'analysis' || stage === 'complexity') strong = hasConnective && words > 12;
+  else strong = hasConnective && words > 15; // contextualization
+
+  return {
+    meets_rubric: strong || attempts >= 4,
+    rubric_feedback: strong
+      ? 'This response meets the rubric standard for this step. (Offline check — AI grading unavailable.)'
+      : 'This response is on the right track but needs more — be more specific or connect it more explicitly to your argument.',
+    clio_response: strong
+      ? "That's exactly what this step needed. Nicely done!"
+      : attempts >= 4
+        ? "Thanks for sticking with it — let's lock this in and keep moving."
+        : "We're close — can you make this more specific, or tie it more directly to your argument?",
+    advance: strong || attempts >= 4,
+  };
+}
+
+function leqThesisBlock(thesis) {
+  return `\nStudent's thesis — claim: ${thesis?.claim || 'n/a'}; reasoning: ${thesis?.reasoning || 'n/a'}`;
+}
+
+async function generateLeqStageQuestion({ stage, assignmentTitle, prompt, thesis, stageContext = '', pathway, studentLevel = 1, history = [] }) {
+  if (!hasKey) return heuristicLeqStageQuestion(stage, history);
+  try {
+    const systems = LEQ_STAGE_SYSTEMS[stage] || LEQ_STAGE_SYSTEMS.contextualization;
+    const historyBlock = (history || []).map((h) => `${h.role === 'clio' ? 'Clio' : 'Student'}: ${h.text}`).join('\n');
+    const pathwayBlock = pathway && LEQ_COMPLEXITY_PATHWAYS[pathway]
+      ? `\nComplexity pathway: ${LEQ_COMPLEXITY_PATHWAYS[pathway].label} — ${LEQ_COMPLEXITY_PATHWAYS[pathway].blurb}`
+      : '';
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 200,
+      system: systems.question,
+      messages: [{
+        role: 'user',
+        content: `Assignment: ${assignmentTitle}\nPROMPT: ${prompt}${leqThesisBlock(thesis)}${stageContext}${pathwayBlock}\nStudent level: ${studentLevel} (1=needs heavy scaffolding, 3=ready for independence)\n\nConversation so far:\n${historyBlock || '(nothing yet — this is the opening question)'}\n\nAsk your next question.`,
+      }],
+    });
+    const parsed = extractJson(response.content[0].text);
+    if (!parsed || typeof parsed.question !== 'string' || !parsed.question.trim()) throw new Error('malformed response');
+    return { question: parsed.question.trim() };
+  } catch (err) {
+    console.error(`write-grader.generateLeqStageQuestion error (stage=${stage}):`, err.message);
+    return heuristicLeqStageQuestion(stage, history);
+  }
+}
+
+async function evaluateLeqStageResponse({ stage, assignmentTitle, prompt, thesis, stageContext = '', pathway, studentLevel = 1, studentText, history = [] }) {
+  if (!hasKey) return heuristicLeqStageEvaluation(stage, studentText, history);
+  try {
+    const systems = LEQ_STAGE_SYSTEMS[stage] || LEQ_STAGE_SYSTEMS.contextualization;
+    const historyBlock = (history || []).map((h) => `${h.role === 'clio' ? 'Clio' : 'Student'}: ${h.text}`).join('\n');
+    const pathwayBlock = pathway && LEQ_COMPLEXITY_PATHWAYS[pathway]
+      ? `\nComplexity pathway: ${LEQ_COMPLEXITY_PATHWAYS[pathway].label} — ${LEQ_COMPLEXITY_PATHWAYS[pathway].blurb}`
+      : '';
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 400,
+      system: systems.eval,
+      messages: [{
+        role: 'user',
+        content: `Assignment: ${assignmentTitle}\nPROMPT: ${prompt}${leqThesisBlock(thesis)}${stageContext}${pathwayBlock}\nStudent level: ${studentLevel}\n\nConversation so far:\n${historyBlock}\n\nStudent's latest response:\n${studentText}\n\nEvaluate this response.`,
+      }],
+    });
+    const parsed = extractJson(response.content[0].text);
+    if (!parsed || typeof parsed.meets_rubric !== 'boolean' || typeof parsed.clio_response !== 'string'
+      || typeof parsed.rubric_feedback !== 'string' || typeof parsed.advance !== 'boolean') {
+      throw new Error('malformed response');
+    }
+    return parsed;
+  } catch (err) {
+    console.error(`write-grader.evaluateLeqStageResponse error (stage=${stage}):`, err.message);
+    return heuristicLeqStageEvaluation(stage, studentText, history);
+  }
+}
+
 module.exports = {
   RUBRICS, gradeEssay, precheck, generateAssignmentPrompt, regradeCriterion, generateDrill, gradeDrill, hasKey,
   generateDecodeBundle, generateClioQuestion, evaluateClioResponse,
+  LEQ_COMPLEXITY_PATHWAYS, generateLeqDecodeBundle, evaluateLeqThesis,
+  generateLeqStageQuestion, evaluateLeqStageResponse,
 };

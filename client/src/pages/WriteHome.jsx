@@ -540,7 +540,10 @@ export default function WriteHome() {
                 const trail = TRAILS.find((t) => t.type === a.type) || TRAILS[0];
                 const due = a.due_date ? new Date(a.due_date) : null;
                 const overdue = due && due < new Date();
-                const guidedWalkAvailable = a.type === 'SAQ' && a.guided_walk_enabled !== false && !!parseSaqPrompt(a.prompt);
+                const guidedWalkAvailable =
+                  (a.type === 'SAQ' && a.guided_walk_enabled !== false && !!parseSaqPrompt(a.prompt)) ||
+                  (a.type === 'LEQ' && a.guided_walk_enabled !== false);
+                const guidedWalkScreen = a.type === 'LEQ' ? 'guided_walk_leq' : 'guided_walk_saq';
                 return (
                   <motion.div key={a.id}
                     role="button" tabIndex={0}
@@ -578,7 +581,7 @@ export default function WriteHome() {
                     {guidedWalkAvailable && (
                       <motion.button
                         whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }}
-                        onClick={(e) => { e.stopPropagation(); navigate('guided_walk_saq', { assignmentId: a.id }); }}
+                        onClick={(e) => { e.stopPropagation(); navigate(guidedWalkScreen, { assignmentId: a.id }); }}
                         style={{
                           flexShrink: 0, border: `1px solid ${GW.amber}80`, background: `${GW.amber}22`,
                           color: GW.gold, borderRadius: 999, padding: '7px 14px', cursor: 'pointer',
