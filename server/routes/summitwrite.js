@@ -159,6 +159,22 @@ async function loadLeqGuidedWalkAssignment(req, res) {
   return { user, assignment };
 }
 
+// Loads + validates an assignment for the DBQ Guided Walk ("Reading the Room").
+async function loadDbqGuidedWalkAssignment(req, res) {
+  const user = req.dbUser;
+  if (!user) { res.status(400).json({ error: 'User not synced' }); return null; }
+  const { rows } = await db.query('SELECT * FROM sw_assignments WHERE id=$1', [req.params.assignmentId]);
+  const assignment = rows[0];
+  if (!assignment) { res.status(404).json({ error: 'Assignment not found' }); return null; }
+  const isOwner = assignment.teacher_id === user.id;
+  if (!assignment.published && !isOwner) { res.status(403).json({ error: 'Not published' }); return null; }
+  if (!assignment.guided_walk_enabled) { res.status(403).json({ error: 'Guided Walk is not enabled for this assignment' }); return null; }
+  if (assignment.type !== 'DBQ') { res.status(400).json({ error: 'This Guided Walk is for DBQ assignments only' }); return null; }
+  const { rows: docs } = await db.query('SELECT * FROM sw_documents WHERE assignment_id=$1 ORDER BY doc_number', [assignment.id]);
+  if (docs.length < 3) { res.status(400).json({ error: 'This DBQ needs at least 3 documents for the Guided Walk' }); return null; }
+  return { user, assignment, documents: docs };
+}
+
 async function getOrCreateGwSession(studentId, assignmentId) {
   const { rows } = await db.query(
     'SELECT * FROM sw_guided_walk_sessions WHERE student_id=$1 AND assignment_id=$2',
@@ -1283,6 +1299,495 @@ router.post('/guided-walk-leq/:assignmentId/compile', requireAuth, async (req, r
     res.json({ submissionId, grading, award, profile, compiledText, attemptNumber });
   } catch (e) {
     console.error('guided-walk-leq compile error:', e.message);
+    res.status(500).json({ error: 'Failed to compile and grade your essay' });
+  }
+});
+
+// ── Guided Walk: DBQ "Reading the Room" ───────────────────────────────────────
+
+const DBQ_HAPP_FULL_DOC = 1;
+const DBQ_HAPP_ABBREV_DOCS = [2, 3];
+const DBQ_EVIDENCE_STAGES = ['evidence_1', 'evidence_2', 'evidence_3'];
+const DBQ_ASK_STAGES = ['contextualization', ...DBQ_EVIDENCE_STAGES, 'evidence_beyond', 'complexity'];
+
+function defaultDbqStageState(stage) {
+  if (DBQ_EVIDENCE_STAGES.includes(stage)) return { docNumber: null, step: 'evidence', evidenceText: '', sourcingText: '', locked: false, history: [] };
+  if (stage === 'complexity') return { pathway: null, locked: false, finalText: '', history: [] };
+  return { locked: false, finalText: '', history: [] }; // contextualization, evidence_beyond
+}
+
+// Extra context fed to the grader for stages that build on earlier answers.
+function buildDbqStageContext(graderStage, current, partResponses, documents) {
+  if (graderStage === 'sourcing') {
+    const doc = documents.find((d) => d.doc_number === current.docNumber);
+    let block = `\nStudent's evidence summary/connection for this document: ${current.evidenceText || ''}`;
+    if (doc?.happ_hint) block += `\n(Internal grading hint, do not reveal to student): ${doc.happ_hint}`;
+    return block;
+  }
+  if (graderStage === 'complexity') {
+    const ctxText = partResponses.contextualization?.finalText || '';
+    const usedDocs = DBQ_EVIDENCE_STAGES.map((s) => partResponses[s]?.docNumber).filter(Boolean);
+    const unusedDocs = documents.map((d) => d.doc_number).filter((n) => !usedDocs.includes(n));
+    const docLines = DBQ_EVIDENCE_STAGES.map((s) => {
+      const ev = partResponses[s] || {};
+      return `Document ${ev.docNumber}: ${ev.evidenceText || ''} — Sourcing: ${ev.sourcingText || ''}`;
+    }).join('\n');
+    return `\nFor reference, here is the rest of the student's essay so far:\nContextualization: ${ctxText}\n${docLines}\nOutside evidence: ${partResponses.evidence_beyond?.finalText || ''}\nDBQ-specific complexity coaching: complexity often comes from noticing what's NOT in the documents (unused document numbers: ${unusedDocs.join(', ') || 'none'}), or from connecting the documents' time period to what came before or after.`;
+  }
+  return '';
+}
+
+// GET /api/write/guided-walk-dbq/:assignmentId — get-or-create session
+router.get('/guided-walk-dbq/:assignmentId', requireAuth, async (req, res) => {
+  try {
+    const ctx = await loadDbqGuidedWalkAssignment(req, res);
+    if (!ctx) return;
+    const session = await getOrCreateGwSession(ctx.user.id, ctx.assignment.id);
+    const profile = await getWritingProfile(ctx.user.id);
+    const isOwner = ctx.assignment.teacher_id === ctx.user.id;
+    const documents = ctx.documents.map((d) => (isOwner ? d : { ...d, happ_hint: undefined }));
+    res.json({
+      assignment: ctx.assignment, documents, session, profile,
+      rubric: grader.RUBRICS.DBQ, complexityPathways: grader.LEQ_COMPLEXITY_PATHWAYS,
+      happDimensions: grader.HAPP_DIMENSIONS,
+      happFullDoc: DBQ_HAPP_FULL_DOC, happAbbrevDocs: DBQ_HAPP_ABBREV_DOCS,
+    });
+  } catch (e) {
+    console.error('guided-walk-dbq GET error:', e.message);
+    res.status(500).json({ error: 'Failed to load guided walk' });
+  }
+});
+
+// PATCH /api/write/guided-walk-dbq/:assignmentId — autosave (phase / part responses / reflection)
+router.patch('/guided-walk-dbq/:assignmentId', requireAuth, async (req, res) => {
+  try {
+    const ctx = await loadDbqGuidedWalkAssignment(req, res);
+    if (!ctx) return;
+    await getOrCreateGwSession(ctx.user.id, ctx.assignment.id);
+    const { phase, partResponses, reflection } = req.body;
+    await db.query(
+      `UPDATE sw_guided_walk_sessions SET
+         phase          = COALESCE($3, phase),
+         part_responses = COALESCE($4, part_responses),
+         reflection     = COALESCE($5, reflection),
+         updated_at     = NOW()
+       WHERE student_id=$1 AND assignment_id=$2`,
+      [ctx.user.id, ctx.assignment.id,
+       phase || null,
+       partResponses ? JSON.stringify(partResponses) : null,
+       reflection ?? null]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('guided-walk-dbq PATCH error:', e.message);
+    res.status(500).json({ error: 'Failed to save progress' });
+  }
+});
+
+// POST /api/write/guided-walk-dbq/:assignmentId/triage — Phase 1 document triage piles
+router.post('/guided-walk-dbq/:assignmentId/triage', requireAuth, async (req, res) => {
+  try {
+    const ctx = await loadDbqGuidedWalkAssignment(req, res);
+    if (!ctx) return;
+    const { triage } = req.body;
+    if (!triage || typeof triage !== 'object') return res.status(400).json({ error: 'triage is required' });
+
+    const docNumbers = new Set(ctx.documents.map((d) => d.doc_number));
+    const cleaned = {};
+    for (const [k, v] of Object.entries(triage)) {
+      const docNum = Number(k);
+      if (docNumbers.has(docNum) && (v === 'supports' || v === 'complicates')) cleaned[docNum] = v;
+    }
+
+    const session = await getOrCreateGwSession(ctx.user.id, ctx.assignment.id);
+    const partResponses = session.part_responses || {};
+    const current = partResponses.documents || {};
+    current.triage = cleaned;
+    partResponses.documents = current;
+    await db.query(
+      `UPDATE sw_guided_walk_sessions SET part_responses=$3, updated_at=NOW() WHERE student_id=$1 AND assignment_id=$2`,
+      [ctx.user.id, ctx.assignment.id, JSON.stringify(partResponses)]
+    );
+    res.json({ ok: true, triage: cleaned });
+  } catch (e) {
+    console.error('guided-walk-dbq triage error:', e.message);
+    res.status(500).json({ error: 'Failed to save document triage' });
+  }
+});
+
+// POST /api/write/guided-walk-dbq/:assignmentId/happ — Phase 2 HAPP Deep Dive responses
+router.post('/guided-walk-dbq/:assignmentId/happ', requireAuth, async (req, res) => {
+  try {
+    const ctx = await loadDbqGuidedWalkAssignment(req, res);
+    if (!ctx) return;
+    const { docNumber, dimension, text } = req.body;
+    if (!text || !text.trim()) return res.status(400).json({ error: 'text is required' });
+    const num = Number(docNumber);
+    const doc = ctx.documents.find((d) => d.doc_number === num);
+    if (!doc) return res.status(400).json({ error: 'Invalid docNumber' });
+
+    const session = await getOrCreateGwSession(ctx.user.id, ctx.assignment.id);
+    const partResponses = session.part_responses || {};
+    const current = partResponses.documents || {};
+
+    let feedback;
+    if (num === DBQ_HAPP_FULL_DOC) {
+      if (!grader.HAPP_DIMENSIONS[dimension]) return res.status(400).json({ error: 'Invalid dimension' });
+      const result = await grader.evaluateHappResponse({ assignmentTitle: ctx.assignment.title, document: doc, dimension, studentText: text });
+      feedback = result.feedback;
+      const full = current.happFull || { docNumber: DBQ_HAPP_FULL_DOC, responses: {}, locked: false };
+      full.responses = { ...(full.responses || {}), [dimension]: text };
+      full.docNumber = DBQ_HAPP_FULL_DOC;
+      full.locked = Object.keys(grader.HAPP_DIMENSIONS).every((d) => !!full.responses[d]);
+      current.happFull = full;
+    } else if (DBQ_HAPP_ABBREV_DOCS.includes(num)) {
+      const result = await grader.evaluateHappResponse({ assignmentTitle: ctx.assignment.title, document: doc, dimension: dimension || 'context', studentText: text });
+      feedback = result.feedback;
+      const abbrev = current.happAbbrev || {};
+      current.happAbbrev = { ...abbrev, [num]: { note: text, locked: true } };
+    } else {
+      return res.status(400).json({ error: 'This document is not part of the HAPP Deep Dive' });
+    }
+
+    const happAbbrevDone = DBQ_HAPP_ABBREV_DOCS.every((n) => current.happAbbrev?.[n]?.locked);
+    current.locked = !!(current.happFull?.locked && happAbbrevDone);
+    partResponses.documents = current;
+
+    await db.query(
+      `UPDATE sw_guided_walk_sessions SET part_responses=$3, updated_at=NOW() WHERE student_id=$1 AND assignment_id=$2`,
+      [ctx.user.id, ctx.assignment.id, JSON.stringify(partResponses)]
+    );
+    res.json({ ok: true, feedback, documents: current });
+  } catch (e) {
+    console.error('guided-walk-dbq happ error:', e.message);
+    res.status(500).json({ error: 'Failed to save HAPP response' });
+  }
+});
+
+// POST /api/write/guided-walk-dbq/:assignmentId/thesis — Phase 3 thesis builder (same as LEQ)
+router.post('/guided-walk-dbq/:assignmentId/thesis', requireAuth, async (req, res) => {
+  try {
+    const ctx = await loadDbqGuidedWalkAssignment(req, res);
+    if (!ctx) return;
+    const { claim, reasoning } = req.body;
+    if (!claim || !claim.trim() || !reasoning || !reasoning.trim()) {
+      return res.status(400).json({ error: 'claim and reasoning are required' });
+    }
+
+    const session = await getOrCreateGwSession(ctx.user.id, ctx.assignment.id);
+    const partResponses = session.part_responses || {};
+    const current = partResponses.thesis || { locked: false, attempts: 0 };
+    if (current.locked) return res.status(409).json({ error: 'Thesis is already locked' });
+
+    const attemptNumber = (current.attempts || 0) + 1;
+    const evalResult = await grader.evaluateLeqThesis({
+      assignmentTitle: ctx.assignment.title,
+      prompt: ctx.assignment.prompt,
+      claim, reasoning, attemptNumber,
+    });
+
+    partResponses.thesis = { claim, reasoning, attempts: attemptNumber, locked: !!evalResult.approved };
+    await db.query(
+      `UPDATE sw_guided_walk_sessions SET part_responses=$3, updated_at=NOW() WHERE student_id=$1 AND assignment_id=$2`,
+      [ctx.user.id, ctx.assignment.id, JSON.stringify(partResponses)]
+    );
+    res.json({ ...evalResult, attempts: attemptNumber, locked: partResponses.thesis.locked });
+  } catch (e) {
+    console.error('guided-walk-dbq thesis error:', e.message);
+    res.status(500).json({ error: 'Failed to evaluate your thesis' });
+  }
+});
+
+// POST /api/write/guided-walk-dbq/:assignmentId/complexity-pathway — Phase 5 pathway choice (same as LEQ)
+router.post('/guided-walk-dbq/:assignmentId/complexity-pathway', requireAuth, async (req, res) => {
+  try {
+    const ctx = await loadDbqGuidedWalkAssignment(req, res);
+    if (!ctx) return;
+    const { pathway } = req.body;
+    if (!grader.LEQ_COMPLEXITY_PATHWAYS[pathway]) return res.status(400).json({ error: 'Invalid pathway' });
+
+    const session = await getOrCreateGwSession(ctx.user.id, ctx.assignment.id);
+    const partResponses = session.part_responses || {};
+    if (partResponses.complexity?.locked) return res.status(409).json({ error: 'Complexity is already locked' });
+    partResponses.complexity = { pathway, locked: false, finalText: '', history: [] };
+    await db.query(
+      `UPDATE sw_guided_walk_sessions SET part_responses=$3, updated_at=NOW() WHERE student_id=$1 AND assignment_id=$2`,
+      [ctx.user.id, ctx.assignment.id, JSON.stringify(partResponses)]
+    );
+    res.json({ ok: true, pathway });
+  } catch (e) {
+    console.error('guided-walk-dbq complexity-pathway error:', e.message);
+    res.status(500).json({ error: 'Failed to set complexity pathway' });
+  }
+});
+
+// POST /api/write/guided-walk-dbq/:assignmentId/ask — Clio's next question for a stage
+router.post('/guided-walk-dbq/:assignmentId/ask', requireAuth, async (req, res) => {
+  try {
+    const ctx = await loadDbqGuidedWalkAssignment(req, res);
+    if (!ctx) return;
+    const { stage, docNumber } = req.body;
+    if (!DBQ_ASK_STAGES.includes(stage)) return res.status(400).json({ error: 'Invalid stage' });
+
+    const session = await getOrCreateGwSession(ctx.user.id, ctx.assignment.id);
+    const partResponses = session.part_responses || {};
+    const current = partResponses[stage] || defaultDbqStageState(stage);
+
+    if (DBQ_EVIDENCE_STAGES.includes(stage) && !current.docNumber) {
+      const num = Number(docNumber);
+      const doc = ctx.documents.find((d) => d.doc_number === num);
+      if (!doc) return res.status(400).json({ error: 'A valid docNumber is required to start this stage' });
+      const usedDocs = DBQ_EVIDENCE_STAGES.map((s) => partResponses[s]?.docNumber).filter(Boolean);
+      if (usedDocs.includes(num)) return res.status(409).json({ error: 'This document is already used by another evidence stage' });
+      current.docNumber = num;
+    }
+    if (stage === 'complexity' && !current.pathway) {
+      return res.status(409).json({ error: 'Choose a complexity pathway first' });
+    }
+
+    const document = DBQ_EVIDENCE_STAGES.includes(stage)
+      ? ctx.documents.find((d) => d.doc_number === current.docNumber)
+      : null;
+
+    const graderStage = DBQ_EVIDENCE_STAGES.includes(stage)
+      ? (current.step === 'sourcing' ? 'sourcing' : 'evidence')
+      : stage === 'evidence_beyond' ? 'outside_evidence'
+      : stage === 'complexity' ? 'complexity'
+      : 'contextualization';
+
+    const profile = await getWritingProfile(ctx.user.id);
+
+    let question;
+    if (graderStage === 'contextualization' || graderStage === 'complexity') {
+      const result = await grader.generateLeqStageQuestion({
+        stage: graderStage,
+        assignmentTitle: ctx.assignment.title,
+        prompt: ctx.assignment.prompt,
+        thesis: partResponses.thesis,
+        stageContext: buildDbqStageContext(graderStage, current, partResponses, ctx.documents),
+        pathway: stage === 'complexity' ? current.pathway : null,
+        studentLevel: profile.dbq_level || 1,
+        history: current.history,
+      });
+      question = result.question;
+    } else {
+      const result = await grader.generateDbqStageQuestion({
+        stage: graderStage,
+        assignmentTitle: ctx.assignment.title,
+        prompt: ctx.assignment.prompt,
+        thesis: partResponses.thesis,
+        document,
+        stageContext: buildDbqStageContext(graderStage, current, partResponses, ctx.documents),
+        studentLevel: profile.dbq_level || 1,
+        history: current.history,
+      });
+      question = result.question;
+    }
+
+    current.history = [...current.history, { role: 'clio', text: question }];
+    partResponses[stage] = current;
+    await db.query(
+      `UPDATE sw_guided_walk_sessions SET part_responses=$3, updated_at=NOW() WHERE student_id=$1 AND assignment_id=$2`,
+      [ctx.user.id, ctx.assignment.id, JSON.stringify(partResponses)]
+    );
+    res.json({ question, history: current.history, step: current.step, docNumber: current.docNumber });
+  } catch (e) {
+    console.error('guided-walk-dbq ask error:', e.message);
+    res.status(500).json({ error: 'Failed to get a question from Clio' });
+  }
+});
+
+// POST /api/write/guided-walk-dbq/:assignmentId/answer — evaluate a student's response to a stage
+router.post('/guided-walk-dbq/:assignmentId/answer', requireAuth, async (req, res) => {
+  try {
+    const ctx = await loadDbqGuidedWalkAssignment(req, res);
+    if (!ctx) return;
+    const { stage, text } = req.body;
+    if (!DBQ_ASK_STAGES.includes(stage)) return res.status(400).json({ error: 'Invalid stage' });
+    if (!text || !text.trim()) return res.status(400).json({ error: 'text is required' });
+
+    const session = await getOrCreateGwSession(ctx.user.id, ctx.assignment.id);
+    const partResponses = session.part_responses || {};
+    const current = partResponses[stage] || defaultDbqStageState(stage);
+    if (current.locked) return res.status(409).json({ error: 'This stage is already locked' });
+    if (DBQ_EVIDENCE_STAGES.includes(stage) && !current.docNumber) {
+      return res.status(409).json({ error: 'Choose a document for this stage first' });
+    }
+    if (stage === 'complexity' && !current.pathway) {
+      return res.status(409).json({ error: 'Choose a complexity pathway first' });
+    }
+
+    const document = DBQ_EVIDENCE_STAGES.includes(stage)
+      ? ctx.documents.find((d) => d.doc_number === current.docNumber)
+      : null;
+
+    const graderStage = DBQ_EVIDENCE_STAGES.includes(stage)
+      ? (current.step === 'sourcing' ? 'sourcing' : 'evidence')
+      : stage === 'evidence_beyond' ? 'outside_evidence'
+      : stage === 'complexity' ? 'complexity'
+      : 'contextualization';
+
+    const profile = await getWritingProfile(ctx.user.id);
+    const stageContext = buildDbqStageContext(graderStage, current, partResponses, ctx.documents);
+
+    let evalResult;
+    if (graderStage === 'contextualization' || graderStage === 'complexity') {
+      evalResult = await grader.evaluateLeqStageResponse({
+        stage: graderStage,
+        assignmentTitle: ctx.assignment.title,
+        prompt: ctx.assignment.prompt,
+        thesis: partResponses.thesis,
+        stageContext,
+        pathway: stage === 'complexity' ? current.pathway : null,
+        studentLevel: profile.dbq_level || 1,
+        studentText: text,
+        history: current.history,
+      });
+    } else {
+      evalResult = await grader.evaluateDbqStageResponse({
+        stage: graderStage,
+        assignmentTitle: ctx.assignment.title,
+        prompt: ctx.assignment.prompt,
+        thesis: partResponses.thesis,
+        document,
+        stageContext,
+        studentLevel: profile.dbq_level || 1,
+        studentText: text,
+        history: current.history,
+      });
+    }
+
+    const studentTurns = current.history.filter((h) => h.role === 'student').length + 1;
+    const advance = !!(evalResult.advance || studentTurns >= 5);
+
+    current.history = [...current.history, { role: 'student', text }, { role: 'clio', text: evalResult.clio_response }];
+
+    if (advance) {
+      if (DBQ_EVIDENCE_STAGES.includes(stage) && graderStage === 'evidence') {
+        current.evidenceText = text;
+        current.step = 'sourcing';
+        current.history = []; // fresh conversation for the sourcing sub-step
+      } else if (DBQ_EVIDENCE_STAGES.includes(stage) && graderStage === 'sourcing') {
+        current.sourcingText = text;
+        current.step = 'done';
+        current.locked = true;
+      } else {
+        current.locked = true;
+        current.finalText = text;
+      }
+    }
+
+    partResponses[stage] = current;
+    await db.query(
+      `UPDATE sw_guided_walk_sessions SET part_responses=$3, updated_at=NOW() WHERE student_id=$1 AND assignment_id=$2`,
+      [ctx.user.id, ctx.assignment.id, JSON.stringify(partResponses)]
+    );
+    res.json({
+      ...evalResult, advance, history: current.history, locked: current.locked, step: current.step,
+      docNumber: current.docNumber, evidenceText: current.evidenceText, sourcingText: current.sourcingText, finalText: current.finalText,
+    });
+  } catch (e) {
+    console.error('guided-walk-dbq answer error:', e.message);
+    res.status(500).json({ error: 'Failed to evaluate your response' });
+  }
+});
+
+// POST /api/write/guided-walk-dbq/:assignmentId/reflection — optional, non-graded reflection
+router.post('/guided-walk-dbq/:assignmentId/reflection', requireAuth, async (req, res) => {
+  try {
+    const ctx = await loadDbqGuidedWalkAssignment(req, res);
+    if (!ctx) return;
+    await getOrCreateGwSession(ctx.user.id, ctx.assignment.id);
+    await db.query(
+      `UPDATE sw_guided_walk_sessions SET reflection=$3, updated_at=NOW() WHERE student_id=$1 AND assignment_id=$2`,
+      [ctx.user.id, ctx.assignment.id, req.body?.text || '']
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to save reflection' });
+  }
+});
+
+// POST /api/write/guided-walk-dbq/:assignmentId/compile — compile contextualization + thesis +
+// 3x document evidence/sourcing + outside evidence + complexity into a full DBQ, grade,
+// create a submission, and award XP/badges.
+router.post('/guided-walk-dbq/:assignmentId/compile', requireAuth, async (req, res) => {
+  try {
+    const ctx = await loadDbqGuidedWalkAssignment(req, res);
+    if (!ctx) return;
+    const session = await getOrCreateGwSession(ctx.user.id, ctx.assignment.id);
+    const partResponses = session.part_responses || {};
+
+    if (!partResponses.documents?.locked) return res.status(409).json({ error: 'Document Triage / HAPP Deep Dive is not complete yet' });
+    if (!partResponses.thesis?.locked) return res.status(409).json({ error: 'Thesis is not locked yet' });
+    if (!partResponses.contextualization?.locked) return res.status(409).json({ error: 'Contextualization is not complete yet' });
+    for (const s of DBQ_EVIDENCE_STAGES) {
+      if (!partResponses[s]?.locked) return res.status(409).json({ error: `${s.replace('_', ' ')} is not complete yet` });
+    }
+    if (!partResponses.evidence_beyond?.locked) return res.status(409).json({ error: 'Outside evidence is not complete yet' });
+    if (!partResponses.complexity?.locked) return res.status(409).json({ error: 'Complexity is not complete yet' });
+
+    const thesisSentence = `${partResponses.thesis.claim} ${partResponses.thesis.reasoning}`.trim();
+    const docParagraphs = DBQ_EVIDENCE_STAGES.map((s) => {
+      const ev = partResponses[s];
+      return `(Document ${ev.docNumber}) ${ev.evidenceText} ${ev.sourcingText}`.trim();
+    });
+    const compiledText = [
+      partResponses.contextualization.finalText,
+      thesisSentence,
+      ...docParagraphs,
+      partResponses.evidence_beyond.finalText,
+      partResponses.complexity.finalText,
+    ].join('\n\n');
+
+    const { rows: prevSubs } = await db.query(
+      'SELECT COUNT(*)::int AS n FROM sw_submissions WHERE assignment_id=$1 AND student_id=$2',
+      [ctx.assignment.id, ctx.user.id]
+    );
+    const attemptNumber = (prevSubs[0]?.n || 0) + 1;
+
+    const grading = await grader.gradeEssay({
+      essayType: 'DBQ',
+      prompt: ctx.assignment.prompt,
+      essayText: compiledText,
+      documents: ctx.documents,
+      attemptNumber,
+    });
+
+    const submissionId = uuidv4();
+    await db.query(
+      `INSERT INTO sw_submissions (id, assignment_id, student_id, essay_text, attempt_number, ai_score, max_score, grading_json)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [submissionId, ctx.assignment.id, ctx.user.id, compiledText, attemptNumber, grading.score, grading.maxScore, JSON.stringify(grading)]
+    );
+
+    const skillUpdates = {};
+    for (const [k, v] of Object.entries(grading.breakdown || {})) {
+      skillUpdates[k] = v.earned ? +8 : -3;
+    }
+    const newBadges = [];
+    if (attemptNumber === 1) {
+      const { rows: total } = await db.query('SELECT COUNT(*)::int AS n FROM sw_submissions WHERE student_id=$1', [ctx.user.id]);
+      if (total[0].n === 1) newBadges.push('trail_blazer');
+    }
+    if (grading.breakdown?.evidence_documents?.points === 3) newBadges.push('sourcing_scout');
+    if (grading.score >= 6) newBadges.push('summit_writer');
+
+    // +50 XP Guided Walk completion bonus on top of the usual essay-grading award
+    const xpGain = Math.round(grading.score * 15 * (attemptNumber === 1 ? 1.5 : 1)) + 50;
+
+    const award = await awardProgress(ctx.user.id, { xpGain, skillUpdates, newBadges });
+    const profile = await updateWritingProfileAfterWalk(ctx.user.id, 'DBQ', grading);
+
+    await db.query(
+      `UPDATE sw_guided_walk_sessions SET phase='complete', rubric_result=$3, completed_at=NOW(), updated_at=NOW()
+       WHERE student_id=$1 AND assignment_id=$2`,
+      [ctx.user.id, ctx.assignment.id, JSON.stringify(grading)]
+    );
+
+    res.json({ submissionId, grading, award, profile, compiledText, attemptNumber });
+  } catch (e) {
+    console.error('guided-walk-dbq compile error:', e.message);
     res.status(500).json({ error: 'Failed to compile and grade your essay' });
   }
 });

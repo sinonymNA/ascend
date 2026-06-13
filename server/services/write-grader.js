@@ -1019,9 +1019,251 @@ async function evaluateLeqStageResponse({ stage, assignmentTitle, prompt, thesis
   }
 }
 
+// ── Guided Walk: DBQ "Reading the Room" ─────────────────────────────────────────
+
+const HAPP_DIMENSIONS = {
+  context: {
+    label: 'Historical Context',
+    prompt: "What was happening in the world when this was written? That context shapes what the author says and doesn't say.",
+  },
+  audience: {
+    label: 'Audience',
+    prompt: "Who is this written FOR? An audience shapes a message — what might this author leave out, exaggerate, or frame carefully because of who's reading?",
+  },
+  purpose: {
+    label: 'Purpose',
+    prompt: 'Why was this created? A propaganda poster and a private letter are both documents — but they work very differently as evidence.',
+  },
+  pov: {
+    label: 'Point of View',
+    prompt: "What does this person's background, position, or identity tell you about why they see it this way?",
+  },
+};
+
+function heuristicHappFeedback(dimension, studentText) {
+  const words = (studentText || '').trim().split(/\s+/).filter(Boolean).length;
+  if (words < 4) {
+    return { feedback: 'Try to say a bit more — even a short sentence helps you remember this when you write.' };
+  }
+  const bank = {
+    context: 'Good — keep that broader moment in mind as you decide how to use this document.',
+    audience: "Nice — thinking about who's reading helps you spot what the author chose to include or leave out.",
+    purpose: 'That’s the idea — the form a document takes shapes what it can tell you as evidence.',
+    pov: "Good thinking — the author's position is often the key to using a document well.",
+  };
+  return { feedback: bank[dimension] || 'Good — hold onto that observation for when you write about this document.' };
+}
+
+async function evaluateHappResponse({ assignmentTitle, document, dimension, studentText }) {
+  if (!hasKey) return heuristicHappFeedback(dimension, studentText);
+  try {
+    const dim = HAPP_DIMENSIONS[dimension] || HAPP_DIMENSIONS.context;
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 150,
+      system: `You are Clio, a warm AP World History writing tutor. The student is practicing HAPP (Historical context, Audience, Purpose, Point of view) analysis on a DBQ document, focusing on ${dim.label}. Give ONE warm sentence (25 words or fewer) of feedback that affirms or gently extends their thinking and connects it to how they might use this document as evidence. Return ONLY valid JSON: {"feedback": "<your sentence>"}`,
+      messages: [{
+        role: 'user',
+        content: `Document: "${document?.title || ''}" (${document?.source || 'unknown source'}, ${document?.year || 'n.d.'})\n${dim.label} prompt: ${dim.prompt}\n\nStudent's response: ${studentText}`,
+      }],
+    });
+    const parsed = extractJson(response.content[0].text);
+    if (!parsed || typeof parsed.feedback !== 'string' || !parsed.feedback.trim()) throw new Error('malformed response');
+    return { feedback: parsed.feedback.trim() };
+  } catch (err) {
+    console.error(`write-grader.evaluateHappResponse error (dimension=${dimension}):`, err.message);
+    return heuristicHappFeedback(dimension, studentText);
+  }
+}
+
+// ── Phase 4: document-anchored Socratic loop (evidence / sourcing / outside evidence) ──
+
+const DBQ_EVIDENCE_QUESTION_SYSTEM = `You are Clio, a warm AP World History writing tutor. The student is using ONE DOCUMENT as evidence for their DBQ thesis.
+
+Ask EXACTLY ONE question, 40 words or fewer, asking the student to summarize what the document says in their own words AND explain how it supports their thesis. Reference the document by its title where helpful. Never summarize the document yourself, and never state the connection to the thesis.
+
+Return ONLY valid JSON: {"question": "<your single question>"}`;
+
+const DBQ_EVIDENCE_EVAL_SYSTEM = `You are Clio, evaluating whether a student's response uses ONE DOCUMENT as evidence for their DBQ thesis.
+
+Classify the response as one of:
+- "thin": too brief, no real content.
+- "description_only": describes or quotes the document without connecting it to the thesis.
+- "strong": accurately summarizes the document's content/argument AND explains how it supports the thesis — earns this step.
+
+Return ONLY valid JSON:
+{
+  "meets_rubric": <boolean>,
+  "rubric_feedback": "<one sentence>",
+  "clio_response": "<Clio's warm reply, 40 words or fewer. If not advancing, ask exactly ONE follow-up question. If advancing, affirm the connection specifically.>",
+  "advance": <boolean — true only if meets_rubric is true, or the student has tried their best after multiple attempts>
+}`;
+
+const DBQ_SOURCING_QUESTION_SYSTEM = `You are Clio, a warm AP World History writing tutor. The student has just used a document as evidence; now they are working on SOURCING (HAPP) for that same document — explaining how the document's point of view, purpose, historical situation, or audience strengthens or complicates its use as evidence for their thesis.
+
+Ask EXACTLY ONE question, 40 words or fewer. Point the student toward ONE HAPP element (whichever seems most relevant to this document) without naming the answer yourself. Use warm, "we" framing.
+
+Return ONLY valid JSON: {"question": "<your single question>"}`;
+
+const DBQ_SOURCING_EVAL_SYSTEM = `You are Clio, evaluating a student's SOURCING (HAPP) analysis of a document used as DBQ evidence.
+
+Classify the response as one of:
+- "thin": no real sourcing content.
+- "description_only": identifies a HAPP element (e.g. "this is a speech" or "the author is a king") but does not connect it to the argument.
+- "strong": identifies a HAPP element (point of view, purpose, historical situation, or audience) AND explains how it strengthens, limits, or complicates the document's use as evidence for the thesis — earns this step.
+
+Return ONLY valid JSON:
+{
+  "meets_rubric": <boolean>,
+  "rubric_feedback": "<one sentence>",
+  "clio_response": "<Clio's warm reply, 40 words or fewer. If not advancing, ask exactly ONE follow-up question pushing toward the connection. If advancing, affirm the sourcing point specifically.>",
+  "advance": <boolean — true only if meets_rubric is true, or the student has tried their best after multiple attempts>
+}`;
+
+const DBQ_OUTSIDE_EVIDENCE_QUESTION_SYSTEM = `You are Clio, a warm AP World History writing tutor. The student is naming ONE PIECE OF OUTSIDE EVIDENCE for their DBQ — something specific and verifiable that is NOT found in any of the provided documents — to support their thesis.
+
+Ask EXACTLY ONE question, 40 words or fewer, asking for a specific name, place, date, treaty, event, or development (not found in the documents) relevant to their thesis. If the student already gave something too vague, or that appears to restate one of the documents, gently redirect. Never name the example yourself.
+
+Return ONLY valid JSON: {"question": "<your single question>"}`;
+
+const DBQ_OUTSIDE_EVIDENCE_EVAL_SYSTEM = `You are Clio, evaluating whether a student's response names a piece of OUTSIDE EVIDENCE for their DBQ — specific, verifiable, AND not one of the provided documents.
+
+Classify the response as one of:
+- "thin": no real historical content.
+- "vague": a general trend, not a verifiable specific, OR appears to restate one of the provided documents rather than outside knowledge.
+- "strong": names something specific, plausibly relevant to the thesis, and distinct from the documents — earns this step.
+
+Return ONLY valid JSON:
+{
+  "meets_rubric": <boolean>,
+  "rubric_feedback": "<one sentence>",
+  "clio_response": "<Clio's warm reply, 40 words or fewer. If not advancing, push for a specific, document-independent example with exactly ONE follow-up question. If advancing, acknowledge the evidence specifically.>",
+  "advance": <boolean — true only if meets_rubric is true, or the student has tried their best after multiple attempts>
+}`;
+
+const DBQ_STAGE_SYSTEMS = {
+  evidence: { question: DBQ_EVIDENCE_QUESTION_SYSTEM, eval: DBQ_EVIDENCE_EVAL_SYSTEM },
+  sourcing: { question: DBQ_SOURCING_QUESTION_SYSTEM, eval: DBQ_SOURCING_EVAL_SYSTEM },
+  outside_evidence: { question: DBQ_OUTSIDE_EVIDENCE_QUESTION_SYSTEM, eval: DBQ_OUTSIDE_EVIDENCE_EVAL_SYSTEM },
+};
+
+function dbqDocumentBlock(document) {
+  if (!document) return '';
+  return `\nDocument ${document.doc_number} — "${document.title}" (${document.source || 'unknown source'}, ${document.year || 'n.d.'}):\n${document.body || '[image-based document]'}`;
+}
+
+function heuristicDbqStageQuestion(stage, history, document) {
+  const title = document?.title || 'this document';
+  const banks = {
+    evidence: [
+      `Summarize what "${title}" says in your own words, then explain how it supports your thesis.`,
+      "Can we connect that summary more directly to your thesis — what's the link?",
+    ],
+    sourcing: [
+      `Think about who created "${title}" and why. How does that shape how you use it as evidence?`,
+      'Can we tie that sourcing point more directly back to your argument?',
+    ],
+    outside_evidence: [
+      "Now give me something you know that isn't in these documents — a specific event, person, or development that supports your argument.",
+      'Can we make that more specific — a name, date, place, or event a historian could verify?',
+    ],
+  };
+  const pool = banks[stage] || banks.evidence;
+  const idx = Math.min((history || []).filter((h) => h.role === 'student').length, pool.length - 1);
+  return { question: pool[idx] };
+}
+
+function heuristicDbqStageEvaluation(stage, studentText, history) {
+  const text = (studentText || '').trim();
+  const words = text.split(/\s+/).filter(Boolean).length;
+  const attempts = (history || []).filter((h) => h.role === 'student').length + 1;
+  const hasSpecific = /\b(\d{3,4}|century|empire|dynasty|trade|treaty|war|revolution|company|state|kingdom|society|movement|reform)\b/i.test(text);
+  const hasConnective = /\b(because|this shows|this means|therefore|as a result|which|so that|in order to|demonstrates|supports|connects|since)\b/i.test(text);
+  const hasHapp = /\b(audience|purpose|perspective|point of view|bias|wrote this|intended|background|position|propaganda|persuade|context|written by|reader)\b/i.test(text);
+
+  if (words < 6) {
+    return {
+      meets_rubric: false,
+      rubric_feedback: 'This response is too brief to evaluate yet.',
+      clio_response: "Let's add a bit more — can you say more about that?",
+      advance: attempts >= 4,
+    };
+  }
+
+  let strong;
+  if (stage === 'evidence') strong = hasConnective && words > 15;
+  else if (stage === 'sourcing') strong = hasHapp && hasConnective && words > 10;
+  else strong = hasSpecific && words >= 6; // outside_evidence
+
+  return {
+    meets_rubric: strong || attempts >= 4,
+    rubric_feedback: strong
+      ? 'This response meets the rubric standard for this step. (Offline check — AI grading unavailable.)'
+      : 'This response is on the right track but needs more — be more specific or connect it more explicitly to your argument.',
+    clio_response: strong
+      ? "That's exactly what this step needed. Nicely done!"
+      : attempts >= 4
+        ? "Thanks for sticking with it — let's lock this in and keep moving."
+        : "We're close — can you make this more specific, or tie it more directly to your argument?",
+    advance: strong || attempts >= 4,
+  };
+}
+
+async function generateDbqStageQuestion({ stage, assignmentTitle, prompt, thesis, document, stageContext = '', studentLevel = 1, history = [] }) {
+  if (!hasKey) return heuristicDbqStageQuestion(stage, history, document);
+  try {
+    const systems = DBQ_STAGE_SYSTEMS[stage];
+    if (!systems) throw new Error(`unknown DBQ stage: ${stage}`);
+    const historyBlock = (history || []).map((h) => `${h.role === 'clio' ? 'Clio' : 'Student'}: ${h.text}`).join('\n');
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 200,
+      system: systems.question,
+      messages: [{
+        role: 'user',
+        content: `Assignment: ${assignmentTitle}\nPROMPT: ${prompt}${leqThesisBlock(thesis)}${dbqDocumentBlock(document)}${stageContext}\nStudent level: ${studentLevel} (1=needs heavy scaffolding, 3=ready for independence)\n\nConversation so far:\n${historyBlock || '(nothing yet — this is the opening question)'}\n\nAsk your next question.`,
+      }],
+    });
+    const parsed = extractJson(response.content[0].text);
+    if (!parsed || typeof parsed.question !== 'string' || !parsed.question.trim()) throw new Error('malformed response');
+    return { question: parsed.question.trim() };
+  } catch (err) {
+    console.error(`write-grader.generateDbqStageQuestion error (stage=${stage}):`, err.message);
+    return heuristicDbqStageQuestion(stage, history, document);
+  }
+}
+
+async function evaluateDbqStageResponse({ stage, assignmentTitle, prompt, thesis, document, stageContext = '', studentLevel = 1, studentText, history = [] }) {
+  if (!hasKey) return heuristicDbqStageEvaluation(stage, studentText, history);
+  try {
+    const systems = DBQ_STAGE_SYSTEMS[stage];
+    if (!systems) throw new Error(`unknown DBQ stage: ${stage}`);
+    const historyBlock = (history || []).map((h) => `${h.role === 'clio' ? 'Clio' : 'Student'}: ${h.text}`).join('\n');
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 400,
+      system: systems.eval,
+      messages: [{
+        role: 'user',
+        content: `Assignment: ${assignmentTitle}\nPROMPT: ${prompt}${leqThesisBlock(thesis)}${dbqDocumentBlock(document)}${stageContext}\nStudent level: ${studentLevel}\n\nConversation so far:\n${historyBlock}\n\nStudent's latest response:\n${studentText}\n\nEvaluate this response.`,
+      }],
+    });
+    const parsed = extractJson(response.content[0].text);
+    if (!parsed || typeof parsed.meets_rubric !== 'boolean' || typeof parsed.clio_response !== 'string'
+      || typeof parsed.rubric_feedback !== 'string' || typeof parsed.advance !== 'boolean') {
+      throw new Error('malformed response');
+    }
+    return parsed;
+  } catch (err) {
+    console.error(`write-grader.evaluateDbqStageResponse error (stage=${stage}):`, err.message);
+    return heuristicDbqStageEvaluation(stage, studentText, history);
+  }
+}
+
 module.exports = {
   RUBRICS, gradeEssay, precheck, generateAssignmentPrompt, regradeCriterion, generateDrill, gradeDrill, hasKey,
   generateDecodeBundle, generateClioQuestion, evaluateClioResponse,
   LEQ_COMPLEXITY_PATHWAYS, generateLeqDecodeBundle, evaluateLeqThesis,
   generateLeqStageQuestion, evaluateLeqStageResponse,
+  HAPP_DIMENSIONS, evaluateHappResponse, generateDbqStageQuestion, evaluateDbqStageResponse,
 };

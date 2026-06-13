@@ -542,8 +542,9 @@ export default function WriteHome() {
                 const overdue = due && due < new Date();
                 const guidedWalkAvailable =
                   (a.type === 'SAQ' && a.guided_walk_enabled !== false && !!parseSaqPrompt(a.prompt)) ||
-                  (a.type === 'LEQ' && a.guided_walk_enabled !== false);
-                const guidedWalkScreen = a.type === 'LEQ' ? 'guided_walk_leq' : 'guided_walk_saq';
+                  (a.type === 'LEQ' && a.guided_walk_enabled !== false) ||
+                  (a.type === 'DBQ' && a.guided_walk_enabled !== false);
+                const guidedWalkScreen = a.type === 'LEQ' ? 'guided_walk_leq' : a.type === 'DBQ' ? 'guided_walk_dbq' : 'guided_walk_saq';
                 return (
                   <motion.div key={a.id}
                     role="button" tabIndex={0}
