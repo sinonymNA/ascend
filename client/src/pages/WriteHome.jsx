@@ -22,6 +22,7 @@ const TRAILS = [
 const BADGE_ICONS = {
   trail_blazer: '🥾', context_climber: '🧗', sourcing_scout: '🔍',
   complexity_king: '👑', revision_ranger: '🔄', summit_writer: '🏔',
+  saq_mastery: '📜', leq_mastery: '⚖️', dbq_mastery: '🗂️',
 };
 
 // ── Cinematic layered mountain vista with mouse parallax ─────────────────────
@@ -520,6 +521,29 @@ export default function WriteHome() {
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}>
           <OrnateCard glow style={{ padding: '18px 20px', marginBottom: 22 }}>
             <RopeXPBar xp={xp} level={level} nextLevelXp={meta.nextLevelXp} thresholds={meta.thresholds} />
+          </OrnateCard>
+        </motion.div>
+
+        {/* Writing Courses entry point */}
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
+          <OrnateCard
+            role="button" tabIndex={0}
+            onClick={() => navigate('write_courses')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('write_courses'); }}
+            style={{ padding: '16px 18px', marginBottom: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{
+              width: 46, height: 46, flexShrink: 0, borderRadius: 10,
+              background: 'radial-gradient(circle at 35% 30%, rgba(245,166,35,0.35), rgba(10,16,24,0.85) 78%)',
+              border: '1px solid rgba(245,166,35,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+            }}>🎓</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 800, color: '#F0EDE6', marginBottom: 3 }}>Writing Courses</div>
+              <div style={{ fontSize: 11.5, color: 'rgba(240,237,230,0.5)', fontWeight: 600 }}>
+                The Craft of Three · The Art of Argument · Reading the Room
+              </div>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#F5A623' }}>→</div>
           </OrnateCard>
         </motion.div>
 

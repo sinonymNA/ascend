@@ -557,6 +557,18 @@ CREATE TABLE IF NOT EXISTS sw_guided_walk_sessions (
   UNIQUE (student_id, assignment_id)
 );
 
+-- Writing Courses: per-student progress through "The Craft of Three" / "The Art of Argument" / "Reading the Room"
+CREATE TABLE IF NOT EXISTS sw_course_progress (
+  student_id        UUID REFERENCES users(id),
+  course_id         TEXT CHECK (course_id IN ('saq_mastery','leq_mastery','dbq_mastery')) NOT NULL,
+  current_lesson    INTEGER DEFAULT 1,
+  completed_lessons INTEGER[] DEFAULT '{}',
+  lesson_scores     JSONB DEFAULT '{}',
+  completed_at      TIMESTAMPTZ,
+  updated_at        TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (student_id, course_id)
+);
+
 CREATE INDEX IF NOT EXISTS sw_sub_assignment ON sw_submissions(assignment_id, submitted_at);
 CREATE INDEX IF NOT EXISTS sw_sub_student    ON sw_submissions(student_id, submitted_at);
 CREATE INDEX IF NOT EXISTS sw_docs_assign    ON sw_documents(assignment_id, doc_number);
