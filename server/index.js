@@ -26,6 +26,7 @@ const devRoutes         = require('./routes/dev');
 const edumissionsRoutes = require('./routes/edumissions');
 const summitwriteRoutes = require('./routes/summitwrite');
 const writeCoursesRoutes = require('./routes/write-courses');
+const writeGamesRoutes   = require('./routes/write-games');
 const initGameSocket    = require('./socket/gameSocket');
 const initDb            = require('./services/initDb');
 
@@ -84,6 +85,7 @@ app.use('/api/minigame',    minigameRoutes);
 app.use('/api/dev',         devRoutes);
 app.use('/api/edumissions', edumissionsRoutes);
 app.use('/api/write/courses', writeCoursesRoutes);
+app.use('/api/write/games',   writeGamesRoutes);
 app.use('/api/write',       summitwriteRoutes);
 
 // ── Serve client build ────────────────────────────────────────────────────────

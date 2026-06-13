@@ -569,10 +569,21 @@ CREATE TABLE IF NOT EXISTS sw_course_progress (
   PRIMARY KEY (student_id, course_id)
 );
 
+-- Speed Round (Describe or Explain?) — per-run scores, doubles as a leaderboard
+CREATE TABLE IF NOT EXISTS sw_speed_round_runs (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id    UUID REFERENCES users(id),
+  score         INTEGER NOT NULL,
+  correct_count INTEGER NOT NULL,
+  total         INTEGER NOT NULL,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS sw_sub_assignment ON sw_submissions(assignment_id, submitted_at);
 CREATE INDEX IF NOT EXISTS sw_sub_student    ON sw_submissions(student_id, submitted_at);
 CREATE INDEX IF NOT EXISTS sw_docs_assign    ON sw_documents(assignment_id, doc_number);
 CREATE INDEX IF NOT EXISTS sw_gw_student     ON sw_guided_walk_sessions(student_id, assignment_id);
+CREATE INDEX IF NOT EXISTS sw_speed_round_score ON sw_speed_round_runs(score DESC);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS uqm_user_set ON user_question_mastery(user_id, set_id);

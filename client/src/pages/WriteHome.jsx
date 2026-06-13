@@ -547,6 +547,29 @@ export default function WriteHome() {
           </OrnateCard>
         </motion.div>
 
+        {/* Speed Round entry point */}
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}>
+          <OrnateCard
+            role="button" tabIndex={0}
+            onClick={() => navigate('speed_round')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('speed_round'); }}
+            style={{ padding: '16px 18px', marginBottom: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{
+              width: 46, height: 46, flexShrink: 0, borderRadius: 10,
+              background: 'radial-gradient(circle at 35% 30%, rgba(245,166,35,0.35), rgba(10,16,24,0.85) 78%)',
+              border: '1px solid rgba(245,166,35,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+            }}>⚡</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 800, color: '#F0EDE6', marginBottom: 3 }}>Speed Round</div>
+              <div style={{ fontSize: 11.5, color: 'rgba(240,237,230,0.5)', fontWeight: 600 }}>
+                Describe or Explain? · Quick warm-up, global leaderboard
+              </div>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#F5A623' }}>→</div>
+          </OrnateCard>
+        </motion.div>
+
         {/* Pending assignments — quest board */}
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
           <SectionTitle>ACTIVE QUESTS</SectionTitle>
