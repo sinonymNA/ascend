@@ -62,6 +62,8 @@ const CourseLesson         = React.lazy(() => import('./pages/CourseLesson.jsx')
 const SpeedRound           = React.lazy(() => import('./pages/SpeedRound.jsx'));
 const ThrowdownHost        = React.lazy(() => import('./pages/ThrowdownHost.jsx'));
 const ThrowdownPlay        = React.lazy(() => import('./pages/ThrowdownPlay.jsx'));
+const TribunalHost         = React.lazy(() => import('./pages/TribunalHost.jsx'));
+const TribunalPlay         = React.lazy(() => import('./pages/TribunalPlay.jsx'));
 
 const SCREEN_MAP = {
   landing:           LandingPage,
@@ -105,6 +107,8 @@ const SCREEN_MAP = {
   speed_round:         SpeedRound,
   throwdown_host:      ThrowdownHost,
   throwdown_play:      ThrowdownPlay,
+  tribunal_host:       TribunalHost,
+  tribunal_play:       TribunalPlay,
 };
 
 // ─── Page transition variants ─────────────────────────────────────────────────

@@ -8,6 +8,8 @@ const { awardProgress } = require('../services/sw-progress');
 const { getRound, getById } = require('../services/speedround-content');
 const { PROMPTS, getRandomPrompt, getById: getThrowdownPromptById } = require('../services/throwdown-content');
 const throwdownEngine = require('../services/throwdownEngine');
+const { PROMPTS: TRIBUNAL_PROMPTS, getRandomPrompt: getRandomTribunalPrompt, getById: getTribunalPromptById } = require('../services/tribunal-content');
+const tribunalEngine = require('../services/tribunalEngine');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -108,6 +110,24 @@ router.post('/thesis-throwdown/create', async (req, res) => {
   const prompt = (promptId && getThrowdownPromptById(promptId)) || getRandomPrompt();
 
   const session = throwdownEngine.createSession(req.dbUser.id, prompt);
+  res.json({ roomCode: session.code, prompt });
+});
+
+// ── THE TRIBUNAL ──────────────────────────────────────────────────────────────
+
+// GET /api/write/games/tribunal/prompts — SAQ prompt bank for teacher picker
+router.get('/tribunal/prompts', async (req, res) => {
+  res.json({ prompts: TRIBUNAL_PROMPTS });
+});
+
+// POST /api/write/games/tribunal/create — teacher launches a room
+router.post('/tribunal/create', async (req, res) => {
+  if (req.dbUser.role !== 'teacher') return res.status(403).json({ error: 'Teachers only' });
+
+  const { promptId } = req.body || {};
+  const prompt = (promptId && getTribunalPromptById(promptId)) || getRandomTribunalPrompt();
+
+  const session = tribunalEngine.createSession(req.dbUser.id, prompt);
   res.json({ roomCode: session.code, prompt });
 });
 

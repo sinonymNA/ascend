@@ -29,6 +29,7 @@ const writeCoursesRoutes = require('./routes/write-courses');
 const writeGamesRoutes   = require('./routes/write-games');
 const initGameSocket    = require('./socket/gameSocket');
 const initThrowdownSocket = require('./socket/throwdownSocket');
+const initTribunalSocket = require('./socket/tribunalSocket');
 const initDb            = require('./services/initDb');
 
 const app = express();
@@ -128,6 +129,7 @@ const io = new Server(server, {
 
 initGameSocket(io);
 initThrowdownSocket(io);
+initTribunalSocket(io);
 
 // ── Start ──────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
