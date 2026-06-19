@@ -1728,4 +1728,139 @@ router.post('/guided-walk-dbq/:assignmentId/compile', requireAuth, async (req, r
   }
 });
 
+// ── PORTFOLIO ──────────────────────────────────────────────────────────────────
+// A student's writing history: every sw_submissions row (independent essays AND
+// the rows guided-walk compile produces), enriched with mode, a growth timeline
+// per essay type, a skill heatmap, and auto-generated milestones.
+
+const SKILL_LABELS = {
+  ...grader.RUBRICS.SAQ.criteria,
+  ...grader.RUBRICS.LEQ.criteria,
+  ...grader.RUBRICS.DBQ.criteria,
+};
+
+function buildPortfolio(submissions, guidedAssignmentIds) {
+  const gwSet = new Set(guidedAssignmentIds);
+
+  const entries = submissions.map((s) => ({
+    id: s.id,
+    assignmentId: s.assignment_id,
+    type: s.type,
+    title: s.title,
+    score: s.ai_score,
+    maxScore: s.max_score,
+    mode: gwSet.has(s.assignment_id) ? 'guided' : 'independent',
+    attemptNumber: s.attempt_number,
+    date: s.submitted_at,
+    essayText: s.essay_text,
+    breakdown: s.grading_json?.breakdown || null,
+    overallFeedback: s.grading_json?.overallFeedback || null,
+    strengthSummary: s.grading_json?.strengthSummary || null,
+    growthTarget: s.grading_json?.growthTarget || null,
+  }));
+
+  const growthTimeline = { SAQ: [], LEQ: [], DBQ: [] };
+  for (const e of entries) {
+    if (growthTimeline[e.type]) {
+      growthTimeline[e.type].push({ date: e.date, score: e.score, maxScore: e.maxScore, attemptNumber: e.attemptNumber });
+    }
+  }
+
+  const skillTallies = {};
+  for (const e of entries) {
+    if (!e.breakdown) continue;
+    for (const [key, b] of Object.entries(e.breakdown)) {
+      if (!skillTallies[key]) skillTallies[key] = { earned: 0, total: 0 };
+      skillTallies[key].total += 1;
+      if (b.earned) skillTallies[key].earned += 1;
+    }
+  }
+  const skillHeatmap = Object.entries(skillTallies).map(([key, t]) => ({
+    key,
+    label: SKILL_LABELS[key]?.label || key,
+    earnedRate: t.total > 0 ? t.earned / t.total : 0,
+    attempts: t.total,
+  }));
+
+  const milestones = [];
+  const firstGuided = entries.find((e) => e.mode === 'guided');
+  if (firstGuided) milestones.push({ key: 'first_guided_walk', label: 'First Guided Walk completed', icon: '🥾', date: firstGuided.date });
+
+  const firstPerfectSaq = entries.find((e) => e.type === 'SAQ' && e.score === e.maxScore);
+  if (firstPerfectSaq) milestones.push({ key: 'first_saq_perfect', label: 'First 3/3 SAQ', icon: '🎯', date: firstPerfectSaq.date });
+
+  const firstLeqAbove4 = entries.find((e) => e.type === 'LEQ' && e.score > 4);
+  if (firstLeqAbove4) milestones.push({ key: 'first_leq_above_4', label: 'First LEQ above 4 points', icon: '⚖️', date: firstLeqAbove4.date });
+
+  if (entries.length >= 10) milestones.push({ key: 'ten_essays', label: '10 essays written', icon: '🔥', date: entries[9].date });
+
+  milestones.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  return { entries, growthTimeline, skillHeatmap, milestones, totalEssays: entries.length };
+}
+
+// GET /api/write/portfolio — the current student's own portfolio
+router.get('/portfolio', requireAuth, async (req, res) => {
+  const user = req.dbUser;
+  if (!user) return res.status(400).json({ error: 'User not synced' });
+  try {
+    const { rows: submissions } = await db.query(
+      `SELECT s.id, s.assignment_id, s.essay_text, s.ai_score, s.max_score, s.grading_json, s.submitted_at, s.attempt_number,
+              a.type, a.title
+       FROM sw_submissions s
+       JOIN sw_assignments a ON a.id = s.assignment_id
+       WHERE s.student_id = $1
+       ORDER BY s.submitted_at ASC`,
+      [user.id]
+    );
+    const { rows: gwRows } = await db.query(
+      'SELECT assignment_id FROM sw_guided_walk_sessions WHERE student_id=$1 AND completed_at IS NOT NULL',
+      [user.id]
+    );
+    res.json(buildPortfolio(submissions, gwRows.map((r) => r.assignment_id)));
+  } catch (e) {
+    console.error('GET /api/write/portfolio error:', e.message);
+    res.status(500).json({ error: 'Failed to load portfolio' });
+  }
+});
+
+// GET /api/write/portfolio/:studentId — a teacher viewing one of their students' portfolios
+router.get('/portfolio/:studentId', requireAuth, async (req, res) => {
+  const user = req.dbUser;
+  if (!user || user.role !== 'teacher') return res.status(403).json({ error: 'Teachers only' });
+  try {
+    const { studentId } = req.params;
+    const { rows: owned } = await db.query(
+      `SELECT 1 FROM sw_submissions s JOIN sw_assignments a ON a.id = s.assignment_id
+       WHERE s.student_id=$1 AND a.teacher_id=$2 LIMIT 1`,
+      [studentId, user.id]
+    );
+    const { rows: inClass } = await db.query(
+      `SELECT 1 FROM class_members cm JOIN classes c ON c.id = cm.class_id
+       WHERE cm.student_id=$1 AND c.teacher_id=$2 LIMIT 1`,
+      [studentId, user.id]
+    );
+    if (!owned[0] && !inClass[0]) return res.status(403).json({ error: "Not your student" });
+
+    const { rows: submissions } = await db.query(
+      `SELECT s.id, s.assignment_id, s.essay_text, s.ai_score, s.max_score, s.grading_json, s.submitted_at, s.attempt_number,
+              a.type, a.title
+       FROM sw_submissions s
+       JOIN sw_assignments a ON a.id = s.assignment_id
+       WHERE s.student_id = $1
+       ORDER BY s.submitted_at ASC`,
+      [studentId]
+    );
+    const { rows: gwRows } = await db.query(
+      'SELECT assignment_id FROM sw_guided_walk_sessions WHERE student_id=$1 AND completed_at IS NOT NULL',
+      [studentId]
+    );
+    const { rows: studentRows } = await db.query('SELECT id, name, username FROM users WHERE id=$1', [studentId]);
+    res.json({ student: studentRows[0] || null, ...buildPortfolio(submissions, gwRows.map((r) => r.assignment_id)) });
+  } catch (e) {
+    console.error('GET /api/write/portfolio/:studentId error:', e.message);
+    res.status(500).json({ error: 'Failed to load student portfolio' });
+  }
+});
+
 module.exports = router;

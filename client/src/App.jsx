@@ -69,6 +69,7 @@ const RelayPlay            = React.lazy(() => import('./pages/RelayPlay.jsx'));
 const AuctionHost          = React.lazy(() => import('./pages/AuctionHost.jsx'));
 const AuctionPlay          = React.lazy(() => import('./pages/AuctionPlay.jsx'));
 const PeerGrade            = React.lazy(() => import('./pages/PeerGrade.jsx'));
+const Portfolio            = React.lazy(() => import('./pages/Portfolio.jsx'));
 
 const SCREEN_MAP = {
   landing:           LandingPage,
@@ -119,6 +120,7 @@ const SCREEN_MAP = {
   auction_host:        AuctionHost,
   auction_play:        AuctionPlay,
   peer_grade:          PeerGrade,
+  write_portfolio:     Portfolio,
 };
 
 // ─── Page transition variants ─────────────────────────────────────────────────

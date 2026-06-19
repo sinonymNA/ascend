@@ -477,17 +477,23 @@ export default function WriteHome() {
         <span style={{ fontFamily: 'Cinzel, serif', fontSize: 15, fontWeight: 800, letterSpacing: '0.12em', ...goldText }}>
           🏔 SUMMIT WRITE
         </span>
-        {streak > 0 ? (
-          <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ duration: 1.8, repeat: Infinity }}
-            style={{
-              fontSize: 13, fontWeight: 900, color: '#FFB54A',
-              background: 'rgba(232,93,74,0.14)', border: '1px solid rgba(232,93,74,0.4)',
-              borderRadius: 20, padding: '4px 12px',
-              boxShadow: '0 0 14px rgba(232,93,74,0.3)',
-            }}>
-            🔥 {streak}
-          </motion.div>
-        ) : <div style={{ width: 40 }} />}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button onClick={() => navigate('write_portfolio')} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'rgba(240,237,230,0.5)', fontSize: 13, fontWeight: 700, padding: '4px 6px',
+          }}>📜</button>
+          {streak > 0 && (
+            <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ duration: 1.8, repeat: Infinity }}
+              style={{
+                fontSize: 13, fontWeight: 900, color: '#FFB54A',
+                background: 'rgba(232,93,74,0.14)', border: '1px solid rgba(232,93,74,0.4)',
+                borderRadius: 20, padding: '4px 12px',
+                boxShadow: '0 0 14px rgba(232,93,74,0.3)',
+              }}>
+              🔥 {streak}
+            </motion.div>
+          )}
+        </div>
       </nav>
 
       {/* Hero: mountain vista */}
