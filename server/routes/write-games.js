@@ -10,6 +10,7 @@ const { PROMPTS, getRandomPrompt, getById: getThrowdownPromptById } = require('.
 const throwdownEngine = require('../services/throwdownEngine');
 const { PROMPTS: TRIBUNAL_PROMPTS, getRandomPrompt: getRandomTribunalPrompt, getById: getTribunalPromptById } = require('../services/tribunal-content');
 const tribunalEngine = require('../services/tribunalEngine');
+const relayEngine = require('../services/relayEngine');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -128,6 +129,26 @@ router.post('/tribunal/create', async (req, res) => {
   const prompt = (promptId && getTribunalPromptById(promptId)) || getRandomTribunalPrompt();
 
   const session = tribunalEngine.createSession(req.dbUser.id, prompt);
+  res.json({ roomCode: session.code, prompt });
+});
+
+// ── THE RELAY ─────────────────────────────────────────────────────────────────
+// Reuses the Thesis Throwdown LEQ-style prompt bank — same "evaluate the
+// extent to which" prompts work for a relay-written LEQ paragraph.
+
+// GET /api/write/games/relay/prompts — prompt bank for teacher picker
+router.get('/relay/prompts', async (req, res) => {
+  res.json({ prompts: PROMPTS });
+});
+
+// POST /api/write/games/relay/create — teacher launches a room
+router.post('/relay/create', async (req, res) => {
+  if (req.dbUser.role !== 'teacher') return res.status(403).json({ error: 'Teachers only' });
+
+  const { promptId } = req.body || {};
+  const prompt = (promptId && getThrowdownPromptById(promptId)) || getRandomPrompt();
+
+  const session = relayEngine.createSession(req.dbUser.id, prompt);
   res.json({ roomCode: session.code, prompt });
 });
 

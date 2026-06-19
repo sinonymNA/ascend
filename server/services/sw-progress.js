@@ -26,6 +26,7 @@ const BADGES = [
   { id: 'dbq_mastery', name: 'DBQ Mastery', desc: 'Completed "Reading the Room"', icon: '🗂️' },
   { id: 'thesis_champion', name: 'Thesis Champion', desc: 'Won a round of Thesis Throwdown', icon: '🥇' },
   { id: 'tribunal_judge', name: 'Tribunal Judge', desc: 'Top accuracy in a round of The Tribunal', icon: '🔨' },
+  { id: 'relay_captain', name: 'Relay Captain', desc: 'Top team score in a round of The Relay', icon: '🏃' },
 ];
 
 async function getProgress(studentId) {
