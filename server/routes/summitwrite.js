@@ -1863,4 +1863,78 @@ router.get('/portfolio/:studentId', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/write/class-portfolio/:classId — class roster with per-student portfolio
+// summary stats, for the teacher's sortable class dashboard.
+router.get('/class-portfolio/:classId', requireAuth, async (req, res) => {
+  const user = req.dbUser;
+  if (!user || user.role !== 'teacher') return res.status(403).json({ error: 'Teachers only' });
+  try {
+    const { classId } = req.params;
+    const { rows: classRows } = await db.query('SELECT id, name FROM classes WHERE id=$1 AND teacher_id=$2', [classId, user.id]);
+    const klass = classRows[0];
+    if (!klass) return res.status(403).json({ error: 'Not your class' });
+
+    const { rows: roster } = await db.query(
+      `SELECT u.id AS student_id, u.name, u.username
+       FROM class_members cm JOIN users u ON u.id = cm.student_id
+       WHERE cm.class_id = $1 ORDER BY u.name ASC`,
+      [classId]
+    );
+
+    const { rows: submissions } = await db.query(
+      `SELECT s.student_id, s.ai_score, s.max_score, s.grading_json, s.submitted_at
+       FROM sw_submissions s
+       WHERE s.student_id IN (SELECT student_id FROM class_members WHERE class_id=$1)
+       ORDER BY s.submitted_at ASC`,
+      [classId]
+    );
+
+    const byStudent = new Map();
+    for (const s of submissions) {
+      if (!byStudent.has(s.student_id)) byStudent.set(s.student_id, []);
+      byStudent.get(s.student_id).push(s);
+    }
+
+    const students = roster.map((r) => {
+      const subs = byStudent.get(r.student_id) || [];
+      const totalEssays = subs.length;
+      let avgPct = null, lastPct = null, weakestSkill = null;
+
+      if (totalEssays > 0) {
+        const pcts = subs.map((s) => s.ai_score / s.max_score);
+        avgPct = Math.round((pcts.reduce((a, b) => a + b, 0) / pcts.length) * 100);
+        lastPct = Math.round(pcts[pcts.length - 1] * 100);
+
+        const tallies = {};
+        for (const s of subs) {
+          for (const [key, b] of Object.entries(s.grading_json?.breakdown || {})) {
+            if (!tallies[key]) tallies[key] = { earned: 0, total: 0 };
+            tallies[key].total += 1;
+            if (b.earned) tallies[key].earned += 1;
+          }
+        }
+        let lowestRate = Infinity;
+        for (const [key, t] of Object.entries(tallies)) {
+          const rate = t.earned / t.total;
+          if (rate < lowestRate) { lowestRate = rate; weakestSkill = { key, label: SKILL_LABELS[key]?.label || key, rate }; }
+        }
+      }
+
+      return {
+        studentId: r.student_id,
+        name: r.name || r.username,
+        totalEssays,
+        avgPct,
+        lastPct,
+        weakestSkill,
+      };
+    });
+
+    res.json({ class: klass, students });
+  } catch (e) {
+    console.error('GET /api/write/class-portfolio/:classId error:', e.message);
+    res.status(500).json({ error: 'Failed to load class portfolio' });
+  }
+});
+
 module.exports = router;

@@ -663,6 +663,119 @@ function Gradebook({ assignments }) {
   );
 }
 
+// ── Class Portfolios tab — sortable roster of per-student portfolio stats ────
+const SORT_OPTIONS = [
+  { key: 'name', label: 'Name' },
+  { key: 'totalEssays', label: 'Total Essays' },
+  { key: 'lastPct', label: 'Recent Score' },
+  { key: 'weakest', label: 'Skill Weakness' },
+];
+
+function ClassPortfolios({ classes, navigate }) {
+  const [classId, setClassId] = useState('');
+  const [data, setData] = useState(null);
+  const [sortKey, setSortKey] = useState('name');
+  const [sortDir, setSortDir] = useState('asc');
+
+  useEffect(() => {
+    if (!classId && classes.length > 0) setClassId(classes[0].id);
+  }, [classes, classId]);
+
+  useEffect(() => {
+    if (!classId) return;
+    setData(null);
+    api.get(`/api/write/class-portfolio/${classId}`).then(setData).catch(() => {});
+  }, [classId]);
+
+  function toggleSort(key) {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(key); setSortDir('asc'); }
+  }
+
+  const sorted = React.useMemo(() => {
+    if (!data?.students) return [];
+    const list = [...data.students];
+    const dir = sortDir === 'asc' ? 1 : -1;
+    list.sort((a, b) => {
+      if (sortKey === 'name') return dir * a.name.localeCompare(b.name);
+      if (sortKey === 'totalEssays') return dir * (a.totalEssays - b.totalEssays);
+      if (sortKey === 'lastPct') return dir * ((a.lastPct ?? -1) - (b.lastPct ?? -1));
+      if (sortKey === 'weakest') return dir * ((a.weakestSkill?.rate ?? 2) - (b.weakestSkill?.rate ?? 2));
+      return 0;
+    });
+    return list;
+  }, [data, sortKey, sortDir]);
+
+  const pctColor = (p) => p == null ? C.muted : p >= 80 ? C.pine : p >= 50 ? '#E8A53A' : C.sunset;
+
+  if (classes.length === 0) {
+    return <div style={{ color: C.muted, fontSize: 13.5 }}>Create a class first to see student portfolios here.</div>;
+  }
+
+  return (
+    <div>
+      <select style={{ ...input, marginBottom: 16 }} value={classId} onChange={(e) => setClassId(e.target.value)}>
+        {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+
+      {!data && <div style={{ color: C.muted, fontSize: 13 }}>Loading…</div>}
+
+      {data && data.students.length === 0 && (
+        <div style={{ color: C.muted, fontSize: 13.5 }}>No students have joined this class yet.</div>
+      )}
+
+      {data && data.students.length > 0 && (
+        <div style={{ background: C.elevated, borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', gap: 6, padding: '10px 14px', borderBottom: `1px solid ${C.border}`, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, color: C.muted, fontWeight: 800, alignSelf: 'center', marginRight: 4 }}>SORT BY</span>
+            {SORT_OPTIONS.map((opt) => (
+              <button key={opt.key} onClick={() => toggleSort(opt.key)} style={{
+                ...pillBtn(sortKey === opt.key ? C.gold : C.muted),
+              }}>
+                {opt.label}{sortKey === opt.key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+              </button>
+            ))}
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                <th style={{ textAlign: 'left', padding: '10px 14px', color: C.muted, fontWeight: 800, fontSize: 11 }}>STUDENT</th>
+                <th style={{ padding: '10px 8px', color: C.muted, fontWeight: 800, fontSize: 11 }}>ESSAYS</th>
+                <th style={{ padding: '10px 8px', color: C.muted, fontWeight: 800, fontSize: 11 }}>AVG</th>
+                <th style={{ padding: '10px 8px', color: C.muted, fontWeight: 800, fontSize: 11 }}>RECENT</th>
+                <th style={{ padding: '10px 14px', color: C.muted, fontWeight: 800, fontSize: 11 }}>WEAKEST SKILL</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((s) => (
+                <tr
+                  key={s.studentId}
+                  onClick={() => navigate('write_portfolio', { studentId: s.studentId })}
+                  style={{ borderBottom: `1px solid ${C.border}`, cursor: 'pointer' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,166,35,0.05)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <td style={{ padding: '10px 14px', color: C.text, fontWeight: 700 }}>{s.name}</td>
+                  <td style={{ padding: '10px 8px', textAlign: 'center', color: C.text }}>{s.totalEssays}</td>
+                  <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 800, color: pctColor(s.avgPct) }}>
+                    {s.avgPct != null ? `${s.avgPct}%` : '—'}
+                  </td>
+                  <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 800, color: pctColor(s.lastPct) }}>
+                    {s.lastPct != null ? `${s.lastPct}%` : '—'}
+                  </td>
+                  <td style={{ padding: '10px 14px', color: C.text }}>
+                    {s.weakestSkill ? `${s.weakestSkill.label} (${Math.round(s.weakestSkill.rate * 100)}%)` : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function WriteTeacher() {
   const { navigate } = useApp();
@@ -686,6 +799,7 @@ export default function WriteTeacher() {
     { key: 'assignments', label: '📝 Assignments' },
     { key: 'inbox', label: `📥 Inbox${inbox.length ? ` (${inbox.length})` : ''}` },
     { key: 'gradebook', label: '📊 Gradebook' },
+    { key: 'portfolios', label: '📜 Portfolios' },
   ];
 
   return (
@@ -872,6 +986,7 @@ export default function WriteTeacher() {
         )}
 
         {tab === 'gradebook' && <Gradebook assignments={assignments} />}
+        {tab === 'portfolios' && <ClassPortfolios classes={classes} navigate={navigate} />}
       </main>
 
       <AnimatePresence>
