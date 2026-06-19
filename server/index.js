@@ -31,6 +31,7 @@ const initGameSocket    = require('./socket/gameSocket');
 const initThrowdownSocket = require('./socket/throwdownSocket');
 const initTribunalSocket = require('./socket/tribunalSocket');
 const initRelaySocket = require('./socket/relaySocket');
+const initAuctionSocket = require('./socket/auctionSocket');
 const initDb            = require('./services/initDb');
 
 const app = express();
@@ -132,6 +133,7 @@ initGameSocket(io);
 initThrowdownSocket(io);
 initTribunalSocket(io);
 initRelaySocket(io);
+initAuctionSocket(io);
 
 // ── Start ──────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;

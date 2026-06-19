@@ -27,6 +27,7 @@ const BADGES = [
   { id: 'thesis_champion', name: 'Thesis Champion', desc: 'Won a round of Thesis Throwdown', icon: '🥇' },
   { id: 'tribunal_judge', name: 'Tribunal Judge', desc: 'Top accuracy in a round of The Tribunal', icon: '🔨' },
   { id: 'relay_captain', name: 'Relay Captain', desc: 'Top team score in a round of The Relay', icon: '🏃' },
+  { id: 'auction_baron', name: 'Auction Baron', desc: 'Most coins after a round of Evidence Auction', icon: '🪙' },
 ];
 
 async function getProgress(studentId) {

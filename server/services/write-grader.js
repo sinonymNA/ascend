@@ -1260,10 +1260,68 @@ async function evaluateDbqStageResponse({ stage, assignmentTitle, prompt, thesis
   }
 }
 
+// ── Evidence Auction — score an evidence-to-thesis connection ──────────────────
+
+const EVIDENCE_AUCTION_SYSTEM = `You are an AP World History writing coach evaluating whether a piece of historical evidence, as justified by a student team, actually supports a given thesis. Score the connection on a 0-3 scale:
+0 = the evidence is irrelevant to the thesis, or no real justification is given.
+1 = the evidence is topically related but the justification is vague or generic (e.g. "this shows change happened") without specifics.
+2 = the evidence is relevant and the justification makes a real connection to the thesis, but lacks full specificity or precision.
+3 = the evidence is specific (named people, places, events, or dates) AND the justification clearly and precisely explains how it supports the thesis's line of reasoning.
+Return ONLY JSON: {"score": 0, "specific": false, "relevant": false, "feedback": "one sentence, addressed to the team"}`;
+
+function heuristicEvidenceConnection(evidenceText, justification) {
+  const text = (justification || '').trim();
+  const words = text.split(/\s+/).filter(Boolean).length;
+  if (words < 4) {
+    return { score: 0, specific: false, relevant: false, feedback: 'No real justification given — explain how this evidence supports the thesis.' };
+  }
+  const hasSpecific = /\b(\d{3,4}|century|empire|dynasty|treaty|revolution|company|king|queen|emperor|war|movement|reform|kingdom|colony|trade)\b/i.test(`${evidenceText} ${text}`);
+  const hasConnective = /\b(because|this shows|this means|therefore|as a result|demonstrates|supports|connects|since|which (proves|shows))\b/i.test(text);
+
+  let score;
+  if (hasSpecific && hasConnective && words > 12) score = 3;
+  else if (hasConnective && words > 8) score = 2;
+  else if (words >= 4) score = 1;
+  else score = 0;
+
+  return {
+    score,
+    specific: hasSpecific,
+    relevant: hasConnective || score > 0,
+    feedback: score >= 2
+      ? 'Solid connection to the thesis. (Offline check — AI grading unavailable.)'
+      : 'This connection needs to be more specific and explicit about why the evidence matters for the thesis.',
+  };
+}
+
+async function evaluateEvidenceConnection({ thesis, evidenceText, justification }) {
+  if (!hasKey) return heuristicEvidenceConnection(evidenceText, justification);
+  try {
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 200,
+      system: EVIDENCE_AUCTION_SYSTEM,
+      messages: [{
+        role: 'user',
+        content: `Thesis: ${thesis}\nEvidence card: ${evidenceText}\nTeam's justification: ${justification || '(nothing submitted)'}\n\nScore this evidence-thesis connection.`,
+      }],
+    });
+    const parsed = extractJson(response.content[0].text);
+    if (!parsed || typeof parsed.score !== 'number' || ![0, 1, 2, 3].includes(parsed.score) || typeof parsed.feedback !== 'string') {
+      throw new Error('malformed response');
+    }
+    return { score: parsed.score, specific: !!parsed.specific, relevant: !!parsed.relevant, feedback: parsed.feedback };
+  } catch (err) {
+    console.error('write-grader.evaluateEvidenceConnection error:', err.message);
+    return heuristicEvidenceConnection(evidenceText, justification);
+  }
+}
+
 module.exports = {
   RUBRICS, gradeEssay, precheck, generateAssignmentPrompt, regradeCriterion, generateDrill, gradeDrill, hasKey,
   generateDecodeBundle, generateClioQuestion, evaluateClioResponse,
   LEQ_COMPLEXITY_PATHWAYS, generateLeqDecodeBundle, evaluateLeqThesis,
   generateLeqStageQuestion, evaluateLeqStageResponse,
   HAPP_DIMENSIONS, evaluateHappResponse, generateDbqStageQuestion, evaluateDbqStageResponse,
+  evaluateEvidenceConnection,
 };

@@ -11,6 +11,8 @@ const throwdownEngine = require('../services/throwdownEngine');
 const { PROMPTS: TRIBUNAL_PROMPTS, getRandomPrompt: getRandomTribunalPrompt, getById: getTribunalPromptById } = require('../services/tribunal-content');
 const tribunalEngine = require('../services/tribunalEngine');
 const relayEngine = require('../services/relayEngine');
+const { PROMPTS: AUCTION_PROMPTS, getRandomPrompt: getRandomAuctionPrompt, getById: getAuctionPromptById } = require('../services/evidence-auction-content');
+const auctionEngine = require('../services/auctionEngine');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -150,6 +152,24 @@ router.post('/relay/create', async (req, res) => {
 
   const session = relayEngine.createSession(req.dbUser.id, prompt);
   res.json({ roomCode: session.code, prompt });
+});
+
+// ── EVIDENCE AUCTION ──────────────────────────────────────────────────────────
+
+// GET /api/write/games/auction/prompts — thesis + evidence-card bank for teacher picker
+router.get('/auction/prompts', async (req, res) => {
+  res.json({ prompts: AUCTION_PROMPTS });
+});
+
+// POST /api/write/games/auction/create — teacher launches a room
+router.post('/auction/create', async (req, res) => {
+  if (req.dbUser.role !== 'teacher') return res.status(403).json({ error: 'Teachers only' });
+
+  const { promptId } = req.body || {};
+  const prompt = (promptId && getAuctionPromptById(promptId)) || getRandomAuctionPrompt();
+
+  const session = auctionEngine.createSession(req.dbUser.id, prompt);
+  res.json({ roomCode: session.code, thesis: session.thesis });
 });
 
 module.exports = router;

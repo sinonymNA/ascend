@@ -66,6 +66,8 @@ const TribunalHost         = React.lazy(() => import('./pages/TribunalHost.jsx')
 const TribunalPlay         = React.lazy(() => import('./pages/TribunalPlay.jsx'));
 const RelayHost            = React.lazy(() => import('./pages/RelayHost.jsx'));
 const RelayPlay            = React.lazy(() => import('./pages/RelayPlay.jsx'));
+const AuctionHost          = React.lazy(() => import('./pages/AuctionHost.jsx'));
+const AuctionPlay          = React.lazy(() => import('./pages/AuctionPlay.jsx'));
 
 const SCREEN_MAP = {
   landing:           LandingPage,
@@ -113,6 +115,8 @@ const SCREEN_MAP = {
   tribunal_play:       TribunalPlay,
   relay_host:          RelayHost,
   relay_play:          RelayPlay,
+  auction_host:        AuctionHost,
+  auction_play:        AuctionPlay,
 };
 
 // ─── Page transition variants ─────────────────────────────────────────────────
