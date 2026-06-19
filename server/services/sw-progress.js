@@ -24,6 +24,7 @@ const BADGES = [
   { id: 'saq_mastery', name: 'SAQ Mastery', desc: 'Completed "The Craft of Three"', icon: '📜' },
   { id: 'leq_mastery', name: 'LEQ Mastery', desc: 'Completed "The Art of Argument"', icon: '⚖️' },
   { id: 'dbq_mastery', name: 'DBQ Mastery', desc: 'Completed "Reading the Room"', icon: '🗂️' },
+  { id: 'thesis_champion', name: 'Thesis Champion', desc: 'Won a round of Thesis Throwdown', icon: '🥇' },
 ];
 
 async function getProgress(studentId) {

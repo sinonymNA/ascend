@@ -6,6 +6,8 @@ const { requireAuth } = require('../middleware/auth');
 const db = require('../services/db');
 const { awardProgress } = require('../services/sw-progress');
 const { getRound, getById } = require('../services/speedround-content');
+const { PROMPTS, getRandomPrompt, getById: getThrowdownPromptById } = require('../services/throwdown-content');
+const throwdownEngine = require('../services/throwdownEngine');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -89,6 +91,24 @@ router.post('/speed-round/submit', async (req, res) => {
     console.error('POST /api/write/games/speed-round/submit error:', e.message);
     res.status(500).json({ error: 'Failed to score speed round' });
   }
+});
+
+// ── THESIS THROWDOWN ─────────────────────────────────────────────────────────
+
+// GET /api/write/games/thesis-throwdown/prompts — prompt bank for teacher picker
+router.get('/thesis-throwdown/prompts', async (req, res) => {
+  res.json({ prompts: PROMPTS });
+});
+
+// POST /api/write/games/thesis-throwdown/create — teacher launches a room
+router.post('/thesis-throwdown/create', async (req, res) => {
+  if (req.dbUser.role !== 'teacher') return res.status(403).json({ error: 'Teachers only' });
+
+  const { promptId } = req.body || {};
+  const prompt = (promptId && getThrowdownPromptById(promptId)) || getRandomPrompt();
+
+  const session = throwdownEngine.createSession(req.dbUser.id, prompt);
+  res.json({ roomCode: session.code, prompt });
 });
 
 module.exports = router;

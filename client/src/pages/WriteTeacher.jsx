@@ -754,6 +754,11 @@ export default function WriteTeacher() {
                   fontWeight: 900, fontSize: 14.5, marginBottom: 18, letterSpacing: '0.05em', textTransform: 'uppercase',
                   boxShadow: `0 6px 22px ${C.gold}40, inset 0 1px 0 rgba(255,255,255,0.5)`,
                 }}>⚒ Forge New Assignment</motion.button>
+              <button onClick={() => navigate('throwdown_host')} style={{
+                width: '100%', padding: '13px', borderRadius: 12, cursor: 'pointer',
+                background: 'transparent', border: `1.5px solid ${C.gold}50`, color: C.gold,
+                fontWeight: 800, fontSize: 13, marginBottom: 18, letterSpacing: '0.04em',
+              }}>⚔ Launch Thesis Throwdown</button>
               {assignments.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px 0', color: C.muted, fontSize: 13 }}>
                   No assignments yet. Create your first one — it takes about 2 minutes.

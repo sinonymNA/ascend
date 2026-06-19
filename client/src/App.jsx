@@ -60,6 +60,8 @@ const GuidedWalkDBQ        = React.lazy(() => import('./pages/GuidedWalkDBQ.jsx'
 const CourseHome           = React.lazy(() => import('./pages/CourseHome.jsx'));
 const CourseLesson         = React.lazy(() => import('./pages/CourseLesson.jsx'));
 const SpeedRound           = React.lazy(() => import('./pages/SpeedRound.jsx'));
+const ThrowdownHost        = React.lazy(() => import('./pages/ThrowdownHost.jsx'));
+const ThrowdownPlay        = React.lazy(() => import('./pages/ThrowdownPlay.jsx'));
 
 const SCREEN_MAP = {
   landing:           LandingPage,
@@ -101,6 +103,8 @@ const SCREEN_MAP = {
   write_courses:       CourseHome,
   course_lesson:       CourseLesson,
   speed_round:         SpeedRound,
+  throwdown_host:      ThrowdownHost,
+  throwdown_play:      ThrowdownPlay,
 };
 
 // ─── Page transition variants ─────────────────────────────────────────────────
