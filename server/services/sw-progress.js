@@ -28,6 +28,7 @@ const BADGES = [
   { id: 'tribunal_judge', name: 'Tribunal Judge', desc: 'Top accuracy in a round of The Tribunal', icon: '🔨' },
   { id: 'relay_captain', name: 'Relay Captain', desc: 'Top team score in a round of The Relay', icon: '🏃' },
   { id: 'auction_baron', name: 'Auction Baron', desc: 'Most coins after a round of Evidence Auction', icon: '🪙' },
+  { id: 'rubric_eye', name: 'Rubric Eye', desc: "Scored a classmate's essay within 1 point of the AI grader", icon: '👁️' },
 ];
 
 async function getProgress(studentId) {

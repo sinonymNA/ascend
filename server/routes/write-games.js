@@ -13,6 +13,7 @@ const tribunalEngine = require('../services/tribunalEngine');
 const relayEngine = require('../services/relayEngine');
 const { PROMPTS: AUCTION_PROMPTS, getRandomPrompt: getRandomAuctionPrompt, getById: getAuctionPromptById } = require('../services/evidence-auction-content');
 const auctionEngine = require('../services/auctionEngine');
+const { RUBRICS } = require('../services/write-grader');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -170,6 +171,153 @@ router.post('/auction/create', async (req, res) => {
 
   const session = auctionEngine.createSession(req.dbUser.id, prompt);
   res.json({ roomCode: session.code, thesis: session.thesis });
+});
+
+// ── BLIND PEER GRADE ──────────────────────────────────────────────────────────
+// Individual, async-compatible: a student grades an anonymized classmate's
+// already-AI-graded essay against a simplified rubric (point granted or not,
+// plus a one-sentence justification per criterion), then sees the AI's real
+// score for comparison. No socket session — this rides on the existing
+// sw_submissions/grading_json pipeline from POST /api/write/grade.
+
+// POST /api/write/games/peer-grade/start — fetch an anonymized essay to grade
+router.post('/peer-grade/start', async (req, res) => {
+  try {
+    const graderId = req.dbUser.id;
+    const { rows } = await db.query(
+      `SELECT s.id, s.essay_text, a.type AS essay_type, a.title AS assignment_title, a.prompt
+       FROM sw_submissions s
+       JOIN sw_assignments a ON a.id = s.assignment_id
+       WHERE s.student_id != $1
+         AND s.grading_json IS NOT NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM sw_peer_grades pg WHERE pg.submission_id = s.id AND pg.grader_id = $1
+         )
+       ORDER BY (SELECT COUNT(*) FROM sw_peer_grades pg2 WHERE pg2.submission_id = s.id) ASC, RANDOM()
+       LIMIT 1`,
+      [graderId]
+    );
+
+    const sub = rows[0];
+    if (!sub) return res.json({ submission: null });
+
+    const criteria = RUBRICS[sub.essay_type]?.criteria || {};
+    res.json({
+      submission: {
+        id: sub.id,
+        essayText: sub.essay_text,
+        assignmentTitle: sub.assignment_title,
+        essayType: sub.essay_type,
+        prompt: sub.prompt,
+        criteria,
+      },
+    });
+  } catch (e) {
+    console.error('POST /api/write/games/peer-grade/start error:', e.message);
+    res.status(500).json({ error: 'Failed to find an essay to grade' });
+  }
+});
+
+// POST /api/write/games/peer-grade/:submissionId/submit — score it, compare to AI
+router.post('/peer-grade/:submissionId/submit', async (req, res) => {
+  try {
+    const graderId = req.dbUser.id;
+    const { submissionId } = req.params;
+    const scores = (req.body && req.body.scores) || {};
+
+    const { rows } = await db.query(
+      `SELECT s.id, s.student_id, s.grading_json, a.type AS essay_type
+       FROM sw_submissions s
+       JOIN sw_assignments a ON a.id = s.assignment_id
+       WHERE s.id = $1`,
+      [submissionId]
+    );
+    const sub = rows[0];
+    if (!sub) return res.status(404).json({ error: 'Submission not found' });
+    if (sub.student_id === graderId) return res.status(403).json({ error: 'You cannot peer-grade your own essay' });
+    if (!sub.grading_json) return res.status(400).json({ error: 'This essay has not been AI-graded yet' });
+
+    const { rows: existing } = await db.query(
+      'SELECT id FROM sw_peer_grades WHERE submission_id=$1 AND grader_id=$2',
+      [submissionId, graderId]
+    );
+    if (existing[0]) return res.status(409).json({ error: 'You already peer-graded this essay' });
+
+    const criteria = RUBRICS[sub.essay_type]?.criteria || {};
+    let peerTotal = 0;
+    const criterionScores = {};
+    for (const [key, def] of Object.entries(criteria)) {
+      const entry = scores[key] || {};
+      const granted = !!entry.granted;
+      if (granted) peerTotal += def.points;
+      criterionScores[key] = { granted, note: typeof entry.note === 'string' ? entry.note.slice(0, 500) : '' };
+    }
+
+    const aiTotal = sub.grading_json.score;
+    const diff = Math.abs(peerTotal - aiTotal);
+    const accuracy = diff <= 1 ? 'full' : diff === 2 ? 'partial' : 'none';
+    const xpGain = accuracy === 'full' ? 20 : accuracy === 'partial' ? 8 : 2;
+
+    await db.query(
+      `INSERT INTO sw_peer_grades (submission_id, grader_id, criterion_scores, peer_total, ai_total, accuracy, xp_gain)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [submissionId, graderId, JSON.stringify(criterionScores), peerTotal, aiTotal, accuracy, xpGain]
+    );
+
+    const award = await awardProgress(graderId, {
+      xpGain,
+      newBadges: accuracy === 'full' ? ['rubric_eye'] : [],
+    });
+
+    res.json({
+      peerTotal,
+      aiTotal,
+      diff,
+      accuracy,
+      xpGain,
+      award,
+      aiBreakdown: sub.grading_json.breakdown,
+      maxScore: sub.grading_json.maxScore,
+    });
+  } catch (e) {
+    console.error('POST /api/write/games/peer-grade/:submissionId/submit error:', e.message);
+    res.status(500).json({ error: 'Failed to submit peer grade' });
+  }
+});
+
+// GET /api/write/games/peer-grade/received/:submissionId — author sees how peers scored their essay
+router.get('/peer-grade/received/:submissionId', async (req, res) => {
+  try {
+    const userId = req.dbUser.id;
+    const { submissionId } = req.params;
+
+    const { rows: subRows } = await db.query(
+      'SELECT id, student_id FROM sw_submissions WHERE id=$1',
+      [submissionId]
+    );
+    const sub = subRows[0];
+    if (!sub) return res.status(404).json({ error: 'Submission not found' });
+    if (sub.student_id !== userId) return res.status(403).json({ error: 'Not your submission' });
+
+    const { rows: grades } = await db.query(
+      `SELECT criterion_scores, peer_total, ai_total, accuracy, created_at
+       FROM sw_peer_grades WHERE submission_id=$1 ORDER BY created_at ASC`,
+      [submissionId]
+    );
+
+    res.json({
+      peerGrades: grades.map((g) => ({
+        criterionScores: g.criterion_scores,
+        peerTotal: g.peer_total,
+        aiTotal: g.ai_total,
+        accuracy: g.accuracy,
+        createdAt: g.created_at,
+      })),
+    });
+  } catch (e) {
+    console.error('GET /api/write/games/peer-grade/received error:', e.message);
+    res.status(500).json({ error: 'Failed to load peer grades' });
+  }
 });
 
 module.exports = router;

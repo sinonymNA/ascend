@@ -579,11 +579,27 @@ CREATE TABLE IF NOT EXISTS sw_speed_round_runs (
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Blind Peer Grade — async per-essay peer scoring, compared against the AI's grade
+CREATE TABLE IF NOT EXISTS sw_peer_grades (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  submission_id    UUID REFERENCES sw_submissions(id) ON DELETE CASCADE,
+  grader_id        UUID REFERENCES users(id),
+  criterion_scores JSONB NOT NULL,
+  peer_total       INTEGER NOT NULL,
+  ai_total         INTEGER NOT NULL,
+  accuracy         TEXT CHECK (accuracy IN ('full','partial','none')) NOT NULL,
+  xp_gain          INTEGER DEFAULT 0,
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (submission_id, grader_id)
+);
+
 CREATE INDEX IF NOT EXISTS sw_sub_assignment ON sw_submissions(assignment_id, submitted_at);
 CREATE INDEX IF NOT EXISTS sw_sub_student    ON sw_submissions(student_id, submitted_at);
 CREATE INDEX IF NOT EXISTS sw_docs_assign    ON sw_documents(assignment_id, doc_number);
 CREATE INDEX IF NOT EXISTS sw_gw_student     ON sw_guided_walk_sessions(student_id, assignment_id);
 CREATE INDEX IF NOT EXISTS sw_speed_round_score ON sw_speed_round_runs(score DESC);
+CREATE INDEX IF NOT EXISTS sw_peer_grades_submission ON sw_peer_grades(submission_id);
+CREATE INDEX IF NOT EXISTS sw_peer_grades_grader     ON sw_peer_grades(grader_id);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS uqm_user_set ON user_question_mastery(user_id, set_id);

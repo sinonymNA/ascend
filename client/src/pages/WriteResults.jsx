@@ -497,6 +497,29 @@ export default function WriteResults() {
           )}
           <AnnotatedEssay essayText={submission.essay_text} annotations={g.annotations} onSelect={setSelectedAnn} />
         </motion.div>
+
+        {/* Blind Peer Grade CTA */}
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <OrnateCard
+            role="button" tabIndex={0}
+            onClick={() => navigate('peer_grade')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('peer_grade'); }}
+            style={{ padding: '16px 18px', marginTop: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{
+              width: 46, height: 46, flexShrink: 0, borderRadius: 10,
+              background: 'radial-gradient(circle at 35% 30%, rgba(245,166,35,0.35), rgba(10,16,24,0.85) 78%)',
+              border: '1px solid rgba(245,166,35,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+            }}>👁️</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 800, color: C.text, marginBottom: 3 }}>Peer Review a Classmate's Essay</div>
+              <div style={{ fontSize: 11.5, color: C.muted, fontWeight: 600 }}>
+                Score someone else's writing — it's one of the fastest ways to internalize the rubric
+              </div>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: C.gold }}>→</div>
+          </OrnateCard>
+        </motion.div>
       </main>
 
       <CoachPanel annotation={selectedAnn} onClose={() => setSelectedAnn(null)}
